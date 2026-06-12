@@ -95,5 +95,28 @@ class DrugDbUpdateWorker(
                 request,
             )
         }
+
+        /**
+         * Cancel any queued drug-DB update job and immediately re-enqueue, replacing the old one.
+         *
+         * Called after a backup restore ([com.beryndil.pharos.backup.BackupRepository]).
+         * Restore replaces the regimen DB; while the drug-ref DB is not directly affected, a
+         * REPLACE ensures the periodic schedule is fresh and consistent with the new regimen
+         * (e.g., a restored regimen may reference drug IDs not seen before). Keeps the same
+         * Wi-Fi-preferred network constraint.
+         */
+        fun scheduleAfterRestore(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.UNMETERED)
+                .build()
+            val request = PeriodicWorkRequestBuilder<DrugDbUpdateWorker>(1, TimeUnit.DAYS)
+                .setConstraints(constraints)
+                .build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                WORK_NAME,
+                ExistingPeriodicWorkPolicy.REPLACE,
+                request,
+            )
+        }
     }
 }

@@ -42,5 +42,13 @@ interface ScheduleDao {
     @Query("SELECT * FROM schedules ORDER BY createdAtEpochMs ASC")
     suspend fun getAll(): List<ScheduleEntity>
 
+    /**
+     * Observe all currently active PRN schedules across all medications.
+     * Used by [DoseRepository.observePrnMeds] to surface the "Log dose" row on the Today screen
+     * (spec §2.7 — PRN doses are user-initiated logs only; no SCHEDULED/MISSED states).
+     */
+    @Query("SELECT * FROM schedules WHERE type = 'PRN' AND isActive = 1")
+    fun observeAllActivePrn(): Flow<List<ScheduleEntity>>
+
     // No DELETE method — see class-level comment.
 }

@@ -46,6 +46,14 @@ import java.time.format.FormatStyle
 class BackupRepository(
     private val db: RegimenDatabase,
     private val context: Context,
+    /**
+     * Called after a restore completes successfully, while still on the IO dispatcher.
+     * Use this to re-arm exact alarms and re-enqueue WorkManager jobs keyed to the restored
+     * regimen (items A2-1 / A2-2). Injected as a lambda rather than a direct dependency on
+     * [com.beryndil.pharos.alarm.AlarmCoordinator] to avoid a cyclic dependency
+     * (BackupRepository → AlarmCoordinator → ScheduleRepository → …).
+     */
+    private val onRestoreComplete: suspend () -> Unit = {},
 ) {
 
     private val json = Json {
@@ -154,6 +162,7 @@ class BackupRepository(
             }
 
             importPayload(payload)
+            onRestoreComplete()
             RestoreResult.Success(
                 medicationCount = payload.medications.size,
             )

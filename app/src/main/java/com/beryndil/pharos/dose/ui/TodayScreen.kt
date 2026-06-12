@@ -15,9 +15,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.CheckCircleOutline
+import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -41,12 +44,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
 import com.beryndil.pharos.data.dose.DoseRow
+import com.beryndil.pharos.data.dose.PrnMedRow
 import com.beryndil.pharos.data.regimen.entity.DoseState
 import java.util.Date
 
 /**
  * Today's doses: the actionable surface. DUE and SNOOZED doses carry the three dose actions
- * (Take / Snooze / Skip); SCHEDULED doses appear as upcoming with no action. Calm, content-first
+ * (Take / Snooze / Skip); SCHEDULED doses appear as upcoming with no action; PRN (as-needed)
+ * medications show a "Log dose" affordance at all times (spec §2.7). Calm, content-first
  * (DESIGN.md): the medication name and time are the data; one primary action (Take) per row.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +89,10 @@ fun TodayScreen(
             )
         },
     ) { innerPadding ->
-        if (uiState.doses.isEmpty()) {
+        val hasDoses = uiState.doses.isNotEmpty()
+        val hasPrn = uiState.prnMeds.isNotEmpty()
+
+        if (!hasDoses && !hasPrn) {
             EmptyToday(modifier = Modifier.padding(innerPadding))
         } else {
             LazyColumn(
@@ -97,6 +105,7 @@ fun TodayScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // ── Scheduled / DUE / SNOOZED dose rows ──────────────────────────────
                 items(uiState.doses, key = { it.doseId }) { dose ->
                     DoseCard(
                         dose = dose,
@@ -106,8 +115,52 @@ fun TodayScreen(
                         onHistory = { onOpenHistory(dose.medicationId) },
                     )
                 }
+
+                // ── PRN (as-needed) section ───────────────────────────────────────────
+                if (hasPrn) {
+                    if (hasDoses) {
+                        item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+                    }
+                    item {
+                        Text(
+                            text = stringResource(R.string.today_prn_section_header),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(uiState.prnMeds, key = { "prn_${it.medicationId}" }) { prn ->
+                        PrnMedCard(
+                            prn = prn,
+                            onLogDose = { onEvent(TodayEvent.LogPrn(prn.medicationId, prn.scheduleId)) },
+                            onHistory = { onOpenHistory(prn.medicationId) },
+                        )
+                    }
+                }
             }
         }
+    }
+
+    // ── PRN daily-max advisory dialog (non-blocking, Law 3 — dose already logged) ────────────
+    if (uiState.prnWarningDoseNumber != null) {
+        AlertDialog(
+            onDismissRequest = { onEvent(TodayEvent.DismissPrnWarning) },
+            title = { Text(stringResource(R.string.prn_daily_max_warning_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.prn_daily_max_warning,
+                        uiState.prnWarningDoseNumber,
+                        uiState.prnWarningDailyMax,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { onEvent(TodayEvent.DismissPrnWarning) }) {
+                    Text(stringResource(R.string.btn_ok))
+                }
+            },
+        )
     }
 }
 
@@ -179,6 +232,77 @@ private fun DoseCard(
                     Text(stringResource(R.string.dose_action_skip))
                 }
             }
+        }
+    }
+}
+
+/**
+ * A row for a PRN (as-needed) medication on the Today screen (spec §2.7).
+ *
+ * PRN doses have no SCHEDULED or MISSED states — the "Log dose" button is the only action.
+ * If [PrnMedRow.dosesToday] > 0, shows a "Logged today: N" count so the user can track intake
+ * without the app forbidding or advising further doses (Law 3).
+ * Tapping the medication name opens dose history (consistent with [DoseCard]).
+ */
+@Composable
+private fun PrnMedCard(
+    prn: PrnMedRow,
+    onLogDose: () -> Unit,
+    onHistory: () -> Unit,
+) {
+    val logDoseCd = stringResource(R.string.cd_prn_log_dose, prn.medName)
+
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+        Text(
+            text = prn.medName,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clickable(
+                    onClickLabel = stringResource(R.string.cd_dose_history_action, prn.medName),
+                    onClick = onHistory,
+                ),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(top = 2.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.MedicalServices,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.schedule_type_prn),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = prn.strength,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        if (prn.dosesToday > 0) {
+            Text(
+                text = stringResource(R.string.today_prn_doses_today, prn.dosesToday),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        Button(
+            onClick = onLogDose,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp)
+                .semantics { contentDescription = logDoseCd },
+        ) {
+            Text(stringResource(R.string.today_prn_log_dose))
         }
     }
 }

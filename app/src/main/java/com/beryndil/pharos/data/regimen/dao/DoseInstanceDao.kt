@@ -152,5 +152,16 @@ interface DoseInstanceDao {
     @Query("SELECT * FROM dose_instances ORDER BY dueEpochMs ASC")
     suspend fun getAll(): List<DoseInstanceEntity>
 
+    /**
+     * Reactively observe all TAKEN dose instances logged at or after [sinceEpochMs].
+     * Used by [com.beryndil.pharos.data.dose.DoseRepository.observePrnMeds] to show a
+     * live "Logged today: N" count on the Today screen for PRN medications (spec §2.7).
+     * Re-emits whenever a new PRN log is inserted (or any dose transitions to TAKEN).
+     */
+    @Query(
+        "SELECT * FROM dose_instances WHERE state = 'TAKEN' AND takenEpochMs >= :sinceEpochMs",
+    )
+    fun observeAllTakenSince(sinceEpochMs: Long): Flow<List<DoseInstanceEntity>>
+
     // No DELETE method. Dose history is permanent (spec §3.3, Law 9).
 }

@@ -20,6 +20,7 @@ import com.beryndil.pharos.data.regimen.entity.SettingEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -370,6 +371,47 @@ class BackupRepositoryTest {
         val uri = uriFor(badBytes)
         val result = repository.restore("passphrase".toCharArray(), uri)
         assertTrue("All-zeros file must be rejected: $result", result is RestoreResult.Error)
+    }
+
+    @Test
+    fun `successful restore invokes onRestoreComplete callback`() = runTest {
+        // Seed data, create backup
+        val medication = med()
+        db.medicationDao().insert(medication)
+        val (outUri, _) = outputUri()
+        repository.createBackup("passphrase".toCharArray(), outUri)
+
+        // Wipe DB
+        val rd = db.restoreDao()
+        rd.clearDoseTransitions(); rd.clearDoseInstances(); rd.clearSchedulePhases()
+        rd.clearSchedules(); rd.clearRefillRecords(); rd.clearMedications(); rd.clearSettings()
+
+        var callbackInvoked = false
+        val repoWithCallback = BackupRepository(
+            db = db,
+            context = context,
+            onRestoreComplete = { callbackInvoked = true },
+        )
+        val result = repoWithCallback.restore("passphrase".toCharArray(), outUri)
+        assertTrue("Restore must succeed: $result", result is RestoreResult.Success)
+        assertTrue("onRestoreComplete must be called after a successful restore", callbackInvoked)
+    }
+
+    @Test
+    fun `failed restore does NOT invoke onRestoreComplete callback`() = runTest {
+        var callbackInvoked = false
+        val repoWithCallback = BackupRepository(
+            db = db,
+            context = context,
+            onRestoreComplete = { callbackInvoked = true },
+        )
+        val badUri = uriFor(ByteArray(200))
+        val result = repoWithCallback.restore("passphrase".toCharArray(), badUri)
+        assertTrue("Bad-file restore must return error: $result", result is RestoreResult.Error)
+        assertFalse(
+            "onRestoreComplete must NOT be called when restore fails",
+            callbackInvoked,
+        )
     }
 }
 

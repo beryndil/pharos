@@ -73,5 +73,26 @@ class LowSupplyCheckWorker(
                 request,
             )
         }
+
+        /**
+         * Cancel any queued low-supply job and immediately re-enqueue, replacing the old one.
+         *
+         * Called after a backup restore ([com.beryndil.pharos.backup.BackupRepository]). A restore
+         * replaces the entire regimen DB, so stale supply counts from the pre-restore state
+         * should not drive the next periodic check. REPLACE cancels the prior job and
+         * schedules a fresh one; the new run will read the restored regimen directly.
+         */
+        fun scheduleAfterRestore(context: Context) {
+            val request = PeriodicWorkRequestBuilder<LowSupplyCheckWorker>(
+                repeatInterval = 1,
+                repeatIntervalTimeUnit = TimeUnit.DAYS,
+            ).build()
+
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                WORK_NAME,
+                ExistingPeriodicWorkPolicy.REPLACE,
+                request,
+            )
+        }
     }
 }

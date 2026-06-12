@@ -214,6 +214,7 @@ private class NoOpScheduleDao : ScheduleDao {
     override suspend fun getById(id: String): ScheduleEntity? = null
     override suspend fun getAllVersionsForMedication(medicationId: String): List<ScheduleEntity> = emptyList()
     override suspend fun getAll(): List<ScheduleEntity> = emptyList()
+    override fun observeAllActivePrn(): Flow<List<ScheduleEntity>> = empty.asStateFlow()
 }
 
 private class NoOpSchedulePhaseDao : SchedulePhaseDao {
@@ -243,4 +244,5 @@ private class NoOpDoseInstanceDao : DoseInstanceDao {
     override suspend fun getDueTimesForSchedule(scheduleId: String): List<Long> = emptyList()
     override suspend fun getLastTakenForSchedule(scheduleId: String): DoseInstanceEntity? = null
     override suspend fun getAll(): List<DoseInstanceEntity> = emptyList()
+    override fun observeAllTakenSince(sinceEpochMs: Long): Flow<List<DoseInstanceEntity>> = empty.asStateFlow()
 }

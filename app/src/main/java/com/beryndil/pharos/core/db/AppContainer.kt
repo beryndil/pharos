@@ -10,26 +10,27 @@ import com.beryndil.pharos.alarm.ReliabilityLog
 import com.beryndil.pharos.alarm.SettingsReliabilityLog
 import com.beryndil.pharos.core.crypto.PassphraseProvider
 import com.beryndil.pharos.core.crypto.TinkPassphraseProvider
+import com.beryndil.pharos.backup.BackupRepository
 import com.beryndil.pharos.data.dose.DoseRepository
-import com.beryndil.pharos.dose.AndroidDoseTransitionScheduler
-import com.beryndil.pharos.dose.DoseStateMachine
-import com.beryndil.pharos.dose.DoseTransitionScheduler
+import com.beryndil.pharos.data.drugref.DrugDbUpdater
+import com.beryndil.pharos.data.drugref.DrugDbUpdateWorker
+import com.beryndil.pharos.data.drugref.DrugLabelRepository
 import com.beryndil.pharos.data.drugref.DrugRefDatabase
 import com.beryndil.pharos.data.drugref.DrugRefDatabaseFactory
+import com.beryndil.pharos.data.drugref.ManifestVerifier
+import com.beryndil.pharos.data.drugref.OpenFdaDrugLabelService
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.RegimenDatabaseFactory
 import com.beryndil.pharos.data.schedule.ScheduleRepository
+import com.beryndil.pharos.dose.AndroidDoseTransitionScheduler
+import com.beryndil.pharos.dose.DoseStateMachine
+import com.beryndil.pharos.dose.DoseTransitionScheduler
 import com.beryndil.pharos.onboarding.OnboardingRepository
 import com.beryndil.pharos.refill.AndroidRefillNotifier
+import com.beryndil.pharos.refill.LowSupplyCheckWorker
 import com.beryndil.pharos.refill.RefillNotifier
-import com.beryndil.pharos.data.drugref.DrugLabelRepository
-import com.beryndil.pharos.data.drugref.DrugDbUpdater
-import com.beryndil.pharos.data.drugref.DrugDbUpdateWorker
-import com.beryndil.pharos.data.drugref.ManifestVerifier
-import com.beryndil.pharos.data.drugref.OpenFdaDrugLabelService
 import com.beryndil.pharos.refill.RefillRepository
-import com.beryndil.pharos.backup.BackupRepository
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
@@ -128,6 +129,7 @@ class AppContainer(private val applicationContext: Context) {
             doseInstanceDao = regimenDatabase.doseInstanceDao(),
             doseTransitionDao = regimenDatabase.doseTransitionDao(),
             medicationDao = regimenDatabase.medicationDao(),
+            scheduleDao = regimenDatabase.scheduleDao(),
             stateMachine = doseStateMachine,
         )
     }
@@ -199,11 +201,22 @@ class AppContainer(private val applicationContext: Context) {
     /**
      * Orchestrates encrypted backup creation, restore, and plaintext export.
      * Law 7: backup/restore are free forever; Law 4: only writes to user-chosen SAF URIs.
+     *
+     * Post-restore callback (A2-1 + A2-2): after a successful restore, re-arm exact alarms
+     * (so the restored regimen's dose schedule fires) and REPLACE both WorkManager jobs
+     * (so they pick up the new regimen state rather than stale pre-restore data).
+     *
+     * [alarmCoordinator] is lazy, so referencing it here does not create a cyclic init.
      */
     val backupRepository: BackupRepository by lazy {
         BackupRepository(
             db = regimenDatabase,
             context = applicationContext,
+            onRestoreComplete = {
+                alarmCoordinator.onReRegistration("restore")
+                LowSupplyCheckWorker.scheduleAfterRestore(applicationContext)
+                DrugDbUpdateWorker.scheduleAfterRestore(applicationContext)
+            },
         )
     }
 

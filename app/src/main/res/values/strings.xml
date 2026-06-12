@@ -209,6 +209,20 @@
     <!-- PRN daily-max warning (spec §2.7). Non-blocking; points outward (Law 3). -->
     <!-- %1$d = this dose number today, %2$d = the maximum the user set -->
     <string name="prn_daily_max_warning">This is dose %1$d today; the maximum you set was %2$d. Check with your doctor or pharmacist.</string>
+    <!-- Title for the non-blocking PRN daily-max advisory dialog -->
+    <string name="prn_daily_max_warning_title">Daily maximum reached</string>
+
+    <!-- PRN (as-needed) medications — Today screen section (spec §2.7) -->
+    <string name="today_prn_section_header">As needed</string>
+    <!-- Button: record an as-needed dose immediately (no SCHEDULED state; user-initiated log only) -->
+    <string name="today_prn_log_dose">Log dose</string>
+    <!-- Accessibility: %1$s = medication name -->
+    <string name="cd_prn_log_dose">Log a dose of %1$s</string>
+    <!-- Shows how many PRN doses the user has logged since midnight. %1$d = count -->
+    <string name="today_prn_doses_today">Logged today: %1$d</string>
+
+    <!-- Shared button label for informational / advisory dialogs -->
+    <string name="btn_ok">OK</string>
 
     <!-- ── Duplicate-ingredient warning (spec §2.4 / Law 3) ──────────── -->
     <!-- Dialog title -->

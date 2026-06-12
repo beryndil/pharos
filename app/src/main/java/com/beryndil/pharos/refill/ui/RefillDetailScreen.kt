@@ -22,6 +22,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -37,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -210,9 +213,19 @@ fun RefillDetailScreen(
             onConfirm = { onEvent(RefillEvent.ConfirmStopBeforeEmpty) },
         )
 
+        // SetRefillByDate is handled below via an if-block (needs rememberDatePickerState).
         RefillDialogState.None,
         RefillDialogState.SetRefillByDate,
         -> Unit
+    }
+
+    // DatePickerDialog requires rememberDatePickerState, so handled outside the when block.
+    if (uiState.dialogState == RefillDialogState.SetRefillByDate) {
+        RefillByDatePickerDialog(
+            currentRefillByMs = uiState.summary?.refillByEpochMs,
+            onConfirm = { epochMs -> onEvent(RefillEvent.ConfirmSetRefillByDate(epochMs)) },
+            onDismiss = { onEvent(RefillEvent.DismissDialog) },
+        )
     }
 }
 
@@ -438,6 +451,13 @@ private fun RefillActions(
                 ) {
                     Text(stringResource(R.string.refill_action_stopped))
                 }
+            }
+            // Tertiary: update the refill-by date independently of a pickup
+            TextButton(
+                onClick = { onEvent(RefillEvent.ShowSetRefillByDialog) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.refill_action_set_refill_by))
             }
         }
     }
@@ -678,4 +698,45 @@ private fun StopBeforeEmptyDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
         },
     )
+}
+
+/**
+ * Date picker dialog for setting or updating the refill-by date (spec §2.9).
+ *
+ * [DatePickerDialog] from Material3 handles locale-aware date display and selection.
+ * The chosen date is stored as UTC-midnight epoch-ms ([currentRefillByMs]) for consistent
+ * cross-timezone representation; display is locale-formatted elsewhere in the UI.
+ *
+ * The dose reminder system is unaffected (zero-supply invariant — spec §2.9, Law 1).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RefillByDatePickerDialog(
+    currentRefillByMs: Long?,
+    onConfirm: (epochMs: Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val state = rememberDatePickerState(initialSelectedDateMillis = currentRefillByMs)
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val ms = state.selectedDateMillis ?: return@TextButton
+                    onConfirm(ms)
+                },
+                enabled = state.selectedDateMillis != null,
+            ) {
+                Text(stringResource(R.string.refill_dialog_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.btn_cancel))
+            }
+        },
+    ) {
+        DatePicker(state = state)
+    }
 }
