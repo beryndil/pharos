@@ -38,6 +38,19 @@ relevant slice is built.
 | A12 | Robolectric `user.home` redirected to `/tmp/pharos-test-home` via `tasks.withType<Test>().configureEach { systemProperty("user.home", ...) }`. The build sandbox mounts the real `$HOME` root read-only, so Robolectric's `MavenDependencyResolver` cannot create `~/.robolectric-download-lock`. | Sandbox environment constraint (learned A5 pattern). |
 | A13 | `DrugRefDatabase` fixture seeded via `BundledDrugRefLoader` + `RoomDatabase.Callback.onCreate` instead of `Room.createFromAsset()`. `createFromAsset()` requires a Room-managed SQLite file (with `room_master_table` identity hash), but the hash isn't known until KSP runs. Using a raw SQLite asset (created via `sqlite3` CLI) read by the loader avoids this coupling. | Build-time dependency constraint. |
 
+## Slice 3 decisions (Schedules)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| S3-A1 | `ScheduleEngine` is a pure `object` with no I/O or Android deps — safe to unit-test on the JVM without Robolectric. | Keeps the generation logic testable and portable. |
+| S3-A2 | `ScheduleSection` is an inline composable within the Details step (no separate nav destination). | Schedule config is tightly coupled to med entry; a separate screen adds nav complexity without UX benefit. |
+| S3-A3 | For `INTERVAL` schedules, `scheduledTimesJson` stores a 1-element array with the anchor time (the time of the first dose on the start date). | Reuses the existing column rather than adding a new one; documented in code. |
+| S3-A4 | `LAST_TAKEN` interval `generateInstances` returns at most 1 instance (the first after `from`). Alarm engine (Slice 4) drives subsequent generation after each dose taken. | LAST_TAKEN semantics require the next instance to depend on the *actual* taken time, which is unknowable at pre-generation time. |
+| S3-A5 | `windowEndEpochMs` for FIXED_DAILY/INTERVAL instances = `min(dueMs + 60 min, nextDueMs)`. Slice 5 state machine applies D2 rules at runtime; engine sets a reasonable default. | Correct D2 cross-instance math requires runtime state; the 60-min default is a safe lower bound. |
+| S3-A6 | Pause/Resume/End mutate `MedicationEntity.status` via `MedicationRepository`. Resume additionally calls `ScheduleRepository.generateInstancesForMed` for 90 days. | Status is a med-level property; generation is schedule-level. Separation keeps the repositories focused. |
+| S3-A7 | Schedule save is NOT wrapped in a cross-DAO transaction. Med entity is saved first, then schedule + instances. | Room doesn't support cross-repository `@Transaction`; acceptable for v1 where the failure window is narrow. Log in TODO.md for Slice 11 hardening if needed. |
+| S3-A8 | Test assertion `intervalScheduleAnchoredEvery8h` corrected from 6 to 5 instances. With anchor=08:00 and to=midnight+2days (exclusive), the midnight-of-day-3 instance falls exactly on `to` and is excluded. | The [from, to) half-open convention is the correct and consistent API; the original test comment ("2 days × 3 doses/day") was wrong about the count. |
+
 ## Open decisions deferred to their slice (not blockers)
 
 - App package id confirmed `com.beryndil.pharos`.

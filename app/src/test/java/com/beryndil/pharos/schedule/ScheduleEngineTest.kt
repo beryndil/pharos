@@ -178,8 +178,10 @@ class ScheduleEngineTest {
 
         val instances = ScheduleEngine.generateInstances(sched, emptyList(), from, to, emptySet(), 0L)
 
-        // 2 days × 3 doses/day = 6 instances
-        assertEquals(6, instances.size)
+        // anchor=08:00 day1, to=midnight day3 (exclusive):
+        // 08:00 day1, 16:00 day1, 00:00 day2, 08:00 day2, 16:00 day2 = 5 instances
+        // (00:00 day3 == to and is excluded by the half-open [from, to) convention)
+        assertEquals(5, instances.size)
         assertEquals(anchorMs, instances[0].dueEpochMs)
         assertEquals(anchorMs + 8 * 3_600_000L, instances[1].dueEpochMs)
         assertEquals(anchorMs + 16 * 3_600_000L, instances[2].dueEpochMs)
