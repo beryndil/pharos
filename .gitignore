@@ -17,3 +17,9 @@ captures/
 # Bearings/Claude session-local data
 .claude/
 .kotlin/
+
+# Release signing — NEVER commit
+.signing/
+keystore.properties
+*.jks
+*.keystore

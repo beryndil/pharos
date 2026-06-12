@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -14,8 +16,8 @@ android {
         applicationId = "com.beryndil.pharos"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.1.1"
+        versionCode = 15
+        versionName = "1.1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -25,16 +27,28 @@ android {
     }
 
     signingConfigs {
-        // Release signing: CI / sandbox falls back to the debug keystore so assembleRelease
-        // can produce a verifiable R8-minified APK without real credentials (DECISIONS.md S11-A1).
-        // Dave supplies the real keystore by creating keystore.properties (gitignored) — see TODO.md.
+        // Release signing: if keystore.properties (gitignored) exists, sign with Dave's real
+        // release keystore — required for an installable, updatable sideload/Play build. Otherwise
+        // fall back to the debug keystore so CI / a fresh checkout can still produce a verifiable
+        // R8-minified APK without credentials (DECISIONS.md S11-A1, RELEASE-1).
         create("release") {
-            val androidUserHome = System.getenv("ANDROID_USER_HOME")
-                ?: "${System.getProperty("user.home")}/.android"
-            storeFile = file("$androidUserHome/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            val keystorePropsFile = rootProject.file("keystore.properties")
+            if (keystorePropsFile.exists()) {
+                val props = Properties().apply {
+                    keystorePropsFile.inputStream().use { stream -> load(stream) }
+                }
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            } else {
+                val androidUserHome = System.getenv("ANDROID_USER_HOME")
+                    ?: "${System.getProperty("user.home")}/.android"
+                storeFile = file("$androidUserHome/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 
