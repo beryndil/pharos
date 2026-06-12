@@ -55,6 +55,7 @@ fun DrugReferenceScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    com.beryndil.pharos.core.ui.SecureWindow()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val backCd = stringResource(R.string.cd_back_button)
 

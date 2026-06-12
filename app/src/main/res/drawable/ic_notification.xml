@@ -1,0 +1,40 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+        Pharos notification small icon — lighthouse silhouette (monochrome, 24dp).
+        White fill on transparent background; Android tints this via the notification
+        accent color at display time. Single-color, flat — no gradients (Law 10).
+        Path: tapered tower body, lantern room, dome cap, base platform.
+    -->
+    <!-- Tower body: narrows from 7dp wide at base to 5dp at top of body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M8.5,20 L8.5,10 Q8.5,9.5 9,9.5 L15,9.5 Q15.5,9.5 15.5,10 L15.5,20 Z
+        " />
+    <!-- Lantern room: wider box above tower -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M7.5,9.5 L16.5,9.5 L16.5,7.5 L7.5,7.5 Z" />
+    <!-- Dome cap -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,4 L7.5,7.5 L16.5,7.5 Z" />
+    <!-- Base platform -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6,20 L18,20 L18,21.5 L6,21.5 Z" />
+    <!-- Light beam rays (three short lines emanating right) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16.5,8.5 L20,6.5 L20,7 L17,8.8 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16.5,8.5 L21,8.5 L21,9 L16.5,9 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16.5,8.5 L20,10.5 L19.7,10.9 L16.5,9 Z" />
+</vector>

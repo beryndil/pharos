@@ -316,9 +316,25 @@ These items require real hardware and cannot be automated in the pipeline (spec 
 - [ ] **Section C: ACCESS_NOTIFICATION_POLICY Play justification** — File the `ACCESS_NOTIFICATION_POLICY` declaration in the Play Console using the text in `docs/play-listing.md`. Google may review this permission; have the user-flow screenshots (lazy DND prompt on first critical med) ready.
 - [ ] **Section C: USE_FULL_SCREEN_INTENT on Android 14+ verification** — Confirm `Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT` opens correctly and grants permission. Dashboard shows correct state after grant/revoke.
 
+## A3 — Polish / quality (executor ses_e0f40ec5, 2026-06-12)
+
+All A3 items are implemented. Device-only verification deferred below.
+
+### Section C: A3 device-only verification
+
+- [ ] **Section C: 12/24h time picker** — Set device to 24-hour time in Display settings, open any schedule screen, confirm the TimePicker shows 24-hour dial. Set back to 12h, confirm AM/PM is shown.
+- [ ] **Section C: Monochrome notification icon** — Fire a test reminder from the reliability dashboard. Confirm the notification's small icon in the status bar is the lighthouse silhouette (not a "+" shape). Check tray on both light and dark system UI. Verify color tinting works (status bar vs notification shade).
+- [ ] **Section C: Multi-due notifications** — Schedule two medications with the same due time. When both fire, confirm they appear as SEPARATE notification tray entries (not merged into one). Verify that acting on one (Taken) does not dismiss the other.
+- [ ] **Section C: Dashboard permission refresh on resume** — Open reliability dashboard; all items show OK. Go to system Settings → Apps → Pharos → Permissions, revoke exact-alarm permission. Use system back to return to the reliability dashboard. Confirm the "Exact alarm" row immediately updates to RISKY (no screen re-navigation required).
+- [ ] **Section C: Per-screen FLAG_SECURE** — Navigate to: (a) Today screen, (b) Medication list, (c) Dose history, (d) Add/edit medication, (e) Backup screen. On each, attempt to take a screenshot — confirm it is blocked/blank. Then navigate to Legal, attempt screenshot — confirm it succeeds. Confirm same for Onboarding.
+- [ ] **Section C: StrongBox wrapping key** — On a device with StrongBox (Pixel 3+ or Samsung with Titan M): fresh install, open the app, confirm no crash. Use `adb shell keystore2_client list` or Android Keystore API check to verify `pharos_master_key` is StrongBox-backed. On a device without StrongBox (emulator): same fresh install, confirm TEE fallback works and no crash.
+- [ ] **Section C: PDF word-wrap** — Export medication list PDF with a medication that has a long schedule description (e.g. taper with multiple phases). Open the PDF, confirm all text is visible and wraps within margins — no clipping at right edge.
+- [ ] **Section C: Share backup snackbar action** — Create a backup from the Backup screen. When the "Backup saved. / Share" snackbar appears, tap Share. Confirm the system share sheet opens with the backup file. Confirm sharing via Gmail/Drive works.
+- [ ] **Section C: Dose history cause line** — Open dose history for a medication that has been through DUE → TAKEN. Confirm the third text line per row shows the cause ("Confirmed by you", "Alarm fired", etc.) in a smaller gray font.
+- [ ] **Section C: Interval anchor time field** — Create an interval schedule with SCHEDULE_ANCHORED anchor type. Confirm a "First dose time" time picker appears. Set it to 10:00. Save. Edit the medication again and confirm the anchor time is 10:00. Verify the engine schedules doses at 10:00, 18:00 (for 8h interval), etc.
+- [ ] **Section C: Boot trigger human-readable label** — Reboot the device. Open the reliability dashboard. Confirm the "Boot receiver" row shows "Boot at HH:MM · date" (not the raw "android.intent.action.BOOT_COMPLETED" string).
+
 ## A3 update (2026-06-12): launcher icon done early
 - The "Teal launcher + splash icon" A3 polish item is SUPERSEDED — Dave supplied the lighthouse
   artwork and it's now the launcher icon in all locations (see DECISIONS.md ICON-1..4, commit below).
-- STILL OPEN for A3: dedicated **monochrome notification small icon** — a white-on-transparent
-  lighthouse silhouette to replace the reused "+" vector (`ic_launcher_foreground`) in
-  FullScreenDoseNotifier (3 refs) + AndroidRefillNotifier (1 ref). 24dp, Android tints it.
+- Monochrome notification icon: now shipped as `ic_notification.xml` (A3 complete).

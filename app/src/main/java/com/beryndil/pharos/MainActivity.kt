@@ -1,7 +1,6 @@
 package com.beryndil.pharos
 
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,11 +22,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Standards §6: FLAG_SECURE on all screens that render health data.
-        // Applied globally: all screens currently lead to PHI. Onboarding and the reliability
-        // dashboard carry no PHI themselves but keeping the flag is the conservative stance.
-        // Decision logged in DECISIONS.md (S6-A1).
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        // FLAG_SECURE is now applied per-screen (A3-5).
+        // PHI-bearing screens call SecureWindow(); non-PHI screens (Onboarding, Legal) call
+        // ClearWindowSecurity(). The global flag is no longer set here — see DECISIONS.md A3-5.
 
         setContent {
             PharosTheme {

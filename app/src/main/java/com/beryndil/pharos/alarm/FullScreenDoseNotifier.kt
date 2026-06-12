@@ -128,7 +128,7 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
         )
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.dose_due_notification_title))
             .setContentText(medName)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -145,11 +145,12 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
             .addAction(0, context.getString(R.string.dose_action_skip), actionPi(doseId, AlarmContract.ACTION_USER_SKIP))
             .build()
 
-        post(AlarmContract.NOTIFICATION_DOSE_DUE, notification)
+        // Per-dose notification id (A3): each concurrent DUE dose gets its own tray slot.
+        post(AlarmContract.notificationIdForDose(doseId), notification)
     }
 
     override fun cancelDoseAlert(doseId: String) {
-        NotificationManagerCompat.from(context).cancel(AlarmContract.NOTIFICATION_DOSE_DUE)
+        NotificationManagerCompat.from(context).cancel(AlarmContract.notificationIdForDose(doseId))
     }
 
     /** A notification-action [PendingIntent] routed to [DoseActionReceiver] carrying the dose id. */
@@ -168,7 +169,7 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
     override fun postTestReminder() {
         ensureChannels()
         val notification = NotificationCompat.Builder(context, AlarmContract.CHANNEL_DOSE_DUE)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.test_reminder_title))
             .setContentText(context.getString(R.string.test_reminder_body))
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -181,7 +182,7 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
     override fun postTestCriticalReminder() {
         ensureChannels()
         val notification = NotificationCompat.Builder(context, AlarmContract.CHANNEL_DOSE_DUE_CRITICAL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.test_critical_reminder_title))
             .setContentText(context.getString(R.string.test_critical_reminder_body))
             .setCategory(NotificationCompat.CATEGORY_ALARM)

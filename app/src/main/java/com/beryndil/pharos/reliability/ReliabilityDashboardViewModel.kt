@@ -20,10 +20,12 @@ import com.beryndil.pharos.data.regimen.dao.SettingDao
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.SettingEntity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -58,23 +60,31 @@ class ReliabilityDashboardViewModel(
     private val oemName: String = Build.MANUFACTURER,
 ) : ViewModel() {
 
-    // Snapshotted once at construction (see kdoc). The VM is recreated on each navigation.
-    private val exactOk: Boolean = canScheduleExact()
-    private val batteryOk: Boolean = isIgnoringBatteryOpt()
-    private val notifOk: Boolean = isNotificationGranted()
-    private val fullscreenOk: Boolean = canUseFullScreenIntent()
-    private val dndOk: Boolean = isDndAccessGranted()
+    /**
+     * Tick counter that forces [uiState] to recompute permissions on demand (A3-4).
+     * Incremented by [refreshPermissions], which is called from the screen whenever the
+     * lifecycle transitions to RESUMED (e.g. user returns from a system settings page).
+     */
+    private val _refreshTick = MutableStateFlow(0)
 
     val uiState: StateFlow<ReliabilityDashboardUiState> = combine(
         settingDao.observeAll(),
         medicationDao.observeActive(),
-    ) { settings, medications ->
+        _refreshTick,
+    ) { settings, medications, _ ->
+        // Lambdas are called live on every emission (including refresh ticks) so a settings
+        // grant made while this screen is visible is reflected immediately on return (A3-4).
         buildState(settings.associateBy { it.key }, medications)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000L),
         initialValue = buildState(emptyMap(), emptyList()),
     )
+
+    /** Re-read all permission states and push a fresh [uiState] emission (A3-4). */
+    fun refreshPermissions() {
+        _refreshTick.update { it + 1 }
+    }
 
     /** Fire a real critical alert through the critical channel so the user can confirm coverage. */
     fun onTestCriticalAlert() {
@@ -85,6 +95,15 @@ class ReliabilityDashboardViewModel(
         map: Map<String, SettingEntity>,
         medications: List<MedicationEntity>,
     ): ReliabilityDashboardUiState {
+        // Permissions are read live from the injected lambdas on every call (A3-4:
+        // refreshPermissions() increments the tick which triggers another buildState call
+        // with fresh permission values — no cached snapshots).
+        val exactOk = canScheduleExact()
+        val batteryOk = isIgnoringBatteryOpt()
+        val notifOk = isNotificationGranted()
+        val fullscreenOk = canUseFullScreenIntent()
+        val dndOk = isDndAccessGranted()
+
         val isKillerOem = isKillerOem(oemName)
         val criticalMeds = medications.filter { it.isCritical && it.status != "ENDED" }
         val hasCritical = criticalMeds.isNotEmpty()

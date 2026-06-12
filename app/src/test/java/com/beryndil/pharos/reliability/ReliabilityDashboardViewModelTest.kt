@@ -319,6 +319,64 @@ class ReliabilityDashboardViewModelTest {
         val state = stateOf(makeVm(oemName = "xiaomi"))
         assertNotNull(state.backgroundAutoStart.fixAction)
     }
+
+    // ── refreshPermissions re-reads lambdas (A3-4) ────────────────────────────────────────────
+
+    /**
+     * Verifies that [ReliabilityDashboardViewModel.refreshPermissions] causes [uiState] to
+     * reflect a changed permission value without recreating the ViewModel.
+     *
+     * The lambda returns `false` initially (RISKY), then `true` (OK) after the var is flipped
+     * and [refreshPermissions] is called. This covers the on-screen grant scenario (A3-4).
+     */
+    @Test
+    fun refreshPermissions_reReadsLambda_exactAlarm() = runTest {
+        var exactGranted = false
+        val vm = ReliabilityDashboardViewModel(
+            settingDao = FakeSettingDao(),
+            medicationDao = FakeMedicationDaoEmpty(),
+            canScheduleExact = { exactGranted },
+            isIgnoringBatteryOpt = { true },
+            isNotificationGranted = { true },
+            canUseFullScreenIntent = { true },
+            isDndAccessGranted = { true },
+            oemName = "Google", // required: Build.MANUFACTURER is null in JVM unit tests
+        )
+
+        // Initial state: permission denied → RISKY
+        val before = stateOf(vm)
+        assertEquals(ItemStatus.RISKY, before.exactAlarm.status)
+
+        // Simulate a settings grant, then request a refresh.
+        exactGranted = true
+        vm.refreshPermissions()
+
+        // refreshPermissions() increments the tick, re-running buildState with the new lambda value.
+        val after = stateOf(vm)
+        assertEquals(ItemStatus.OK, after.exactAlarm.status)
+    }
+
+    @Test
+    fun refreshPermissions_reReadsLambda_notification() = runTest {
+        var notifGranted = false
+        val vm = ReliabilityDashboardViewModel(
+            settingDao = FakeSettingDao(),
+            medicationDao = FakeMedicationDaoEmpty(),
+            canScheduleExact = { true },
+            isIgnoringBatteryOpt = { true },
+            isNotificationGranted = { notifGranted },
+            canUseFullScreenIntent = { true },
+            isDndAccessGranted = { true },
+            oemName = "Google",
+        )
+
+        assertEquals(ItemStatus.RISKY, stateOf(vm).notification.status)
+
+        notifGranted = true
+        vm.refreshPermissions()
+
+        assertEquals(ItemStatus.OK, stateOf(vm).notification.status)
+    }
 }
 
 // ── Fake ─────────────────────────────────────────────────────────────────────────────────────

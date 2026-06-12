@@ -97,6 +97,7 @@ fun AddEditMedicationScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    com.beryndil.pharos.core.ui.SecureWindow()
     val snackbarHostState = remember { SnackbarHostState() }
     val errorText = when (uiState.saveError) {
         SaveError.GENERAL -> stringResource(R.string.error_save_failed)

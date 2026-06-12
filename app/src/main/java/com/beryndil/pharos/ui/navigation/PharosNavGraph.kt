@@ -284,6 +284,7 @@ fun PharosNavGraph(
                 uiState = uiState,
                 onBack = { navController.popBackStack() },
                 onTestCriticalAlert = viewModel::onTestCriticalAlert,
+                onRefreshPermissions = viewModel::refreshPermissions,
             )
         }
     }

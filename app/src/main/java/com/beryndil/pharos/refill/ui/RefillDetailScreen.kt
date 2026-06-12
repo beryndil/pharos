@@ -88,6 +88,7 @@ fun RefillDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    com.beryndil.pharos.core.ui.SecureWindow()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(

@@ -73,11 +73,30 @@ object AlarmContract {
      */
     const val CHANNEL_REFILL = "refill"
 
-    /** Notification id for the active dose-due alert. One slot — the active DUE alert. */
+    /**
+     * Legacy constant kept for tests. The active dose-due tray slot is now per-dose-instance
+     * (A3 — multi-due notifications). Use [notificationIdForDose] at call sites.
+     */
     const val NOTIFICATION_DOSE_DUE = 5001
     const val NOTIFICATION_TEST = 5002
     /** Notification id for the critical-channel test reminder (Law 6 — testable). */
     const val NOTIFICATION_TEST_CRITICAL = 5003
+
+    /**
+     * Base id for per-dose-instance due-alert notifications (A3 — multi-due fix).
+     * Each dose instance gets its own stable tray slot:
+     *   notificationIdForDose(doseId) = NOTIFICATION_DOSE_DUE_BASE + (doseId.hashCode & 0x0FFFFFFF)
+     * Range chosen to avoid collision with the test slots and refill slots.
+     */
+    const val NOTIFICATION_DOSE_DUE_BASE = 7000
+
+    /**
+     * Derive a stable notification id from a dose instance id (A3).
+     * Each concurrently DUE dose instance appears as its own tray entry so the user can act
+     * on both independently (tap Taken on one without dismissing the other).
+     */
+    fun notificationIdForDose(doseId: String): Int =
+        NOTIFICATION_DOSE_DUE_BASE + (doseId.hashCode() and 0x0FFFFFFF)
 
     /**
      * Base id for per-medication refill/low-supply notifications (spec §2.9).

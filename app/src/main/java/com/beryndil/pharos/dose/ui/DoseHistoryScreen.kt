@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
 import com.beryndil.pharos.data.regimen.entity.DoseState
+import com.beryndil.pharos.data.regimen.entity.DoseTransitionCause
 import com.beryndil.pharos.data.regimen.entity.DoseTransitionEntity
 import java.util.Date
 
@@ -41,6 +42,7 @@ fun DoseHistoryScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    com.beryndil.pharos.core.ui.SecureWindow()
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -96,6 +98,9 @@ private fun TransitionRow(transition: DoseTransitionEntity) {
     val context = LocalContext.current
     val timeText = DateFormat.getMediumDateFormat(context).format(Date(transition.atEpochMs)) +
         " " + DateFormat.getTimeFormat(context).format(Date(transition.atEpochMs))
+    val causeText = runCatching { DoseTransitionCause.valueOf(transition.cause) }
+        .getOrNull()
+        ?.let { stringResource(causeLabelRes(it)) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(
@@ -108,5 +113,23 @@ private fun TransitionRow(transition: DoseTransitionEntity) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 2.dp),
         )
+        if (causeText != null) {
+            Text(
+                text = causeText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 1.dp),
+            )
+        }
     }
+}
+
+/** Maps [DoseTransitionCause] to a factual, human-readable string resource (Law 3 — no advice). */
+private fun causeLabelRes(cause: DoseTransitionCause): Int = when (cause) {
+    DoseTransitionCause.ALARM_FIRED -> R.string.history_cause_alarm_fired
+    DoseTransitionCause.USER_TAKEN -> R.string.history_cause_user_taken
+    DoseTransitionCause.USER_SNOOZED -> R.string.history_cause_user_snoozed
+    DoseTransitionCause.USER_SKIPPED -> R.string.history_cause_user_skipped
+    DoseTransitionCause.SNOOZE_ELAPSED -> R.string.history_cause_snooze_elapsed
+    DoseTransitionCause.MISS_WINDOW_CLOSED -> R.string.history_cause_miss_window_closed
 }

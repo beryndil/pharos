@@ -95,6 +95,8 @@
     <string name="schedule_interval_hours_suffix">hours</string>
     <string name="schedule_anchor_schedule">From schedule</string>
     <string name="schedule_anchor_last_dose">From last dose taken</string>
+    <!-- Interval anchor time (A3-10): time of day that anchors the schedule-anchored interval grid. -->
+    <string name="schedule_interval_anchor_time">First dose time</string>
     <string name="schedule_daily_window">Daily window</string>
     <string name="schedule_window_start">Window opens</string>
     <string name="schedule_window_end">Window closes</string>
@@ -205,6 +207,14 @@
     <string name="dose_state_taken">Taken</string>
     <string name="dose_state_skipped">Skipped</string>
     <string name="dose_state_missed">Missed</string>
+
+    <!-- Dose history cause labels (A3-9). Factual only — no advice (Law 3). -->
+    <string name="history_cause_alarm_fired">Alarm fired</string>
+    <string name="history_cause_user_taken">Confirmed by you</string>
+    <string name="history_cause_user_snoozed">Snoozed by you</string>
+    <string name="history_cause_user_skipped">Skipped by you</string>
+    <string name="history_cause_snooze_elapsed">Snooze interval elapsed</string>
+    <string name="history_cause_miss_window_closed">Miss window closed</string>
 
     <!-- PRN daily-max warning (spec §2.7). Non-blocking; points outward (Law 3). -->
     <!-- %1$d = this dose number today, %2$d = the maximum the user set -->
@@ -350,8 +360,20 @@
     <!-- System integration -->
     <string name="reliability_boot_receiver_label">Boot receiver</string>
     <string name="reliability_boot_receiver_unknown">Not yet triggered since install</string>
-    <!-- %1$s = trigger name, %2$s = formatted timestamp -->
+    <!-- %1$s = trigger name (human-readable) -->
     <string name="reliability_boot_receiver_ok">Last triggered by %1$s</string>
+    <!-- %1$s = trigger name (human-readable), %2$s = formatted timestamp (A3-11) -->
+    <string name="reliability_boot_receiver_with_time">%1$s at %2$s</string>
+    <!-- Human-readable labels for re-registration triggers (A3-11) -->
+    <string name="reliability_trigger_boot">Boot</string>
+    <string name="reliability_trigger_locked_boot">Locked boot</string>
+    <string name="reliability_trigger_time_set">Time changed</string>
+    <string name="reliability_trigger_timezone_changed">Time zone changed</string>
+    <string name="reliability_trigger_date_changed">Date changed</string>
+    <string name="reliability_trigger_app_updated">App updated</string>
+    <string name="reliability_trigger_exact_alarm_changed">Alarm permission changed</string>
+    <string name="reliability_trigger_daily_rollover">Daily rollover</string>
+    <string name="reliability_trigger_restore">Restore from backup</string>
 
     <!-- Drug database -->
     <string name="reliability_drug_db_version_label">Version</string>
@@ -497,6 +519,8 @@
     <!-- Progress / result messages -->
     <string name="backup_in_progress">Working…</string>
     <string name="backup_success">Backup saved.</string>
+    <!-- Snackbar action to share the backup file immediately after writing (A3-8). -->
+    <string name="backup_share_action">Share</string>
     <string name="backup_restore_success">Restore complete. Your medications have been loaded.</string>
     <string name="backup_export_success">Exported.</string>
 

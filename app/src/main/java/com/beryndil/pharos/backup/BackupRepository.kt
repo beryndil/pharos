@@ -7,6 +7,8 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
+import android.text.StaticLayout
+import android.text.TextPaint
 import androidx.room.withTransaction
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.entity.DoseInstanceEntity
@@ -243,6 +245,23 @@ class BackupRepository(
                 }
             }
 
+            // Word-wrap helper (A3-7): renders multi-line text using StaticLayout so long strings
+            // wrap within the page margins rather than clipping silently at the page edge.
+            // Returns y advanced past the last rendered line.
+            val maxTextWidth = (pageWidth - margin * 2).toInt()
+            fun drawWrapped(text: String, startY: Float, paint: Paint): Float {
+                val tp = TextPaint(paint)
+                val layout = StaticLayout.Builder
+                    .obtain(text, 0, text.length, tp, maxTextWidth)
+                    .build()
+                var y = newPageIfNeeded(startY + layout.height)
+                canvas.save()
+                canvas.translate(margin, y)
+                layout.draw(canvas)
+                canvas.restore()
+                return y + layout.height
+            }
+
             // Header
             canvas.drawText("Pharos — Medication List", margin, y, titlePaint)
             y += lineHeight + 4f
@@ -251,11 +270,12 @@ class BackupRepository(
                 .format(Instant.ofEpochMilli(exportedAtEpochMs))
             canvas.drawText("Exported $dateStr", margin, y, subtitlePaint)
             y += lineHeight + 4f
-            canvas.drawText(
+            // Disclaimer wraps if the locale produces a long string (A3-7).
+            y = drawWrapped(
                 "This list is for reference only. Check with your doctor or pharmacist before making any changes.",
-                margin, y, disclaimerPaint,
+                y, disclaimerPaint,
             )
-            y += lineHeight + 12f
+            y += 12f
 
             for (med in medications) {
                 y = newPageIfNeeded(y + lineHeight * 3)
@@ -267,17 +287,15 @@ class BackupRepository(
                 val activeSchedules = scheduleMap[med.id]?.filter { it.isActive } ?: emptyList()
                 if (activeSchedules.isNotEmpty()) {
                     val schedDesc = activeSchedules.joinToString("; ") { it.toDisplayString() }
-                    canvas.drawText("Schedule: $schedDesc", margin, y, detailPaint)
-                    y += lineHeight
+                    // Schedule descriptions for complex meds can be long — wrap (A3-7).
+                    y = drawWrapped("Schedule: $schedDesc", y, detailPaint)
                 }
 
                 if (!med.prescriber.isNullOrBlank()) {
-                    canvas.drawText("Prescriber: ${med.prescriber}", margin, y, detailPaint)
-                    y += lineHeight
+                    y = drawWrapped("Prescriber: ${med.prescriber}", y, detailPaint)
                 }
                 if (!med.pharmacy.isNullOrBlank()) {
-                    canvas.drawText("Pharmacy: ${med.pharmacy}", margin, y, detailPaint)
-                    y += lineHeight
+                    y = drawWrapped("Pharmacy: ${med.pharmacy}", y, detailPaint)
                 }
 
                 latestRefill[med.id]?.let { refill ->

@@ -57,7 +57,7 @@ class AndroidRefillNotifier(private val context: Context) : RefillNotifier {
         }
 
         val notification = NotificationCompat.Builder(context, AlarmContract.CHANNEL_REFILL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)

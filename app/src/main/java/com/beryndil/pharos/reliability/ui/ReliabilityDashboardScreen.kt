@@ -28,7 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -59,9 +63,21 @@ fun ReliabilityDashboardScreen(
     uiState: ReliabilityDashboardUiState,
     onBack: () -> Unit,
     onTestCriticalAlert: () -> Unit = {},
+    /** Called each time the screen resumes; used to re-read permission states (A3-4). */
+    onRefreshPermissions: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    com.beryndil.pharos.core.ui.SecureWindow()
     val context = LocalContext.current
+
+    // Re-read permission states when the lifecycle transitions to RESUMED so that returning
+    // from a system settings page (exact-alarm, DND, FSI) reflects the grant immediately.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            onRefreshPermissions()
+        }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -217,12 +233,17 @@ fun ReliabilityDashboardScreen(
             }
             item {
                 val bootValue = uiState.bootReceiverLastTrigger?.let { trigger ->
+                    val friendlyTrigger = humanReadableReRegistrationTrigger(trigger, context)
                     val timeText = uiState.bootReceiverLastTriggerEpochMs
-                        ?.let { formatTimestamp(it, context) } ?: ""
-                    if (timeText.isNotEmpty()) {
-                        stringResource(R.string.reliability_boot_receiver_ok, trigger)
+                        ?.let { formatTimestamp(it, context) }
+                    if (timeText != null) {
+                        stringResource(
+                            R.string.reliability_boot_receiver_with_time,
+                            friendlyTrigger,
+                            timeText,
+                        )
                     } else {
-                        stringResource(R.string.reliability_boot_receiver_ok, trigger)
+                        stringResource(R.string.reliability_boot_receiver_ok, friendlyTrigger)
                     }
                 } ?: stringResource(R.string.reliability_boot_receiver_unknown)
 
@@ -408,4 +429,36 @@ private fun formatTimestamp(epochMs: Long, context: android.content.Context): St
     val timeStr = DateFormat.getTimeFormat(context).format(date)
     val dateStr = DateFormat.getDateFormat(context).format(date)
     return "$timeStr · $dateStr"
+}
+
+// ── Boot trigger human-readable label (A3-11) ─────────────────────────────────────────────────
+
+/**
+ * Maps the raw broadcast action string stored by [com.beryndil.pharos.alarm.SettingsReliabilityLog]
+ * to a short, human-readable label for display in the reliability dashboard.
+ *
+ * Unknown actions fall back to the raw string so future trigger types are not silently swallowed.
+ */
+private fun humanReadableReRegistrationTrigger(raw: String, context: android.content.Context): String {
+    return when (raw) {
+        "android.intent.action.BOOT_COMPLETED" ->
+            context.getString(R.string.reliability_trigger_boot)
+        "android.intent.action.LOCKED_BOOT_COMPLETED" ->
+            context.getString(R.string.reliability_trigger_locked_boot)
+        "android.intent.action.TIME_SET" ->
+            context.getString(R.string.reliability_trigger_time_set)
+        "android.intent.action.TIMEZONE_CHANGED" ->
+            context.getString(R.string.reliability_trigger_timezone_changed)
+        "android.intent.action.DATE_CHANGED" ->
+            context.getString(R.string.reliability_trigger_date_changed)
+        "android.intent.action.MY_PACKAGE_REPLACED" ->
+            context.getString(R.string.reliability_trigger_app_updated)
+        "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" ->
+            context.getString(R.string.reliability_trigger_exact_alarm_changed)
+        com.beryndil.pharos.alarm.AlarmContract.ACTION_DAILY_ROLLOVER ->
+            context.getString(R.string.reliability_trigger_daily_rollover)
+        "restore" ->
+            context.getString(R.string.reliability_trigger_restore)
+        else -> raw
+    }
 }

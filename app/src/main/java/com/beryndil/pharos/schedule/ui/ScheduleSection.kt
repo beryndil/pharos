@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -277,6 +278,17 @@ private fun IntervalSection(
             onClick = { onInputChanged(input.copy(intervalAnchor = IntervalAnchorType.LAST_TAKEN)) },
             label = { Text(lastDoseAnchorLabel) },
             modifier = Modifier.semantics { contentDescription = lastDoseAnchorCd },
+        )
+    }
+
+    // Anchor time field — only relevant for SCHEDULE_ANCHORED (defines the origin of the interval grid)
+    if (input.intervalAnchor == IntervalAnchorType.SCHEDULE_ANCHORED) {
+        TimePickerField(
+            label = stringResource(R.string.schedule_interval_anchor_time),
+            time = input.times.firstOrNull() ?: java.time.LocalTime.of(8, 0),
+            onTimeSelected = { picked ->
+                onInputChanged(input.copy(times = listOf(picked)))
+            },
         )
     }
 
@@ -565,7 +577,7 @@ private fun TimePickerField(
         trailingIcon = {
             IconButton(onClick = { showPicker = true }) {
                 Icon(
-                    imageVector = Icons.Default.Add, // clock icon not available without extended; use add
+                    imageVector = Icons.Outlined.AccessTime,
                     contentDescription = label,
                 )
             }
@@ -591,10 +603,11 @@ private fun TimePickerDialog(
     onConfirm: (LocalTime) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
     val state = rememberTimePickerState(
         initialHour = initialTime.hour,
         initialMinute = initialTime.minute,
-        is24Hour = false,
+        is24Hour = DateFormat.is24HourFormat(context),
     )
     AlertDialog(
         onDismissRequest = onDismiss,

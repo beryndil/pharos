@@ -68,6 +68,7 @@ fun OnboardingScreen(
     onOpenLegal: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    com.beryndil.pharos.core.ui.ClearWindowSecurity()
     // Navigate away as soon as completion is persisted.
     LaunchedEffect(uiState.isComplete) {
         if (uiState.isComplete) onDone()

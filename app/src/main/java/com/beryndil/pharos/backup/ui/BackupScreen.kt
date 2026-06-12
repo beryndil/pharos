@@ -1,5 +1,6 @@
 package com.beryndil.pharos.backup.ui
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +31,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -42,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -74,6 +77,8 @@ fun BackupScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    com.beryndil.pharos.core.ui.SecureWindow()
+    val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -110,13 +115,28 @@ fun BackupScreen(
     }
 
     val backupSuccessMsg = stringResource(R.string.backup_success)
+    val backupShareActionLabel = stringResource(R.string.backup_share_action)
     val restoreSuccessMsg = stringResource(R.string.backup_restore_success)
     val exportSuccessMsg = stringResource(R.string.backup_export_success)
 
     LaunchedEffect(uiState.operation) {
         when (val op = uiState.operation) {
             is BackupOperation.BackupSuccess -> {
-                snackbarHostState.showSnackbar(backupSuccessMsg)
+                // Offer a "Share" action so the user can immediately send the backup file (A3-8).
+                val result = snackbarHostState.showSnackbar(
+                    message = backupSuccessMsg,
+                    actionLabel = backupShareActionLabel,
+                    duration = androidx.compose.material3.SnackbarDuration.Long,
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/octet-stream"
+                        putExtra(Intent.EXTRA_STREAM, op.uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, null))
+                }
                 onEvent(BackupEvent.DismissResult)
             }
             is BackupOperation.RestoreSuccess -> {

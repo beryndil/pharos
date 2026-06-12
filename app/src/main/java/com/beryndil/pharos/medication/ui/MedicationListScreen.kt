@@ -70,6 +70,7 @@ fun MedicationListScreen(
     onEvent: (MedicationListEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    com.beryndil.pharos.core.ui.SecureWindow()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     var globalMenuExpanded by remember { mutableStateOf(false) }
 
