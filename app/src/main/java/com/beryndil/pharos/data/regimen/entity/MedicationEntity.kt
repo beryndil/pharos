@@ -62,6 +62,14 @@ data class MedicationEntity(
      */
     val isCritical: Boolean = false,
 
+    /**
+     * Grace period in minutes before a DUE dose transitions to MISSED (spec §2.6, DECISIONS.md D2).
+     * This is the per-medication counterpart to the global 60-minute default — the user can
+     * tighten it for a critical med or loosen it for a low-stakes one. Must be in [5, 360].
+     * Default 60 (matches [com.beryndil.pharos.dose.MissWindow.GRACE_MS]).
+     */
+    val missWindowMinutes: Int = 60,
+
     /** ACTIVE, PAUSED, or ENDED. Stored as [MedicationStatus].name. */
     val status: String,
 

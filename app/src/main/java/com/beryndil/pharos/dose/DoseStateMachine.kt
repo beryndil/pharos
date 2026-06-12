@@ -211,7 +211,13 @@ class DoseStateMachine(
         val nextDue = doseInstanceDao
             .getNextScheduledAfter(dose.medicationId, dose.dueEpochMs)
             ?.dueEpochMs
-        return MissWindow.closeEpochMs(dose.dueEpochMs, isWindowed, dose.windowEndEpochMs, nextDue)
+        // Read the per-medication miss window (spec §2.6 D2). Fall back to GRACE_MS if the
+        // medication row cannot be found (should not happen in normal operation).
+        val graceLengthMs = medicationDao.getById(dose.medicationId)
+            ?.missWindowMinutes
+            ?.let { it.toLong() * 60L * 1000L }
+            ?: MissWindow.GRACE_MS
+        return MissWindow.closeEpochMs(dose.dueEpochMs, isWindowed, dose.windowEndEpochMs, nextDue, graceLengthMs)
     }
 
     private fun scheduleNextReAlert(doseId: String, nowMs: Long, missClose: Long) {

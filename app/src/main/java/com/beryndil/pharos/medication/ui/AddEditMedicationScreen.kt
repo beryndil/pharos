@@ -64,6 +64,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
@@ -495,6 +496,12 @@ private fun DetailsStep(
                 onToggle = { onEvent(AddEditMedEvent.IsCriticalToggled(it)) },
             )
 
+            MissWindowField(
+                value = uiState.missWindowMinutesText,
+                isError = uiState.missWindowMinutesError,
+                onValueChange = { onEvent(AddEditMedEvent.MissWindowMinutesChanged(it)) },
+            )
+
             ScheduleSection(
                 input = uiState.scheduleInput,
                 error = uiState.scheduleValidationError,
@@ -735,6 +742,45 @@ private fun CriticalToggleRow(
             )
         }
     }
+}
+
+// ── Miss window field ─────────────────────────────────────────────────────
+
+/**
+ * Numeric input for per-medication miss-window grace period (spec §2.6, G1).
+ * Valid range: 5–360 minutes. Default 60. TalkBack-labelled; ≥48dp hit target via
+ * OutlinedTextField's default height.
+ */
+@Composable
+private fun MissWindowField(
+    value: String,
+    isError: Boolean,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val cd = stringResource(R.string.cd_miss_window_field)
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(R.string.miss_window_label)) },
+        supportingText = {
+            Text(
+                text = if (isError) stringResource(R.string.miss_window_error)
+                       else stringResource(R.string.miss_window_helper),
+                color = if (isError) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        isError = isError,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Next,
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = cd },
+    )
 }
 
 // ── DND permission rationale dialog ──────────────────────────────────────

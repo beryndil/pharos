@@ -294,6 +294,11 @@
     <string name="critical_toggle_desc">Break through silent mode and Do Not Disturb for this medication. Use only for medications you must never miss.</string>
     <string name="cd_critical_toggle_on">Critical reminder: enabled. Tap to disable.</string>
     <string name="cd_critical_toggle_off">Critical reminder: disabled. Tap to enable.</string>
+    <!-- Miss window field (spec §2.6, G1) -->
+    <string name="miss_window_label">Reminder grace period (minutes)</string>
+    <string name="miss_window_helper">How long after a dose is due before it is marked missed. Enter a value between 5 and 360.</string>
+    <string name="miss_window_error">Enter a value between 5 and 360 minutes.</string>
+    <string name="cd_miss_window_field">Reminder grace period in minutes. Enter a number between 5 and 360.</string>
     <!-- DND permission rationale dialog -->
     <string name="dnd_rationale_title">Enable critical override</string>
     <string name="dnd_rationale_body">To break through Do Not Disturb for critical reminders, grant Pharos Do Not Disturb access. Without it, critical reminders will still appear but may be silenced by DND.</string>

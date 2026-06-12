@@ -251,6 +251,83 @@ class DoseStateMachineTest {
         assertEquals(DoseState.MISSED.name, db.doseInstanceDao().getById(dose.id)!!.state)
     }
 
+    // ── G1: per-medication configurable miss window ────────────────────────────────────────
+
+    @Test
+    fun customMissWindow_tight15min_missesAt15Minutes() = runTest {
+        // A medication with a 15-minute miss window should miss at 15 min, not 60 min.
+        val med = insertMed(missWindowMinutes = 15)
+        val sched = insertSchedule(med.id, ScheduleType.FIXED_DAILY)
+        val due = nowMs
+        val dose = insertScheduledDose(med.id, sched.id, due)
+        db.doseInstanceDao().markDue(dose.id)
+        machine().onEnteredDue(dose.id, due)
+
+        // 14 minutes: not yet missed.
+        nowMs = due + 14 * minute
+        machine().onMissCheck(dose.id)
+        assertEquals(DoseState.DUE.name, db.doseInstanceDao().getById(dose.id)!!.state)
+
+        // 15 minutes: missed.
+        nowMs = due + 15 * minute
+        machine().onMissCheck(dose.id)
+        assertEquals(DoseState.MISSED.name, db.doseInstanceDao().getById(dose.id)!!.state)
+    }
+
+    @Test
+    fun customMissWindow_loose180min_doesNotMissAt60Minutes() = runTest {
+        // A medication with a 180-minute miss window must still be DUE at 60 min.
+        val med = insertMed(missWindowMinutes = 180)
+        val sched = insertSchedule(med.id, ScheduleType.FIXED_DAILY)
+        val due = nowMs
+        val dose = insertScheduledDose(med.id, sched.id, due)
+        db.doseInstanceDao().markDue(dose.id)
+        machine().onEnteredDue(dose.id, due)
+
+        // 60 minutes: the default would miss here, but not with a 180-min window.
+        nowMs = due + 60 * minute
+        machine().onMissCheck(dose.id)
+        assertEquals(
+            "180-min window: dose must still be DUE at 60 min",
+            DoseState.DUE.name,
+            db.doseInstanceDao().getById(dose.id)!!.state,
+        )
+
+        // 180 minutes: missed.
+        nowMs = due + 180 * minute
+        machine().onMissCheck(dose.id)
+        assertEquals(DoseState.MISSED.name, db.doseInstanceDao().getById(dose.id)!!.state)
+    }
+
+    @Test
+    fun customMissWindow_snooze_capsAtCustomMissClose() = runTest {
+        // With a 30-min window: snooze at 20 min (target = 35 min) must cap at 30 min.
+        val med = insertMed(missWindowMinutes = 30)
+        val sched = insertSchedule(med.id, ScheduleType.FIXED_DAILY)
+        val due = nowMs
+        val dose = insertScheduledDose(med.id, sched.id, due)
+        db.doseInstanceDao().markDue(dose.id)
+        val m = machine()
+        m.onEnteredDue(dose.id, due)
+
+        nowMs = due + 20 * minute
+        m.onSnooze(dose.id, nowMs)
+
+        val snoozed = db.doseInstanceDao().getById(dose.id)!!
+        assertEquals(DoseState.SNOOZED.name, snoozed.state)
+        // 20 + 15 = 35 min > 30 min window → capped at the 30-min miss close.
+        assertEquals(
+            "Snooze must cap at the custom 30-min miss window",
+            due + 30 * minute,
+            snoozed.snoozeUntilEpochMs,
+        )
+
+        // Re-alert at the capped target → MISSED (same as default-window behavior, D3).
+        nowMs = due + 30 * minute
+        m.onReAlert(dose.id)
+        assertEquals(DoseState.MISSED.name, db.doseInstanceDao().getById(dose.id)!!.state)
+    }
+
     // ── independence (Law 3) ────────────────────────────────────────────────────────────────
 
     @Test
@@ -358,7 +435,7 @@ class DoseStateMachineTest {
         return med to sched
     }
 
-    private suspend fun insertMed(): MedicationEntity {
+    private suspend fun insertMed(missWindowMinutes: Int = 60): MedicationEntity {
         val med = MedicationEntity(
             id = UUID.randomUUID().toString(),
             name = "Metoprolol",
@@ -371,6 +448,7 @@ class DoseStateMachineTest {
             pharmacy = null,
             purpose = null,
             isFreeText = false,
+            missWindowMinutes = missWindowMinutes,
             status = MedicationStatus.ACTIVE.name,
             startEpochMs = nowMs,
             endEpochMs = null,

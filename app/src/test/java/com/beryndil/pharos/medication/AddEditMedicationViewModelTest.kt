@@ -241,6 +241,63 @@ class AddEditMedicationViewModelTest {
         assertEquals(FormStep.SEARCH, vm.uiState.value.step)
     }
 
+    // ── Miss window field plumbing (G1) ───────────────────────────────────
+
+    @Test
+    fun missWindowMinutesChanged_validValue_clearsError() {
+        val vm = buildFilledViewModel()
+        // Set an invalid value first.
+        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("0"))
+        assertTrue(vm.uiState.value.missWindowMinutesError)
+
+        // Valid value must clear the error.
+        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("30"))
+        assertEquals("30", vm.uiState.value.missWindowMinutesText)
+        assertFalse(vm.uiState.value.missWindowMinutesError)
+    }
+
+    @Test
+    fun missWindowMinutesChanged_outOfRange_setsError() {
+        val vm = buildFilledViewModel()
+        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("4")) // below min
+        assertTrue("4 is below minimum 5", vm.uiState.value.missWindowMinutesError)
+
+        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("361")) // above max
+        assertTrue("361 is above maximum 360", vm.uiState.value.missWindowMinutesError)
+    }
+
+    @Test
+    fun missWindowMinutesChanged_emptyString_doesNotSetError() {
+        // Intermediate empty state during typing must not show an error.
+        val vm = buildFilledViewModel()
+        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged(""))
+        assertFalse("Empty field during typing must not show error", vm.uiState.value.missWindowMinutesError)
+    }
+
+    @Test
+    fun editMode_loadsMissWindowMinutes_fromExistingMed() = runTest(testDispatcher) {
+        val med = sampleMedication(missWindowMinutes = 45)
+        regimenDb.medicationDao().insert(med)
+
+        val vm = buildViewModel(editMedId = med.id)
+        advanceUntilIdle()
+
+        assertEquals("45", vm.uiState.value.missWindowMinutesText)
+        assertFalse(vm.uiState.value.missWindowMinutesError)
+    }
+
+    @Test
+    fun save_persistsMissWindowMinutes_toEntity() = runTest(testDispatcher) {
+        val vm = buildFilledViewModel()
+        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("90"))
+        vm.onEvent(AddEditMedEvent.SaveRequested)
+        advanceUntilIdle()
+
+        assertTrue("Must save successfully", vm.uiState.value.savedSuccessfully)
+        val saved = regimenDb.medicationDao().getAll().firstOrNull()
+        assertEquals("missWindowMinutes must be persisted as 90", 90, saved?.missWindowMinutes)
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────
 
     private fun buildViewModel(editMedId: String? = null): AddEditMedicationViewModel {
@@ -322,6 +379,7 @@ class AddEditMedicationViewModelTest {
         id: String = UUID.randomUUID().toString(),
         name: String = "Existing Medication",
         ingredientsJson: String = """["161"]""",
+        missWindowMinutes: Int = 60,
     ) = MedicationEntity(
         id = id,
         name = name,
@@ -334,6 +392,7 @@ class AddEditMedicationViewModelTest {
         pharmacy = null,
         purpose = null,
         isFreeText = false,
+        missWindowMinutes = missWindowMinutes,
         status = MedicationStatus.ACTIVE.name,
         startEpochMs = 1_700_000_000_000L,
         endEpochMs = null,

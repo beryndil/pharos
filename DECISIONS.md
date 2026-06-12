@@ -242,6 +242,16 @@ relevant slice is built.
 | A2-5 | Refill-by date picker uses the existing Material3 `DatePickerDialog` + `rememberDatePickerState` pattern from `AddEditMedicationScreen`. The `SetRefillByDate` dialog state is handled via an `if` outside the `when` block (consistent with how `AddEditMedicationScreen` handles its date pickers). `selectedDateMillis` (UTC midnight epoch-ms) is passed directly to `RefillEvent.ConfirmSetRefillByDate`. | Reusing the existing pattern ensures consistent UX. UTC midnight is the correct representation for a "date" field (no time-of-day intent). `RefillRepository.setRefillByDate` and `RefillViewModel` already handled this event end-to-end; the UI wire was the only missing piece. |
 | A2-PRN-1 | `DoseRepository.observePrnMeds()` injects `scheduleDao: ScheduleDao` directly (not via `ScheduleRepository`). Precedent: `DoseStateMachine` already uses `scheduleDao` directly for per-dose schedule lookups. | Consistent with existing pattern; avoids wrapping a simple DAO query in another repository layer. |
 
+## Slice G1 — Per-medication configurable miss window (2026-06-12, executor ses_b0791e32)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| G1-A | `MissWindow.closeEpochMs()` gains an optional `graceLengthMs: Long = GRACE_MS` parameter. All existing callers pass no argument and retain the 60-min default. | Minimal API surface: one parameter instead of a separate overload. Default preserves backward compat. |
+| G1-B | `DoseStateMachine.computeMissClose()` calls `medicationDao.getById()` to read `missWindowMinutes`; falls back to `MissWindow.GRACE_MS` if the row is absent. | `medicationDao` is already injected for `medName`/`isCritical` lookups — no new dependencies. Fallback is defensive; normal operation should never hit it (medications are never deleted per spec §3.3). |
+| G1-C | UI field placed in the DETAILS step after `CriticalToggleRow`, under the same `section_critical_alerts` header. Both fields control the same reminder-behavior aspect of a medication. | Keeps reminder-related settings in one visual zone without adding a new section header. |
+| G1-D | `missWindowMinutesText: String` in UiState (not `Int`) so the field can hold a partially-typed value without forcing integer conversion during input. Converted to `Int` with range validation `[5, 360]` at save time; defaults to `"60"`. | Standard Compose text-field pattern — avoids "NaN" flickers on partial input. |
+| G1-E | `customMissWindow_fallsBackToDefaultWhenMedMissing` test deferred to TODO.md §C. `MedicationDao` has no `@Delete` method (medications are never physically removed, spec §3.3), so the fallback path cannot be triggered cleanly in a Room-backed JVM test without adding a test-only DAO method. The three functional window tests cover all production paths. | Correctness > completeness for a non-production code path. |
+
 ## Release pipeline — installable signed APK (2026-06-12, Dave directive)
 
 | ID | Decision | Why |

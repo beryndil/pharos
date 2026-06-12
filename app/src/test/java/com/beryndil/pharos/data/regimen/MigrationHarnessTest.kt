@@ -156,4 +156,50 @@ class MigrationHarnessTest {
             }
         }
     }
+
+    /**
+     * v3 → v4 (G1 Per-medication miss window): [missWindowMinutes] column is added to medications
+     * with DEFAULT 60. Existing rows must survive the migration with missWindowMinutes=60, matching
+     * the prior hardcoded behavior (Standards §5: no behavioral change for existing users).
+     */
+    @Test
+    fun migrateV3ToV4_addMissWindowMinutesColumn_existingRowsDefaultTo60() {
+        // Seed a v3 database with one medication row (no isCritical col needed — it was added v2→v3).
+        migrationHelper.createDatabase(RegimenDatabaseFactory.DATABASE_NAME, 3).use { v3 ->
+            v3.execSQL(
+                "INSERT INTO medications (id, name, rxcui, ingredientsJson, strength, form, " +
+                    "doseAmount, prescriber, pharmacy, purpose, isFreeText, isCritical, status, " +
+                    "startEpochMs, endEpochMs, createdAtEpochMs, updatedAtEpochMs) VALUES " +
+                    "('m3','Atorvastatin',NULL,'[]','40 mg','TABLET','1 tablet',NULL,NULL,NULL,0,0," +
+                    "'ACTIVE',0,NULL,0,0)",
+            )
+        }
+
+        // Apply MIGRATION_3_4 and validate the resulting schema matches Room's expectation.
+        val v4 = migrationHelper.runMigrationsAndValidate(
+            RegimenDatabaseFactory.DATABASE_NAME,
+            4,
+            true,
+            RegimenDatabaseFactory.MIGRATION_3_4,
+        )
+        v4.use {
+            // Pre-existing medication row survived.
+            v4.query("SELECT COUNT(*) FROM medications", emptyArray<Any?>()).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            // missWindowMinutes column exists and defaults to 60 for all pre-existing rows.
+            v4.query(
+                "SELECT missWindowMinutes FROM medications WHERE id = 'm3'",
+                emptyArray<Any?>(),
+            ).use { c ->
+                assertTrue("Row must still exist after migration", c.moveToFirst())
+                assertEquals(
+                    "missWindowMinutes must default to 60 for pre-existing rows (no behavioral change)",
+                    60,
+                    c.getInt(0),
+                )
+            }
+        }
+    }
 }

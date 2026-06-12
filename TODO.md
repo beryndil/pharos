@@ -338,3 +338,11 @@ All A3 items are implemented. Device-only verification deferred below.
 - The "Teal launcher + splash icon" A3 polish item is SUPERSEDED — Dave supplied the lighthouse
   artwork and it's now the launcher icon in all locations (see DECISIONS.md ICON-1..4, commit below).
 - Monochrome notification icon: now shipped as `ic_notification.xml` (A3 complete).
+
+## G1 — Per-medication configurable miss window (2026-06-12, executor ses_b0791e32)
+
+### Section C: G1 device-only verification
+
+- [ ] **Section C: Miss window field UX on device** — Open Add Medication. In the Details step, locate "Reminder grace period (minutes)" near the Critical reminder toggle. Confirm the numeric keyboard appears on focus, the default value is 60, and the helper text reads "How long after a dose is due before it is marked missed." Attempt to enter 4 → confirm error message. Enter 90 → confirm save succeeds.
+- [ ] **Section C: Custom miss window fires correctly** — Create a medication with missWindowMinutes=5. Fire a test dose alarm from the reliability dashboard (or wait for a real dose). After 5 minutes without action, confirm the dose transitions to MISSED in the dose history. Confirm a 60-min-window med on the same device does NOT miss at 5 min.
+- [ ] **Section C: Fallback path for absent medication row** — The `computeMissClose` fallback to `GRACE_MS` when `medicationDao.getById()` returns null is a defensive code path that cannot be triggered through normal app operation (medications are never physically deleted). No device test needed; the unit-test gap is documented here (DECISIONS.md G1-E).

@@ -98,6 +98,16 @@ data class AddEditMedicationUiState(
      * Default false — non-critical is the safe default.
      */
     val isCritical: Boolean = false,
+
+    // ── Miss window (spec §2.6, G1) ───────────────────────────────────────
+    /**
+     * User-entered text for the miss-window field in minutes. Stored as a String so the
+     * text field can hold an intermediate (partially typed) value without forcing a number.
+     * Must convert to Int in [5, 360] at save time; defaults to "60".
+     */
+    val missWindowMinutesText: String = "60",
+    /** True when [missWindowMinutesText] is outside the valid range [5, 360]. */
+    val missWindowMinutesError: Boolean = false,
     /**
      * True when the user has just toggled isCritical=true for the FIRST time (no other critical
      * active medication exists) AND DND policy access is not yet granted. The UI reacts by showing
@@ -137,6 +147,7 @@ sealed interface AddEditMedEvent {
     data class PurposeChanged(val value: String) : AddEditMedEvent
     data class ScheduleInputChanged(val input: ScheduleInput) : AddEditMedEvent
     data class IsCriticalToggled(val value: Boolean) : AddEditMedEvent
+    data class MissWindowMinutesChanged(val value: String) : AddEditMedEvent
     data object DndPermissionRationaleDismissed : AddEditMedEvent
     data object SaveRequested : AddEditMedEvent
     data object DuplicateWarningConfirmed : AddEditMedEvent
@@ -214,6 +225,14 @@ class AddEditMedicationViewModel(
             is AddEditMedEvent.ScheduleInputChanged ->
                 _uiState.update { it.copy(scheduleInput = event.input, scheduleValidationError = false) }
             is AddEditMedEvent.IsCriticalToggled -> onIsCriticalToggled(event.value)
+            is AddEditMedEvent.MissWindowMinutesChanged ->
+                _uiState.update {
+                    val valid = event.value.toIntOrNull()?.let { it in 5..360 } ?: false
+                    it.copy(
+                        missWindowMinutesText = event.value,
+                        missWindowMinutesError = event.value.isNotEmpty() && !valid,
+                    )
+                }
             is AddEditMedEvent.DndPermissionRationaleDismissed ->
                 _uiState.update { it.copy(showDndPermissionRationale = false) }
             is AddEditMedEvent.SaveRequested -> onSaveRequested()
@@ -287,6 +306,7 @@ class AddEditMedicationViewModel(
                     pharmacy = med.pharmacy ?: "",
                     purpose = med.purpose ?: "",
                     isCritical = med.isCritical,
+                    missWindowMinutesText = med.missWindowMinutes.toString(),
                     originalCreatedAtMs = med.createdAtEpochMs,
                     scheduleInput = scheduleInput,
                 )
@@ -382,6 +402,11 @@ class AddEditMedicationViewModel(
             _uiState.update { it.copy(scheduleValidationError = true) }
             hasError = true
         }
+        val missWindowMinutes = state.missWindowMinutesText.toIntOrNull()?.takeIf { it in 5..360 }
+        if (missWindowMinutes == null) {
+            _uiState.update { it.copy(missWindowMinutesError = true) }
+            hasError = true
+        }
         if (hasError) return
 
         _uiState.update { it.copy(isSaving = true) }
@@ -410,6 +435,7 @@ class AddEditMedicationViewModel(
     private fun performSave() {
         _uiState.update { it.copy(showDuplicateWarning = false, isSaving = true) }
         val state = _uiState.value
+        val missWindowMinutes = state.missWindowMinutesText.toIntOrNull()?.takeIf { it in 5..360 } ?: 60
         val nowMs = System.currentTimeMillis()
 
         val medId = state.editMedId ?: UUID.randomUUID().toString()
@@ -428,6 +454,7 @@ class AddEditMedicationViewModel(
             purpose = state.purpose.trim().ifEmpty { null },
             isFreeText = state.isFreeText,
             isCritical = state.isCritical,
+            missWindowMinutes = missWindowMinutes,
             status = MedicationStatus.ACTIVE.name,
             startEpochMs = startDate
                 .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
