@@ -5,6 +5,7 @@ import com.beryndil.pharos.core.crypto.PassphraseProvider
 import com.beryndil.pharos.core.crypto.TinkPassphraseProvider
 import com.beryndil.pharos.data.drugref.DrugRefDatabase
 import com.beryndil.pharos.data.drugref.DrugRefDatabaseFactory
+import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.RegimenDatabaseFactory
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
@@ -37,5 +38,14 @@ class AppContainer(private val applicationContext: Context) {
 
     val drugRefDatabase: DrugRefDatabase by lazy {
         DrugRefDatabaseFactory.build(applicationContext)
+    }
+
+    /** Repository for medication identity & entry (Slice 2). Bridges both databases. */
+    val medicationRepository: MedicationRepository by lazy {
+        MedicationRepository(
+            medicationDao = regimenDatabase.medicationDao(),
+            productDao = drugRefDatabase.productDao(),
+            ingredientDao = drugRefDatabase.ingredientDao(),
+        )
     }
 }

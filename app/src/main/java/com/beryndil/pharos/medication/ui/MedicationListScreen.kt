@@ -1,0 +1,187 @@
+package com.beryndil.pharos.medication.ui
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Medication
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import com.beryndil.pharos.R
+import com.beryndil.pharos.data.regimen.entity.MedicationEntity
+import com.beryndil.pharos.data.regimen.entity.MedicationForm
+import com.beryndil.pharos.medication.MedicationListUiState
+
+/**
+ * Shows all active medications with a FAB to add a new one.
+ *
+ * Stateless — receives state and callbacks; the ViewModel lives in the nav graph.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MedicationListScreen(
+    uiState: MedicationListUiState,
+    onAddMedication: () -> Unit,
+    onMedicationClicked: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
+    Scaffold(
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            LargeTopAppBar(
+                title = { Text(stringResource(R.string.screen_medications)) },
+                scrollBehavior = scrollBehavior,
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddMedication,
+                modifier = Modifier.semantics {
+                    contentDescription =
+                        // Loaded via ContentDescription from string resource at composition.
+                        // The direct string is set via the outer semantics call.
+                        ""
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.cd_add_medication),
+                )
+            }
+        },
+    ) { innerPadding ->
+        if (uiState.medications.isEmpty()) {
+            EmptyMedicationsState(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                items(
+                    items = uiState.medications,
+                    key = { it.id },
+                ) { med ->
+                    MedicationListItem(
+                        medication = med,
+                        onClick = { onMedicationClicked(med.id) },
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
+                }
+                // Bottom spacing so the FAB doesn't obscure the last item.
+                item { Spacer(modifier = Modifier.height(80.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MedicationListItem(
+    medication: MedicationEntity,
+    onClick: () -> Unit,
+) {
+    val formLabel = medication.form.toFormLabel()
+    val itemDesc = stringResource(R.string.cd_med_item, medication.name, medication.strength, formLabel)
+
+    ListItem(
+        headlineContent = {
+            Text(
+                text = medication.name,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        },
+        supportingContent = {
+            Text(
+                text = stringResource(R.string.med_strength_form, medication.strength, formLabel),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                onClickLabel = medication.name,
+                onClick = onClick,
+            )
+            .semantics { contentDescription = itemDesc },
+    )
+}
+
+@Composable
+private fun EmptyMedicationsState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Medication,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.empty_medications_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.empty_medications_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** Map the stored form name to a display string. */
+@Composable
+private fun String.toFormLabel(): String {
+    val form = runCatching { MedicationForm.valueOf(this) }.getOrNull()
+    return when (form) {
+        MedicationForm.TABLET -> stringResource(R.string.form_tablet)
+        MedicationForm.CAPSULE -> stringResource(R.string.form_capsule)
+        MedicationForm.LIQUID -> stringResource(R.string.form_liquid)
+        MedicationForm.INJECTION -> stringResource(R.string.form_injection)
+        MedicationForm.INHALER -> stringResource(R.string.form_inhaler)
+        MedicationForm.PATCH -> stringResource(R.string.form_patch)
+        MedicationForm.DROPS -> stringResource(R.string.form_drops)
+        MedicationForm.CREAM -> stringResource(R.string.form_cream)
+        MedicationForm.OTHER, null -> stringResource(R.string.form_other)
+    }
+}

@@ -15,6 +15,13 @@ interface IngredientDao {
     @Query("SELECT * FROM ingredients WHERE rxcui = :rxcui")
     suspend fun getByRxcui(rxcui: String): IngredientEntity?
 
+    /**
+     * Batch fetch by a list of RxCUI strings.
+     * Used when resolving product ingredient lists without N+1 individual queries.
+     */
+    @Query("SELECT * FROM ingredients WHERE rxcui IN (:rxcuis)")
+    suspend fun getByRxcuiList(rxcuis: List<String>): List<IngredientEntity>
+
     @Query("SELECT * FROM ingredients WHERE name LIKE :query || '%' ORDER BY name ASC LIMIT 20")
     suspend fun searchByName(query: String): List<IngredientEntity>
 

@@ -47,3 +47,20 @@ relevant slice is built.
   (account creation + payment) — logged in TODO.md, not a code blocker.
 - Release signing keystore: generated and stored out-of-tree at first release-build
   need; Play App Signing enrollment is a Dave/console task.
+
+## Slice 2 decisions (Medication identity & entry)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| S2-A1 | `androidx.navigation:navigation-compose` 2.8.4 | Compatible with Compose BOM 2024.09.03 (Compose 1.7.x); navigation 2.8.x is the first stable line supporting Compose 1.7+. |
+| S2-A2 | Add/Edit flow is a **single screen** with internal step state (SEARCH → CONFIRM → DETAILS) rather than three separate nav destinations. | Shared ViewModel state is simpler; back navigation through steps works naturally with `StepBack` events before popping the nav stack. |
+| S2-A3 | `MedicationRepository` lives in `data/medication/` (separate from `data/regimen/` and `data/drugref/`). | It bridges both databases and belongs at a cross-cutting data layer; avoids putting business logic in the feature package. |
+| S2-A4 | Drug search returns `DrugSearchResult` (product-level: name + strength + form + ingredients) rather than raw ingredient-level results. | Users identify meds by product (e.g., "Tylenol 500 mg Tablet"), not by ingredient. Ingredient data is used internally for duplicate detection. |
+| S2-A5 | Dates (start/end) stored as epoch-ms of midnight UTC via `LocalDate.atStartOfDay(ZoneOffset.UTC)`. | Medication start/end dates are calendar dates with no time component; midnight UTC avoids timezone shifts and is consistent with Standards §2. |
+| S2-A6 | Form selector uses M3 `FlowRow` + `FilterChip` (not a dropdown). | Flat chip layout shows all 9 options at once; faster tapping; aligns with DESIGN.md "one clear primary action" — form selection is not a secondary affordance. |
+| S2-A7 | `AddEditMedicationViewModel` takes `SavedStateHandle` and reads `medId` nav arg for edit mode. Null = add mode. | Standards §9 — nav args carry IDs only; SavedStateHandle survives process death. |
+| S2-A8 | Duplicate warning rendered as M3 `AlertDialog` with "Cancel" + "Save anyway" (Law 3 non-blocking). | Clear modal without navigation; user stays on the details screen after dismissal. |
+| S2-A9 | Edit mode loads existing medication at VM init (via `loadExistingMedication`) and jumps to DETAILS step. | No need to re-resolve the drug from search; ingredient RxCUIs are already stored in `ingredientsJson`. |
+| S2-A10 | `MedicationRepository.mapRxNormForm()` maps RxNorm form strings to `MedicationForm` enum via `contains` checks, falls through to OTHER. | RxNorm form strings are verbose ("Oral Tablet", "Extended-Release Capsule"); substring matching covers the common cases without a hard lookup table. |
+| S2-A11 | `FLAG_SECURE` applied globally in `MainActivity.onCreate()` for this slice. | All screens currently rendered contain or lead to PHI (medication names, strengths). Deferred: per-screen refinement once onboarding/legal screens (Slice 6) are added. |
+| S2-A12 | `lifecycle-runtime-compose` added explicitly for `collectAsStateWithLifecycle()`. | Not in the Compose BOM; needed for lifecycle-aware StateFlow collection in composables. |

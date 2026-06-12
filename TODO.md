@@ -48,3 +48,21 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 - [ ] **Real RxNorm CDN bundle**: `drug_ref_fixture.db` contains 5 sample medications.
       Production bundle requires the full trimmed RxNorm dataset via the CDN pipeline
       (Slice 8 / parallel track). Dave task: provision Backblaze B2 + Cloudflare CDN.
+
+### Slice 2 — Medication identity & entry (2026-06-12)
+
+- [ ] **FLAG_SECURE per-screen** (DECISIONS.md S2-A11): Currently applied globally in
+      `MainActivity.onCreate()`. Refine to only screens rendering PHI during the Slice 10
+      accessibility/security hardening pass, once onboarding screens (Slice 6) are added.
+- [ ] **`searchDrugs` N+1 optimisation** (DECISIONS.md S2-A9 note): Ingredient name
+      resolution in `searchDrugs` uses a single batch fetch (`getByRxcuiList`) — good for
+      current fixture, will need profiling against full RxNorm dataset (Slice 8).
+- [ ] **`Icons.Outlined.Medication`**: Requires `material-icons-extended`; already added
+      as a dependency. If the exact icon name changes in a future BOM upgrade, update the
+      import in `MedicationListScreen.kt`.
+- [ ] **Edit-mode ingredient RxCUI re-resolution**: When editing a medication that was
+      originally resolved from RxNorm, the ingredient RxCUIs are read from
+      `MedicationEntity.ingredientsJson`. If the user changes the drug via the form,
+      they re-enter the SEARCH→CONFIRM flow. Current implementation does not offer a
+      "re-resolve this drug" path from the DETAILS step in edit mode — deferred to UX
+      refinement (no user request yet).
