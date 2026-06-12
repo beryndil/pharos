@@ -58,6 +58,14 @@ object AlarmContract {
     const val CHANNEL_DOSE_DUE = "dose_due"
 
     /**
+     * Critical dose channel (A1): for medications marked isCritical=true. Sacred (Law 1 —
+     * dose reminders only). Bypasses DND and uses alarm-usage AudioAttributes so it sounds
+     * at alarm volume in silent/vibrate. Created correctly once at app start; never silently
+     * recreated (bypass-DND only takes effect on first creation per the Android channel model).
+     */
+    const val CHANNEL_DOSE_DUE_CRITICAL = "dose_due_critical"
+
+    /**
      * Separate, separately-disableable refill / low-supply channel (spec §2.8, §2.9, Law 1).
      * The user can silence this channel without touching dose reminders.
      * Nothing from the dose reminder path may post here; nothing from the refill path
@@ -68,6 +76,8 @@ object AlarmContract {
     /** Notification id for the active dose-due alert. One slot — the active DUE alert. */
     const val NOTIFICATION_DOSE_DUE = 5001
     const val NOTIFICATION_TEST = 5002
+    /** Notification id for the critical-channel test reminder (Law 6 — testable). */
+    const val NOTIFICATION_TEST_CRITICAL = 5003
 
     /**
      * Base id for per-medication refill/low-supply notifications (spec §2.9).

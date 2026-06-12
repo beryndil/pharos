@@ -20,8 +20,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,9 +52,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import android.app.NotificationManager
+import android.content.Context
+import android.provider.Settings
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -169,6 +175,19 @@ fun AddEditMedicationScreen(
             warnings = uiState.pendingDuplicateWarnings,
             onDismiss = { onEvent(AddEditMedEvent.DuplicateWarningDismissed) },
             onConfirm = { onEvent(AddEditMedEvent.DuplicateWarningConfirmed) },
+        )
+    }
+
+    if (uiState.showDndPermissionRationale) {
+        val context = LocalContext.current
+        DndPermissionRationaleDialog(
+            onDismiss = { onEvent(AddEditMedEvent.DndPermissionRationaleDismissed) },
+            onGrant = {
+                onEvent(AddEditMedEvent.DndPermissionRationaleDismissed)
+                context.startActivity(
+                    android.content.Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS),
+                )
+            },
         )
     }
 }
@@ -469,6 +488,12 @@ private fun DetailsStep(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            SectionHeader(stringResource(R.string.section_critical_alerts))
+            CriticalToggleRow(
+                isCritical = uiState.isCritical,
+                onToggle = { onEvent(AddEditMedEvent.IsCriticalToggled(it)) },
+            )
+
             ScheduleSection(
                 input = uiState.scheduleInput,
                 error = uiState.scheduleValidationError,
@@ -650,6 +675,98 @@ private fun DateField(
             }
         } else null,
         modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+// ── Critical reminder toggle ──────────────────────────────────────────────
+
+/**
+ * Row with a Switch and plain-language label for the isCritical flag (spec §3.1).
+ * Icon + text pair — never color alone (Law 10).
+ */
+@Composable
+private fun CriticalToggleRow(
+    isCritical: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val cd = if (isCritical) {
+        stringResource(R.string.cd_critical_toggle_on)
+    } else {
+        stringResource(R.string.cd_critical_toggle_off)
+    }
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = cd },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.NotificationsOff,
+                contentDescription = null,
+                tint = if (isCritical) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(20.dp)
+                    .padding(top = 2.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.critical_toggle_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.critical_toggle_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            Switch(
+                checked = isCritical,
+                onCheckedChange = onToggle,
+            )
+        }
+    }
+}
+
+// ── DND permission rationale dialog ──────────────────────────────────────
+
+@Composable
+private fun DndPermissionRationaleDialog(
+    onDismiss: () -> Unit,
+    onGrant: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.dnd_rationale_title),
+                style = MaterialTheme.typography.titleLarge,
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.dnd_rationale_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.btn_cancel))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onGrant) {
+                Text(stringResource(R.string.dnd_rationale_grant))
+            }
+        },
     )
 }
 

@@ -360,6 +360,8 @@ private class RecordingNotifier : DoseNotifier {
         testReminderPosted = true
     }
 
+    override fun postTestCriticalReminder() = Unit
+
     override fun canUseFullScreen(): Boolean = true
 }
 

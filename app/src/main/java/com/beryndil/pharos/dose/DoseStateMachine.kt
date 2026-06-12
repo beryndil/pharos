@@ -92,7 +92,7 @@ class DoseStateMachine(
                 } else {
                     doseInstanceDao.markDueFromSnooze(doseId)
                     recordTransition(dose, DoseState.SNOOZED, DoseState.DUE, DoseTransitionCause.SNOOZE_ELAPSED, nowMs)
-                    notifier.postDoseDueAlert(doseId, medName(dose), dose.dueEpochMs, 0)
+                    notifier.postDoseDueAlert(doseId, medName(dose), dose.dueEpochMs, 0, isCritical(dose))
                     scheduleNextReAlert(doseId, nowMs, missClose)
                 }
             }
@@ -102,7 +102,7 @@ class DoseStateMachine(
                     transitionToMissed(dose, nowMs)
                 } else {
                     val level = escalationLevel(dose.dueEpochMs, nowMs)
-                    notifier.postDoseDueAlert(doseId, medName(dose), dose.dueEpochMs, level)
+                    notifier.postDoseDueAlert(doseId, medName(dose), dose.dueEpochMs, level, isCritical(dose))
                     scheduleNextReAlert(doseId, nowMs, missClose)
                 }
             }
@@ -233,6 +233,9 @@ class DoseStateMachine(
 
     private suspend fun medName(dose: DoseInstanceEntity): String =
         medicationDao.getById(dose.medicationId)?.name.orEmpty()
+
+    private suspend fun isCritical(dose: DoseInstanceEntity): Boolean =
+        medicationDao.getById(dose.medicationId)?.isCritical ?: false
 
     private suspend fun recordTransition(
         dose: DoseInstanceEntity,

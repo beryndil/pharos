@@ -13,13 +13,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.beryndil.pharos.alarm.AlarmMode
+import com.beryndil.pharos.alarm.DoseNotifier
 import com.beryndil.pharos.alarm.SettingsReliabilityLog
+import com.beryndil.pharos.data.regimen.dao.MedicationDao
 import com.beryndil.pharos.data.regimen.dao.SettingDao
+import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.SettingEntity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
@@ -42,10 +48,13 @@ import java.util.Locale
  */
 class ReliabilityDashboardViewModel(
     settingDao: SettingDao,
+    medicationDao: MedicationDao,
     private val canScheduleExact: () -> Boolean,
     private val isIgnoringBatteryOpt: () -> Boolean,
     private val isNotificationGranted: () -> Boolean,
     private val canUseFullScreenIntent: () -> Boolean,
+    private val isDndAccessGranted: () -> Boolean,
+    private val postTestCriticalAlert: () -> Unit = {},
     private val oemName: String = Build.MANUFACTURER,
 ) : ViewModel() {
 
@@ -54,17 +63,31 @@ class ReliabilityDashboardViewModel(
     private val batteryOk: Boolean = isIgnoringBatteryOpt()
     private val notifOk: Boolean = isNotificationGranted()
     private val fullscreenOk: Boolean = canUseFullScreenIntent()
+    private val dndOk: Boolean = isDndAccessGranted()
 
-    val uiState: StateFlow<ReliabilityDashboardUiState> = settingDao.observeAll()
-        .map { settings -> buildState(settings.associateBy { it.key }) }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000L),
-            initialValue = buildState(emptyMap()),
-        )
+    val uiState: StateFlow<ReliabilityDashboardUiState> = combine(
+        settingDao.observeAll(),
+        medicationDao.observeActive(),
+    ) { settings, medications ->
+        buildState(settings.associateBy { it.key }, medications)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000L),
+        initialValue = buildState(emptyMap(), emptyList()),
+    )
 
-    private fun buildState(map: Map<String, SettingEntity>): ReliabilityDashboardUiState {
+    /** Fire a real critical alert through the critical channel so the user can confirm coverage. */
+    fun onTestCriticalAlert() {
+        viewModelScope.launch(Dispatchers.IO) { postTestCriticalAlert() }
+    }
+
+    private fun buildState(
+        map: Map<String, SettingEntity>,
+        medications: List<MedicationEntity>,
+    ): ReliabilityDashboardUiState {
         val isKillerOem = isKillerOem(oemName)
+        val criticalMeds = medications.filter { it.isCritical && it.status != "ENDED" }
+        val hasCritical = criticalMeds.isNotEmpty()
         return ReliabilityDashboardUiState(
             exactAlarm = if (exactOk) {
                 DashboardPermissionItem(ItemStatus.OK)
@@ -106,6 +129,15 @@ class ReliabilityDashboardViewModel(
                     fixAction = FixAction.FullScreenIntentSettings,
                 )
             },
+            dndAccess = when {
+                !hasCritical -> DashboardPermissionItem(ItemStatus.OK) // no critical meds → N/A, show OK
+                dndOk -> DashboardPermissionItem(ItemStatus.OK)
+                else -> DashboardPermissionItem(
+                    status = ItemStatus.RISKY,
+                    fixAction = FixAction.DndPolicySettings,
+                )
+            },
+            criticalMedNames = criticalMeds.map { it.name },
             lastAlarmFiredEpochMs = map[SettingsReliabilityLog.KEY_LAST_FIRED_AT]
                 ?.value?.toLongOrNull()?.takeIf { it > 0L },
             nextAlarmEpochMs = map[SettingsReliabilityLog.KEY_NEXT_ALARM_AT]
@@ -147,7 +179,9 @@ class ReliabilityDashboardViewModel(
          */
         fun factory(
             settingDao: SettingDao,
+            medicationDao: MedicationDao,
             applicationContext: Context,
+            doseNotifier: DoseNotifier,
         ) = viewModelFactory {
             initializer {
                 val am = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -157,6 +191,7 @@ class ReliabilityDashboardViewModel(
 
                 ReliabilityDashboardViewModel(
                     settingDao = settingDao,
+                    medicationDao = medicationDao,
                     canScheduleExact = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             am.canScheduleExactAlarms()
@@ -183,6 +218,12 @@ class ReliabilityDashboardViewModel(
                         } else {
                             true
                         }
+                    },
+                    isDndAccessGranted = {
+                        nm.isNotificationPolicyAccessGranted
+                    },
+                    postTestCriticalAlert = {
+                        doseNotifier.postTestCriticalReminder()
                     },
                 )
             }

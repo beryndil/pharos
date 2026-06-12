@@ -27,11 +27,33 @@ interface DoseNotifier {
         postDoseDueAlert(doseId, medName, dueEpochMs)
     }
 
+    /**
+     * Post the dose-due alert with critical channel routing (A1 — Critical Alerts).
+     * When [isCritical] is true the notification is posted on [AlarmContract.CHANNEL_DOSE_DUE_CRITICAL]
+     * (bypasses DND + alarm-volume audio); otherwise it posts on the standard channel.
+     * Default implementation ignores [isCritical] so existing callers without this param remain valid.
+     */
+    fun postDoseDueAlert(
+        doseId: String,
+        medName: String,
+        dueEpochMs: Long,
+        escalationLevel: Int,
+        isCritical: Boolean,
+    ) {
+        postDoseDueAlert(doseId, medName, dueEpochMs, escalationLevel)
+    }
+
     /** Cancel the active dose-due alert for [doseId] (the dose was acted on or missed). */
     fun cancelDoseAlert(doseId: String) = Unit
 
     /** Post the "test reminder" alert (Law 6 — every alarm is testable). */
     fun postTestReminder()
+
+    /**
+     * Post a test critical alert through [AlarmContract.CHANNEL_DOSE_DUE_CRITICAL] so the user
+     * can confirm it breaks through on their device in their current silent/DND state (Law 6).
+     */
+    fun postTestCriticalReminder()
 
     /** True when full-screen intents may be used (Android 14 gates this at runtime). */
     fun canUseFullScreen(): Boolean

@@ -26,6 +26,16 @@ Paste these into Data safety / Permissions declarations.
 > without having to unlock the device first. Usage is limited to dose-due alerts only.
 > The app does not use full-screen intent for marketing, re-engagement, or any other purpose.
 
+### ACCESS_NOTIFICATION_POLICY (Do Not Disturb access)
+
+> This app uses Do Not Disturb access solely to deliver time-critical medication reminders that
+> the user explicitly designates as critical, so they are not missed when the device is silenced.
+> The user opts in per medication — the permission is requested lazily, only when the user marks
+> their first medication as critical, never during onboarding, and never for users with no
+> critical medications. The user can revoke access at any time from system settings. This
+> permission is not used for advertising, analytics, re-engagement, or any purpose other than
+> critical dose reminding.
+
 ### SCHEDULE_EXACT_ALARM (secondary / fallback)
 
 > Declared as a fallback for devices where USE_EXACT_ALARM is unavailable or revoked.
@@ -94,6 +104,7 @@ Work through each item and confirm:
 - [ ] Medical disclaimer is present and prominent in the store listing.
 - [ ] Privacy policy URL is filled in (required for all apps declaring health-related
       permissions). Host the privacy policy text at a stable URL before submission.
+- [ ] ACCESS_NOTIFICATION_POLICY justification filed (A1 — Critical Alerts; see above).
 - [ ] USE_EXACT_ALARM justification filed.
 - [ ] USE_FULL_SCREEN_INTENT justification filed and reviewed (Android 14+ gate).
 - [ ] Data Safety section completed: no data collected; data encrypted on-device;

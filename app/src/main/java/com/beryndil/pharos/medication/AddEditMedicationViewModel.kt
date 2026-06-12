@@ -92,6 +92,19 @@ data class AddEditMedicationUiState(
     val scheduleInput: ScheduleInput = ScheduleInput(),
     val scheduleValidationError: Boolean = false,
 
+    // ── Critical reminders (A1 — Critical Alerts) ─────────────────────────
+    /**
+     * True when the user has designated this medication as critical (spec §3.1).
+     * Default false — non-critical is the safe default.
+     */
+    val isCritical: Boolean = false,
+    /**
+     * True when the user has just toggled isCritical=true for the FIRST time (no other critical
+     * active medication exists) AND DND policy access is not yet granted. The UI reacts by showing
+     * a rationale dialog and routing to Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS.
+     */
+    val showDndPermissionRationale: Boolean = false,
+
     // ── Validation ────────────────────────────────────────────────────────
     val strengthError: Boolean = false,
     val formError: Boolean = false,
@@ -123,6 +136,8 @@ sealed interface AddEditMedEvent {
     data class PharmacyChanged(val value: String) : AddEditMedEvent
     data class PurposeChanged(val value: String) : AddEditMedEvent
     data class ScheduleInputChanged(val input: ScheduleInput) : AddEditMedEvent
+    data class IsCriticalToggled(val value: Boolean) : AddEditMedEvent
+    data object DndPermissionRationaleDismissed : AddEditMedEvent
     data object SaveRequested : AddEditMedEvent
     data object DuplicateWarningConfirmed : AddEditMedEvent
     data object DuplicateWarningDismissed : AddEditMedEvent
@@ -145,6 +160,18 @@ class AddEditMedicationViewModel(
      * Null in existing tests that don't provide it — the label fetch is simply skipped.
      */
     private val drugLabelRepository: DrugLabelRepository? = null,
+    /**
+     * Lambda that returns true when ACCESS_NOTIFICATION_POLICY has been granted. Injected for
+     * testability (tests pass { true } / { false }; production supplies NotificationManager check).
+     */
+    private val isDndAccessGranted: () -> Boolean = { true },
+    /**
+     * Suspend lambda that returns the current list of active critical medications. Injected for
+     * testability (tests pass a lambda returning a controlled list; production delegates to
+     * [MedicationRepository.getCriticalActiveMedications]). This avoids needing Room in unit tests.
+     */
+    private val fetchCriticalMeds: suspend () -> List<com.beryndil.pharos.data.regimen.entity.MedicationEntity> =
+        repository::getCriticalActiveMedications,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditMedicationUiState())
@@ -186,6 +213,9 @@ class AddEditMedicationViewModel(
                 _uiState.update { it.copy(purpose = event.value) }
             is AddEditMedEvent.ScheduleInputChanged ->
                 _uiState.update { it.copy(scheduleInput = event.input, scheduleValidationError = false) }
+            is AddEditMedEvent.IsCriticalToggled -> onIsCriticalToggled(event.value)
+            is AddEditMedEvent.DndPermissionRationaleDismissed ->
+                _uiState.update { it.copy(showDndPermissionRationale = false) }
             is AddEditMedEvent.SaveRequested -> onSaveRequested()
             is AddEditMedEvent.DuplicateWarningConfirmed -> performSave()
             is AddEditMedEvent.DuplicateWarningDismissed ->
@@ -196,6 +226,27 @@ class AddEditMedicationViewModel(
     }
 
     // ── Private ───────────────────────────────────────────────────────────
+
+    /**
+     * Handles toggling isCritical. When enabled for the FIRST critical med and DND access is not
+     * yet granted, shows the rationale dialog so the user can grant it (spec §4 lazy permission).
+     */
+    private fun onIsCriticalToggled(value: Boolean) {
+        _uiState.update { it.copy(isCritical = value) }
+        if (!value) return
+        // Lazy DND permission: only prompt on the first critical med and only if not yet granted.
+        if (isDndAccessGranted()) return
+        viewModelScope.launch {
+            val existingCritical = withContext(ioDispatcher) {
+                fetchCriticalMeds()
+            }
+            // Exclude the med being edited from the count (it may already be critical in the DB).
+            val othersCount = existingCritical.count { it.id != _uiState.value.editMedId }
+            if (othersCount == 0) {
+                _uiState.update { it.copy(showDndPermissionRationale = true) }
+            }
+        }
+    }
 
     private fun loadExistingMedication(medId: String) {
         viewModelScope.launch {
@@ -235,6 +286,7 @@ class AddEditMedicationViewModel(
                     prescriber = med.prescriber ?: "",
                     pharmacy = med.pharmacy ?: "",
                     purpose = med.purpose ?: "",
+                    isCritical = med.isCritical,
                     originalCreatedAtMs = med.createdAtEpochMs,
                     scheduleInput = scheduleInput,
                 )
@@ -375,6 +427,7 @@ class AddEditMedicationViewModel(
             pharmacy = state.pharmacy.trim().ifEmpty { null },
             purpose = state.purpose.trim().ifEmpty { null },
             isFreeText = state.isFreeText,
+            isCritical = state.isCritical,
             status = MedicationStatus.ACTIVE.name,
             startEpochMs = startDate
                 .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
@@ -435,6 +488,7 @@ class AddEditMedicationViewModel(
             repository: MedicationRepository,
             scheduleRepository: ScheduleRepository,
             drugLabelRepository: DrugLabelRepository? = null,
+            isDndAccessGranted: () -> Boolean = { true },
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -443,6 +497,7 @@ class AddEditMedicationViewModel(
                         scheduleRepository = scheduleRepository,
                         savedStateHandle = createSavedStateHandle(),
                         drugLabelRepository = drugLabelRepository,
+                        isDndAccessGranted = isDndAccessGranted,
                     )
                 }
             }

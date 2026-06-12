@@ -55,6 +55,13 @@ data class MedicationEntity(
      */
     val isFreeText: Boolean,
 
+    /**
+     * True when the user has designated this medication as critical, meaning its dose alerts
+     * should break through silent mode and Do Not Disturb (spec §FEATURE_critical_alerts §3.1).
+     * Default false — the vast majority of medications are non-critical.
+     */
+    val isCritical: Boolean = false,
+
     /** ACTIVE, PAUSED, or ENDED. Stored as [MedicationStatus].name. */
     val status: String,
 

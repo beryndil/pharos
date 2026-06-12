@@ -1,12 +1,15 @@
 package com.beryndil.pharos.alarm
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -14,16 +17,28 @@ import androidx.core.content.ContextCompat
 import com.beryndil.pharos.R
 
 /**
- * [DoseNotifier] that posts a high-importance, full-screen-intent notification on the dose
- * channel and launches [DueAlertActivity] (spec §2.8, §3.4; Standards §3, §4).
+ * [DoseNotifier] that posts high-importance, full-screen-intent notifications and launches
+ * [DueAlertActivity] (spec §2.8, §3.4; Standards §3, §4).
  *
- * The dose channel is created at [IMPORTANCE_HIGH]; importance cannot be raised later, so it is
- * set correctly from the start (Standards §4). Full sacred-channel enforcement is Slice 5.
+ * Two channels are managed here:
+ *  - **Standard dose channel** ([AlarmContract.CHANNEL_DOSE_DUE]): IMPORTANCE_HIGH, escalating.
+ *    Used for non-critical meds. Respects silent mode and DND.
+ *  - **Critical dose channel** ([AlarmContract.CHANNEL_DOSE_DUE_CRITICAL]): IMPORTANCE_HIGH,
+ *    setBypassDnd(true), alarm-usage AudioAttributes. Used when [isCritical] is true. Bypasses
+ *    DND and sounds at alarm volume regardless of ringer mute (A1 — Critical Alerts §3.3).
+ *
+ * Both channels are sacred (Law 1): dose-due alerts only. Channel config is set correctly at
+ * creation time and never silently recreated (spec §5 — bypass-DND only takes effect on the
+ * first-created channel; the system ignores subsequent setBypassDnd calls on an existing channel).
  *
  * Degradation rule: if full-screen intents are gated off (Android 14) or POST_NOTIFICATIONS is
  * not granted, the alarm has still fired — we post a heads-up notification rather than dropping
  * anything (Law 6). When notifications are blocked entirely the system drops the post; that fact
  * is surfaced in the reliability dashboard (Slice 6).
+ *
+ * DND-access degrade: if ACCESS_NOTIFICATION_POLICY is not granted, the critical channel still
+ * posts — it just won't bypass DND. The reliability dashboard surfaces this gap so the user knows
+ * the override is OFF. The alert is never silently suppressed (Law 6 / spec §3.4).
  */
 class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
 
@@ -32,24 +47,47 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
 
     override fun ensureChannels() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        if (notificationManager.getNotificationChannel(AlarmContract.CHANNEL_DOSE_DUE) != null) {
-            return
+
+        // Standard dose channel — create only if absent.
+        if (notificationManager.getNotificationChannel(AlarmContract.CHANNEL_DOSE_DUE) == null) {
+            val channel = NotificationChannel(
+                AlarmContract.CHANNEL_DOSE_DUE,
+                context.getString(R.string.channel_dose_due_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = context.getString(R.string.channel_dose_due_desc)
+                setBypassDnd(true)
+                enableLights(true)
+                enableVibration(true)
+            }
+            notificationManager.createNotificationChannel(channel)
         }
-        val channel = NotificationChannel(
-            AlarmContract.CHANNEL_DOSE_DUE,
-            context.getString(R.string.channel_dose_due_name),
-            NotificationManager.IMPORTANCE_HIGH,
-        ).apply {
-            description = context.getString(R.string.channel_dose_due_desc)
-            setBypassDnd(true)
-            enableLights(true)
-            enableVibration(true)
+
+        // Critical dose channel — create only if absent (spec §5: never silently recreate).
+        if (notificationManager.getNotificationChannel(AlarmContract.CHANNEL_DOSE_DUE_CRITICAL) == null) {
+            val alarmAudio = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            val channel = NotificationChannel(
+                AlarmContract.CHANNEL_DOSE_DUE_CRITICAL,
+                context.getString(R.string.channel_dose_due_critical_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = context.getString(R.string.channel_dose_due_critical_desc)
+                setBypassDnd(true)
+                enableLights(true)
+                enableVibration(true)
+                // Alarm-usage audio: sounds at alarm volume even in silent/vibrate mode (§3.3).
+                setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), alarmAudio)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            }
+            notificationManager.createNotificationChannel(channel)
         }
-        notificationManager.createNotificationChannel(channel)
     }
 
     override fun postDoseDueAlert(doseId: String, medName: String, dueEpochMs: Long) {
-        postDoseDueAlert(doseId, medName, dueEpochMs, escalationLevel = 0)
+        postDoseDueAlert(doseId, medName, dueEpochMs, escalationLevel = 0, isCritical = false)
     }
 
     override fun postDoseDueAlert(
@@ -58,7 +96,23 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
         dueEpochMs: Long,
         escalationLevel: Int,
     ) {
+        postDoseDueAlert(doseId, medName, dueEpochMs, escalationLevel, isCritical = false)
+    }
+
+    override fun postDoseDueAlert(
+        doseId: String,
+        medName: String,
+        dueEpochMs: Long,
+        escalationLevel: Int,
+        isCritical: Boolean,
+    ) {
         ensureChannels()
+
+        val channelId = if (isCritical) {
+            AlarmContract.CHANNEL_DOSE_DUE_CRITICAL
+        } else {
+            AlarmContract.CHANNEL_DOSE_DUE
+        }
 
         val fullScreenIntent = Intent(context, DueAlertActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -73,7 +127,7 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-        val notification = NotificationCompat.Builder(context, AlarmContract.CHANNEL_DOSE_DUE)
+        val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(context.getString(R.string.dose_due_notification_title))
             .setContentText(medName)
@@ -122,6 +176,19 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
             .setAutoCancel(true)
             .build()
         post(AlarmContract.NOTIFICATION_TEST, notification)
+    }
+
+    override fun postTestCriticalReminder() {
+        ensureChannels()
+        val notification = NotificationCompat.Builder(context, AlarmContract.CHANNEL_DOSE_DUE_CRITICAL)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(context.getString(R.string.test_critical_reminder_title))
+            .setContentText(context.getString(R.string.test_critical_reminder_body))
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setAutoCancel(true)
+            .build()
+        post(AlarmContract.NOTIFICATION_TEST_CRITICAL, notification)
     }
 
     override fun canUseFullScreen(): Boolean =

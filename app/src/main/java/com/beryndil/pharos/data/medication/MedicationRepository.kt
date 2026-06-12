@@ -155,6 +155,14 @@ class MedicationRepository(
     suspend fun getMedication(id: String): MedicationEntity? =
         medicationDao.getById(id)
 
+    /**
+     * Returns active medications with [MedicationEntity.isCritical] = true, ordered by name.
+     * Used by the add/edit VM to check whether this is the user's first critical med (to
+     * trigger the lazy DND-access permission request) and by the reliability dashboard.
+     */
+    suspend fun getCriticalActiveMedications(): List<MedicationEntity> =
+        medicationDao.getCriticalActive()
+
     /** Pause a medication (status → PAUSED). No-op if not found. */
     suspend fun pauseMedication(medId: String) {
         val med = medicationDao.getById(medId) ?: return

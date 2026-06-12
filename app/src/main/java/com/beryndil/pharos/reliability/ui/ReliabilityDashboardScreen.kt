@@ -58,6 +58,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 fun ReliabilityDashboardScreen(
     uiState: ReliabilityDashboardUiState,
     onBack: () -> Unit,
+    onTestCriticalAlert: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -132,6 +133,49 @@ fun ReliabilityDashboardScreen(
                     riskyDesc = stringResource(R.string.reliability_fullscreen_risky),
                     onFix = { handleFixAction(uiState.fullScreenIntent.fixAction, context) },
                 )
+            }
+            item {
+                PermissionRow(
+                    label = stringResource(R.string.reliability_label_dnd),
+                    item = uiState.dndAccess,
+                    okDesc = stringResource(R.string.reliability_dnd_ok),
+                    riskyDesc = stringResource(R.string.reliability_dnd_risky),
+                    onFix = { handleFixAction(uiState.dndAccess.fixAction, context) },
+                )
+            }
+
+            // ── Critical meds section ─────────────────────────────────────────────
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                SectionHeader(stringResource(R.string.reliability_section_critical))
+            }
+            item {
+                if (uiState.criticalMedNames.isEmpty()) {
+                    InfoRow(
+                        label = stringResource(R.string.reliability_critical_none_label),
+                        value = stringResource(R.string.reliability_critical_none),
+                    )
+                } else {
+                    InfoRow(
+                        label = stringResource(R.string.reliability_critical_list_label),
+                        value = uiState.criticalMedNames.joinToString(", "),
+                    )
+                }
+            }
+            item {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onTestCriticalAlert,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.reliability_btn_test_critical))
+                    }
+                }
             }
 
             // ── Alarm history section ─────────────────────────────────────────────
@@ -342,6 +386,9 @@ private fun handleFixAction(action: FixAction?, context: android.content.Context
                     .setData(Uri.parse("package:${context.packageName}"))
                 context.startActivity(intent)
             }
+        }
+        FixAction.DndPolicySettings -> {
+            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
         }
         is FixAction.OpenUrl -> {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(action.url))

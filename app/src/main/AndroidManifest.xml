@@ -18,6 +18,10 @@
     <!-- Lets the onboarding flow open the per-app battery-optimization settings page
          (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS). Normal permission — auto-granted. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Critical dose channel bypass DND (A1 — Critical Alerts). Requested lazily when the user
+         marks their first medication as critical; never requested for non-critical-only installs.
+         Justification text in docs/play-listing.md. -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <application
         android:name=".PharosApplication"

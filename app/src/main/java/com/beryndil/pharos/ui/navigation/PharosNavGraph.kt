@@ -11,6 +11,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import android.app.NotificationManager
+import android.content.Context
 import com.beryndil.pharos.PharosApplication
 import com.beryndil.pharos.appContainer
 import com.beryndil.pharos.dose.ui.DoseHistoryScreen
@@ -50,6 +52,7 @@ fun PharosNavGraph(
     modifier: Modifier = Modifier,
 ) {
     val app = LocalContext.current.applicationContext as PharosApplication
+    val nm = LocalContext.current.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     val medicationRepository = app.appContainer.medicationRepository
     val scheduleRepository = app.appContainer.scheduleRepository
     val doseRepository = app.appContainer.doseRepository
@@ -166,6 +169,7 @@ fun PharosNavGraph(
                     repository = medicationRepository,
                     scheduleRepository = scheduleRepository,
                     drugLabelRepository = drugLabelRepository,
+                    isDndAccessGranted = { nm.isNotificationPolicyAccessGranted },
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -192,6 +196,7 @@ fun PharosNavGraph(
                     repository = medicationRepository,
                     scheduleRepository = scheduleRepository,
                     drugLabelRepository = drugLabelRepository,
+                    isDndAccessGranted = { nm.isNotificationPolicyAccessGranted },
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -269,16 +274,16 @@ fun PharosNavGraph(
             val viewModel: ReliabilityDashboardViewModel = viewModel(
                 factory = ReliabilityDashboardViewModel.factory(
                     settingDao = app.appContainer.regimenDatabase.settingDao(),
-                    applicationContext = app.appContainer.regimenDatabase.let {
-                        // Use applicationContext captured via the app reference (no Activity leak).
-                        app.applicationContext
-                    },
+                    medicationDao = app.appContainer.regimenDatabase.medicationDao(),
+                    applicationContext = app.applicationContext,
+                    doseNotifier = app.appContainer.doseNotifier,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             ReliabilityDashboardScreen(
                 uiState = uiState,
                 onBack = { navController.popBackStack() },
+                onTestCriticalAlert = viewModel::onTestCriticalAlert,
             )
         }
     }

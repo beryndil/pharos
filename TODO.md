@@ -300,3 +300,18 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       the release on an emulator. **Lesson: a launch smoke test on a real device/emulator
       is mandatory before tagging a release.** The on-device test matrix (§4.3) now must
       include a cold-launch + encrypted-DB-open check as gate zero.
+
+## A1 — Critical Alerts (device-matrix Section C, 2026-06-12)
+
+These items require real hardware and cannot be automated in the pipeline (spec §8 — device matrix). Dave handles these before promoting any tester track.
+
+- [ ] **Section C: Critical alert sounds through ringer-silent/vibrate mode** — Verify on Samsung Galaxy, Google Pixel, and Xiaomi at minimum. Put device in silent/vibrate, fire a critical test reminder from the reliability dashboard, confirm it rings at alarm volume.
+- [ ] **Section C: Critical alert sounds through Do Not Disturb** — Enable DND (all notifications blocked), fire the critical test reminder, confirm it breaks through when DND policy access is granted.
+- [ ] **Section C: Critical alert sounds through both silent AND DND simultaneously** — Compound test. Confirm both blocking mechanisms are defeated.
+- [ ] **Section C: DND-access-denied path visible** — Revoke DND policy access, open the reliability dashboard, confirm dndAccess shows RISKY with the correct "Critical override is OFF" message. Fire the critical test reminder, confirm it still delivers (on standard channel, not silenced by OS before grant).
+- [ ] **Section C: Verified overnight in Doze** — Leave device idle for ≥3 hours (screen off, stationary), confirm a critical alarm fires at the scheduled time.
+- [ ] **Section C: OEM-specific verification** — Samsung (One UI), Xiaomi (MIUI), and Motorola/OnePlus if available. DND bypass behavior differs by OEM.
+- [ ] **Section C: Non-critical meds do not bypass DND** — Confirm a non-critical med reminder is silenced by DND when bypass is NOT granted to that channel.
+- [ ] **Section C: Channel-not-modifiable caveat** — Document what happens if the user manually modifies the critical channel via system settings (Android then controls bypass state, not the app). Surface this limitation in the reliability dashboard help text if needed.
+- [ ] **Section C: ACCESS_NOTIFICATION_POLICY Play justification** — File the `ACCESS_NOTIFICATION_POLICY` declaration in the Play Console using the text in `docs/play-listing.md`. Google may review this permission; have the user-flow screenshots (lazy DND prompt on first critical med) ready.
+- [ ] **Section C: USE_FULL_SCREEN_INTENT on Android 14+ verification** — Confirm `Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT` opens correctly and grants permission. Dashboard shows correct state after grant/revoke.

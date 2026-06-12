@@ -110,4 +110,50 @@ class MigrationHarnessTest {
             }
         }
     }
+
+    /**
+     * v2 → v3 (A1 Critical Alerts): [isCritical] column is added to medications with DEFAULT 0.
+     * Existing rows must survive the migration with isCritical=0 (non-critical by default,
+     * Standards §5: never destructive, Law 4: no silent opt-in to critical behavior).
+     */
+    @Test
+    fun migrateV2ToV3_addIsCriticalColumn_existingRowsDefaultToFalse() {
+        // Seed a v2 database with one medication row.
+        migrationHelper.createDatabase(RegimenDatabaseFactory.DATABASE_NAME, 2).use { v2 ->
+            v2.execSQL(
+                "INSERT INTO medications (id, name, rxcui, ingredientsJson, strength, form, " +
+                    "doseAmount, prescriber, pharmacy, purpose, isFreeText, status, startEpochMs, " +
+                    "endEpochMs, createdAtEpochMs, updatedAtEpochMs) VALUES " +
+                    "('m2','Lisinopril',NULL,'[]','10 mg','TABLET','1 tablet',NULL,NULL,NULL,0," +
+                    "'ACTIVE',0,NULL,0,0)",
+            )
+        }
+
+        // Apply MIGRATION_2_3 and validate the resulting schema matches Room's expectation.
+        val v3 = migrationHelper.runMigrationsAndValidate(
+            RegimenDatabaseFactory.DATABASE_NAME,
+            3,
+            true,
+            RegimenDatabaseFactory.MIGRATION_2_3,
+        )
+        v3.use {
+            // Pre-existing medication row survived.
+            v3.query("SELECT COUNT(*) FROM medications", emptyArray<Any?>()).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            // isCritical column exists and defaults to 0 (false) for all pre-existing rows.
+            v3.query(
+                "SELECT isCritical FROM medications WHERE id = 'm2'",
+                emptyArray<Any?>(),
+            ).use { c ->
+                assertTrue("Row must still exist after migration", c.moveToFirst())
+                assertEquals(
+                    "isCritical must default to 0 for pre-existing rows (Law 4 — no silent opt-in)",
+                    0,
+                    c.getInt(0),
+                )
+            }
+        }
+    }
 }

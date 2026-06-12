@@ -209,6 +209,7 @@ class AlarmDstTest {
         override fun ensureChannels() = Unit
         override fun postDoseDueAlert(doseId: String, medName: String, dueEpochMs: Long) = Unit
         override fun postTestReminder() = Unit
+        override fun postTestCriticalReminder() = Unit
         override fun canUseFullScreen() = true
     }
 

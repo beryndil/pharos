@@ -79,8 +79,10 @@ class AlarmCoordinator(
         if (dose != null && dose.state == DoseState.SCHEDULED.name) {
             doseInstanceDao.markDue(doseId)
         }
-        val medName = dose?.let { medicationDao.getById(it.medicationId)?.name }.orEmpty()
-        notifier.postDoseDueAlert(doseId, medName, dose?.dueEpochMs ?: firedAt)
+        val med = dose?.let { medicationDao.getById(it.medicationId) }
+        val medName = med?.name.orEmpty()
+        val isCritical = med?.isCritical ?: false
+        notifier.postDoseDueAlert(doseId, medName, dose?.dueEpochMs ?: firedAt, 0, isCritical)
         reliabilityLog.recordAlarmFired(AlarmKind.DOSE, firedAt)
         rearmNextDoseAlarm()
         // Hand off to the dose state machine (Slice 5): arm the D2 miss-window deadline and the

@@ -19,11 +19,11 @@ object RegimenDatabaseFactory {
     const val DATABASE_NAME = "pharos_regimen.db"
 
     /**
-     * Current schema version. Used by Room's `@Database(version = ...)` annotation (set to 1)
+     * Current schema version. Used by Room's `@Database(version = ...)` annotation
      * AND by the newer-schema guard to detect on-disk databases from future app versions.
      * Keep in sync with [RegimenDatabase]'s `@Database` annotation.
      */
-    const val CURRENT_VERSION = 2
+    const val CURRENT_VERSION = 3
 
     /**
      * v1 → v2 (Slice 5): adds the append-only [dose_transitions] history table. Additive only —
@@ -63,6 +63,18 @@ object RegimenDatabaseFactory {
     }
 
     /**
+     * v2 → v3 (A1 Critical Alerts): adds `isCritical` boolean column to [medications].
+     * Additive only — no existing column is touched. All existing rows default to 0 (false).
+     */
+    val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "ALTER TABLE `medications` ADD COLUMN `isCritical` INTEGER NOT NULL DEFAULT 0",
+            )
+        }
+    }
+
+    /**
      * Builds [RegimenDatabase] with a newer-schema version guard.
      *
      * @param openHelperFactory SQLCipher [net.zetetic.database.sqlcipher.SupportFactory] in
@@ -77,7 +89,7 @@ object RegimenDatabaseFactory {
         enforceSchemaVersion(context)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 

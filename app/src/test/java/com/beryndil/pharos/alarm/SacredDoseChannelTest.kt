@@ -35,25 +35,32 @@ class SacredDoseChannelTest {
     }
 
     @Test
-    fun doseChannel_isHighImportance_andTheOnlyChannel() {
+    fun bothDoseChannels_areHighImportance_andNoOtherChannelIs() {
         notifier.ensureChannels()
 
-        val channel = notificationManager.getNotificationChannel(AlarmContract.CHANNEL_DOSE_DUE)
-        assertNotNull("dose channel must exist", channel)
-        assertEquals(NotificationManager.IMPORTANCE_HIGH, channel!!.importance)
-        assertTrue("dose channel bypasses Do Not Disturb (safety-critical)", channel.canBypassDnd())
+        // Standard dose channel must exist at IMPORTANCE_HIGH.
+        val standard = notificationManager.getNotificationChannel(AlarmContract.CHANNEL_DOSE_DUE)
+        assertNotNull("standard dose channel must exist", standard)
+        assertEquals(NotificationManager.IMPORTANCE_HIGH, standard!!.importance)
+        assertTrue("standard dose channel bypasses DND", standard.canBypassDnd())
 
-        // The dose channel is the ONLY high-importance channel (Law 1, spec §2.8).
-        // Other channels (e.g., the refill channel created by AndroidRefillNotifier) may exist
-        // but must be at lower importance so the user can silence them without muting doses.
+        // Critical dose channel must exist at IMPORTANCE_HIGH (A1 — Critical Alerts).
+        val critical = notificationManager.getNotificationChannel(AlarmContract.CHANNEL_DOSE_DUE_CRITICAL)
+        assertNotNull("critical dose channel must exist", critical)
+        assertEquals(NotificationManager.IMPORTANCE_HIGH, critical!!.importance)
+        assertTrue("critical dose channel bypasses DND", critical.canBypassDnd())
+
+        // Only the two dose channels (sacred Law 1) are IMPORTANCE_HIGH.
+        // Refill / other channels must be at lower importance so they can be silenced without
+        // silencing dose reminders.
         val highImportanceChannels = notificationManager.notificationChannels
             .filter { it.importance >= NotificationManager.IMPORTANCE_HIGH }
+        val highIds = highImportanceChannels.map { it.id }.toSet()
         assertEquals(
-            "Only the dose channel must be IMPORTANCE_HIGH — the user cannot silence doses",
-            1,
-            highImportanceChannels.size,
+            "Only the standard and critical dose channels must be IMPORTANCE_HIGH",
+            setOf(AlarmContract.CHANNEL_DOSE_DUE, AlarmContract.CHANNEL_DOSE_DUE_CRITICAL),
+            highIds,
         )
-        assertEquals(AlarmContract.CHANNEL_DOSE_DUE, highImportanceChannels.first().id)
     }
 
     @Test

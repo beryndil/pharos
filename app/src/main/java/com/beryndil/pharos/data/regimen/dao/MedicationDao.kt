@@ -38,6 +38,14 @@ interface MedicationDao {
     @Query("SELECT * FROM medications ORDER BY createdAtEpochMs ASC")
     suspend fun getAll(): List<MedicationEntity>
 
+    /**
+     * Returns active medications that have [MedicationEntity.isCritical] = true.
+     * Used to determine whether to prompt for DND policy access (lazy, on first critical med)
+     * and to populate the reliability dashboard critical-meds list.
+     */
+    @Query("SELECT * FROM medications WHERE status = 'ACTIVE' AND isCritical = 1 ORDER BY name ASC")
+    suspend fun getCriticalActive(): List<MedicationEntity>
+
     // NOTE: No DELETE method. Medications are never physically removed (spec §3.3).
     // To end a medication, update its status to ENDED via [update].
 }

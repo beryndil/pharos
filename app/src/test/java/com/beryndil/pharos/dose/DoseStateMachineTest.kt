@@ -469,6 +469,7 @@ private class RecordingNotifier : DoseNotifier {
     }
 
     override fun postTestReminder() = Unit
+    override fun postTestCriticalReminder() = Unit
     override fun canUseFullScreen(): Boolean = true
     override fun cancelDoseAlert(doseId: String) {
         canceled.add(doseId)

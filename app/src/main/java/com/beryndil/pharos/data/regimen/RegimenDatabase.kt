@@ -41,7 +41,7 @@ import com.beryndil.pharos.data.regimen.entity.SettingEntity
         RefillRecordEntity::class,
         SettingEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class RegimenDatabase : RoomDatabase() {

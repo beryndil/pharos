@@ -170,6 +170,12 @@
     <!-- Dose notification channel: sacred (Law 1) — dose-due alerts only. -->
     <string name="channel_dose_due_name">Dose reminders</string>
     <string name="channel_dose_due_desc">Alerts when a dose is due. This channel carries dose reminders only.</string>
+    <!-- Critical dose channel (A1): bypasses Do Not Disturb, sounds at alarm volume. -->
+    <string name="channel_dose_due_critical_name">Critical dose reminders</string>
+    <string name="channel_dose_due_critical_desc">Alerts for medications you have marked critical. Breaks through silent mode and Do Not Disturb. This channel carries critical dose reminders only.</string>
+    <!-- Test critical reminder strings (Law 6) -->
+    <string name="test_critical_reminder_title">Test: critical reminder</string>
+    <string name="test_critical_reminder_body">This is a test of your critical dose alert. It should reach you even in silent mode or Do Not Disturb.</string>
     <!-- Full-screen DUE alert -->
     <string name="dose_due_heading">Dose due</string>
     <string name="dose_due_notification_title">Dose due</string>
@@ -258,6 +264,17 @@
     <string name="onboarding_btn_send_test">Send test reminder</string>
     <string name="onboarding_test_sent_confirmation">Test reminder sent. It should arrive within a few seconds.</string>
 
+    <!-- ── Add/edit medication — critical toggle (A1) ───────────────────── -->
+    <string name="section_critical_alerts">Critical reminder</string>
+    <string name="critical_toggle_label">Critical reminder</string>
+    <string name="critical_toggle_desc">Break through silent mode and Do Not Disturb for this medication. Use only for medications you must never miss.</string>
+    <string name="cd_critical_toggle_on">Critical reminder: enabled. Tap to disable.</string>
+    <string name="cd_critical_toggle_off">Critical reminder: disabled. Tap to enable.</string>
+    <!-- DND permission rationale dialog -->
+    <string name="dnd_rationale_title">Enable critical override</string>
+    <string name="dnd_rationale_body">To break through Do Not Disturb for critical reminders, grant Pharos Do Not Disturb access. Without it, critical reminders will still appear but may be silenced by DND.</string>
+    <string name="dnd_rationale_grant">Grant access</string>
+
     <!-- ── Reliability dashboard (Slice 6, spec §2.13) ───────────────────── -->
     <string name="screen_reliability_dashboard">Reliability</string>
     <string name="cd_open_reliability">Reliability dashboard</string>
@@ -267,6 +284,7 @@
     <string name="reliability_section_alarm_history">Alarm history</string>
     <string name="reliability_section_system">System integration</string>
     <string name="reliability_section_drug_db">Drug database</string>
+    <string name="reliability_section_critical">Critical reminders</string>
 
     <!-- Permission item labels -->
     <string name="reliability_label_exact_alarm">Exact alarm timing</string>
@@ -274,6 +292,7 @@
     <string name="reliability_label_autostart">Background activity</string>
     <string name="reliability_label_notification">Notification permission</string>
     <string name="reliability_label_fullscreen">Full-screen alerts</string>
+    <string name="reliability_label_dnd">Do Not Disturb override</string>
 
     <!-- Status descriptions (icon + text, never color alone — Law 10) -->
     <string name="reliability_exact_alarm_ok">Reminders fire at the exact scheduled time</string>
@@ -286,6 +305,15 @@
     <string name="reliability_notification_risky">Notifications are off — reminders will not appear on screen</string>
     <string name="reliability_fullscreen_ok">Full-screen alerts available</string>
     <string name="reliability_fullscreen_risky">Full-screen alerts are off — reminders appear in the notification tray only</string>
+    <string name="reliability_dnd_ok">Critical override active — reminders break through Do Not Disturb</string>
+    <string name="reliability_dnd_risky">Critical override is OFF — grant Do Not Disturb access to enable it</string>
+
+    <!-- Critical meds list -->
+    <string name="reliability_critical_none_label">Critical medications</string>
+    <string name="reliability_critical_none">None — no medications marked critical</string>
+    <string name="reliability_critical_list_label">Critical medications</string>
+    <!-- Test critical alert button -->
+    <string name="reliability_btn_test_critical">Test critical alert now</string>
 
     <!-- Fix buttons -->
     <string name="reliability_btn_fix">Fix</string>

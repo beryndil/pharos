@@ -2,7 +2,9 @@ package com.beryndil.pharos.reliability
 
 import com.beryndil.pharos.alarm.AlarmMode
 import com.beryndil.pharos.alarm.SettingsReliabilityLog
+import com.beryndil.pharos.data.regimen.dao.MedicationDao
 import com.beryndil.pharos.data.regimen.dao.SettingDao
+import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.SettingEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,17 +59,21 @@ class ReliabilityDashboardViewModelTest {
 
     private fun makeVm(
         settingDao: SettingDao = FakeSettingDao(),
+        medicationDao: MedicationDao = FakeMedicationDaoEmpty(),
         canScheduleExact: Boolean = true,
         isIgnoringBatteryOpt: Boolean = true,
         isNotificationGranted: Boolean = true,
         canUseFullScreenIntent: Boolean = true,
+        isDndAccessGranted: Boolean = true,
         oemName: String = "Google",
     ) = ReliabilityDashboardViewModel(
         settingDao = settingDao,
+        medicationDao = medicationDao,
         canScheduleExact = { canScheduleExact },
         isIgnoringBatteryOpt = { isIgnoringBatteryOpt },
         isNotificationGranted = { isNotificationGranted },
         canUseFullScreenIntent = { canUseFullScreenIntent },
+        isDndAccessGranted = { isDndAccessGranted },
         oemName = oemName,
     )
 
@@ -337,4 +343,17 @@ private class FakeSettingDao : SettingDao {
     override fun observeAll(): Flow<List<SettingEntity>> = _all.asStateFlow()
 
     override suspend fun getAll(): List<SettingEntity> = _all.value
+}
+
+/** Empty [MedicationDao] stub for existing tests that don't test critical-med logic. */
+private class FakeMedicationDaoEmpty : MedicationDao {
+    private val empty = MutableStateFlow<List<MedicationEntity>>(emptyList())
+    override suspend fun insert(medication: MedicationEntity) = Unit
+    override suspend fun update(medication: MedicationEntity) = Unit
+    override suspend fun getById(id: String): MedicationEntity? = null
+    override fun observeActive(): Flow<List<MedicationEntity>> = empty.asStateFlow()
+    override fun observeAll(): Flow<List<MedicationEntity>> = empty.asStateFlow()
+    override suspend fun getActiveOnce(): List<MedicationEntity> = emptyList()
+    override suspend fun getAll(): List<MedicationEntity> = emptyList()
+    override suspend fun getCriticalActive(): List<MedicationEntity> = emptyList()
 }

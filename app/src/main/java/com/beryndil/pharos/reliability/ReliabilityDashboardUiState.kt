@@ -26,6 +26,12 @@ sealed class FixAction {
     /** Open the system full-screen-intent permission screen for this app. API 34+ only. */
     object FullScreenIntentSettings : FixAction()
 
+    /**
+     * Open the system Do Not Disturb policy access settings (A1 — Critical Alerts).
+     * Required to grant the critical dose channel the ability to bypass DND.
+     */
+    object DndPolicySettings : FixAction()
+
     /** Open a URL (e.g. dontkillmyapp.com) in the browser. */
     data class OpenUrl(val url: String) : FixAction()
 }
@@ -57,6 +63,16 @@ data class ReliabilityDashboardUiState(
     val backgroundAutoStart: DashboardPermissionItem = DashboardPermissionItem(ItemStatus.OK),
     val notification: DashboardPermissionItem = DashboardPermissionItem(ItemStatus.OK),
     val fullScreenIntent: DashboardPermissionItem = DashboardPermissionItem(ItemStatus.OK),
+    /**
+     * DND policy access status (A1 — Critical Alerts). Risky when any active medication has
+     * isCritical=true AND ACCESS_NOTIFICATION_POLICY is not granted.
+     */
+    val dndAccess: DashboardPermissionItem = DashboardPermissionItem(ItemStatus.OK),
+    /**
+     * Names of active medications with isCritical=true. Shown in the reliability dashboard
+     * so the user can confirm which meds are on the critical path (Law 6).
+     */
+    val criticalMedNames: List<String> = emptyList(),
     val lastAlarmFiredEpochMs: Long? = null,
     val nextAlarmEpochMs: Long? = null,
     val alarmMode: AlarmMode? = null,
