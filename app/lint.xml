@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Localization gate -->
+    <issue id="HardcodedText" severity="error" />
+    <issue id="SetTextI18n" severity="error" />
+    <issue id="StringFormatMatches" severity="error" />
+    <issue id="MissingTranslation" severity="error" />
+    <issue id="ExtraTranslation" severity="warning" />
+    <!-- RTL readiness -->
+    <issue id="RtlHardcoded" severity="error" />
+    <issue id="RtlEnabled" severity="error" />
+    <issue id="RtlSymmetry" severity="warning" />
+    <!-- Accessibility / typography (Law 10) -->
+    <issue id="SpUsage" severity="error" />
+    <issue id="ContentDescription" severity="error" />
+    <!-- Security -->
+    <issue id="ExportedReceiver" severity="error" />
+    <issue id="ExportedService" severity="error" />
+    <issue id="UnsafeImplicitIntentLaunch" severity="error" />
+</lint>

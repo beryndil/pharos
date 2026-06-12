@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pharos</string>
+    <string name="welcome_title">Pharos</string>
+    <string name="welcome_tagline">Private. Reliable. Free.</string>
+</resources>

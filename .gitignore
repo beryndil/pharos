@@ -1,0 +1,15 @@
+# Build
+.gradle/
+build/
+app/build/
+# Local config & secrets (NEVER commit)
+local.properties
+env.sh
+keystore.properties
+*.jks
+*.keystore
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+captures/
