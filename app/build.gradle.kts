@@ -115,6 +115,11 @@ dependencies {
     // androidx.security:security-crypto is deprecated per Standards §6; do NOT use it.
     implementation(libs.tink.android)
 
+    // WorkManager for non-time-critical background tasks (CDN drug-DB update + low-supply check).
+    // NOT used for dose reminders — those use AlarmManager (CLAUDE.md: never WorkManager for reminders).
+    implementation(libs.androidx.work.runtime.ktx)
+    testImplementation(libs.androidx.work.testing)
+
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.core.testing)

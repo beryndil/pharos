@@ -43,8 +43,17 @@ class SacredDoseChannelTest {
         assertEquals(NotificationManager.IMPORTANCE_HIGH, channel!!.importance)
         assertTrue("dose channel bypasses Do Not Disturb (safety-critical)", channel.canBypassDnd())
 
-        // Exactly one channel — the sacred dose channel. No marketing/refill channel here.
-        assertEquals(1, notificationManager.notificationChannels.size)
+        // The dose channel is the ONLY high-importance channel (Law 1, spec §2.8).
+        // Other channels (e.g., the refill channel created by AndroidRefillNotifier) may exist
+        // but must be at lower importance so the user can silence them without muting doses.
+        val highImportanceChannels = notificationManager.notificationChannels
+            .filter { it.importance >= NotificationManager.IMPORTANCE_HIGH }
+        assertEquals(
+            "Only the dose channel must be IMPORTANCE_HIGH — the user cannot silence doses",
+            1,
+            highImportanceChannels.size,
+        )
+        assertEquals(AlarmContract.CHANNEL_DOSE_DUE, highImportanceChannels.first().id)
     }
 
     @Test

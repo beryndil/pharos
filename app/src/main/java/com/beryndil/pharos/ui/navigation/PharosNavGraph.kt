@@ -23,6 +23,8 @@ import com.beryndil.pharos.medication.ui.AddEditMedicationScreen
 import com.beryndil.pharos.medication.ui.MedicationListScreen
 import com.beryndil.pharos.onboarding.OnboardingViewModel
 import com.beryndil.pharos.onboarding.ui.OnboardingScreen
+import com.beryndil.pharos.refill.RefillViewModel
+import com.beryndil.pharos.refill.ui.RefillDetailScreen
 import com.beryndil.pharos.reliability.ReliabilityDashboardViewModel
 import com.beryndil.pharos.reliability.ui.ReliabilityDashboardScreen
 
@@ -46,6 +48,7 @@ fun PharosNavGraph(
     val medicationRepository = app.appContainer.medicationRepository
     val scheduleRepository = app.appContainer.scheduleRepository
     val doseRepository = app.appContainer.doseRepository
+    val refillRepository = app.appContainer.refillRepository
 
     NavHost(
         navController = navController,
@@ -131,6 +134,9 @@ fun PharosNavGraph(
                 onMedicationClicked = { medId ->
                     navController.navigate(NavRoute.EditMedication.buildRoute(medId))
                 },
+                onRefillClicked = { medId ->
+                    navController.navigate(NavRoute.RefillDetail.buildRoute(medId))
+                },
                 onEvent = viewModel::onEvent,
             )
         }
@@ -173,6 +179,28 @@ fun PharosNavGraph(
                 uiState = uiState,
                 onEvent = viewModel::onEvent,
                 onDone = { navController.popBackStack() },
+            )
+        }
+
+        // ── Refill tracking (Slice 7, spec §2.9) ─────────────────────────
+        composable(
+            route = NavRoute.RefillDetail.route,
+            arguments = listOf(
+                navArgument(NavRoute.RefillDetail.ARG_MED_ID) { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val medId = backStackEntry.arguments?.getString(NavRoute.RefillDetail.ARG_MED_ID).orEmpty()
+            val viewModel: RefillViewModel = viewModel(
+                factory = RefillViewModel.factory(
+                    refillRepository = refillRepository,
+                    medicationId = medId,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            RefillDetailScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onBack = { navController.popBackStack() },
             )
         }
 
@@ -221,4 +249,10 @@ sealed class NavRoute(val route: String) {
     }
 
     data object ReliabilityDashboard : NavRoute("reliability")
+
+    data object RefillDetail : NavRoute("medications/{medId}/refill") {
+        const val ARG_MED_ID = "medId"
+
+        fun buildRoute(medId: String): String = "medications/$medId/refill"
+    }
 }

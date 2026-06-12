@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Plurals for refill tracking (Slice 7, spec §2.9). -->
+    <!-- Standards §7: plurals via <plurals> + pluralStringResource, never count + "s". -->
+    <!-- %1$d = number of days -->
+    <plurals name="refill_days_count">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+</resources>

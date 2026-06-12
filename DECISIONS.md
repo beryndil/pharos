@@ -77,6 +77,19 @@ relevant slice is built.
 | S5-A7 | PRN logs are `DoseInstanceEntity` rows inserted directly in state `TAKEN` (no SCHEDULED/MISSED). Daily-max is counted via `countTakenSince(med, startOfDay)`; the warning is returned as data (`PrnLogResult`) and is **non-blocking** — the dose is always logged. | Spec §2.7; Law 3 (warn, never forbid). The PRN-log UI entry point (a "log dose" affordance for PRN meds) is deferred — see TODO. |
 | S5-A8 | Single dose-notification slot (`NOTIFICATION_DOSE_DUE`); `cancelDoseAlert` clears it. Two simultaneously-DUE doses share one visual notification. | Dose **state** independence is preserved in the DB regardless (each instance transitions on its own row); only the visual collapse is shared. Multi-DUE notification fan-out deferred — see TODO. |
 
+## Slice 7 decisions (Refill tracking)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| S7-A1 | Dedicated `medications/{medId}/refill` nav route; accessible via a "Track refill" dropdown item on each medication row. | Refill tracking is logically distinct from medication configuration; a dedicated screen keeps concerns separated without restructuring the edit screen. |
+| S7-A2 | Doses/day computed directly from `ScheduleEntity` fields (not via `ScheduleEngine.generateInstances` over a time window). | Avoids running the full instance generator; cleaner and fully testable as pure arithmetic on entity fields. TAPER schedules use a weighted average across phases via `computeDosesPerDayForTaper`. |
+| S7-A3 | Low-supply threshold = 7 days (constant, not user-configurable in v1). TAPER schedules return null for doses/day (no low-supply alert). | Conservative default covering typical prescription refill lead time. TAPER average doesn't account for current phase position — flagged in TODO.md for a follow-up if needed. |
+| S7-A4 | WorkManager `PeriodicWorkRequestBuilder` (24h interval) for the low-supply check. `ExistingPeriodicWorkPolicy.KEEP` prevents duplicate enqueues on every app start. | Refill alerts are NOT time-critical (unlike dose reminders, which use AlarmManager exact alarms — CLAUDE.md: "Never WorkManager for reminders"). WorkManager is the correct tool here. |
+| S7-A5 | "Request refill checklist" is UI-only (not persisted to DB). Resets each app session. | The checklist is a prompt, not a record. Persisting checkbox state adds schema complexity with no user-facing benefit; users who want a record use the notes field on the pickup dialog. |
+| S7-A6 | `refillByEpochMs` stored per `RefillRecordEntity`; shown from the latest record. ViewModel exposes a `SetRefillByDate` event that creates an ADJUSTMENT record preserving quantity. | Append-only invariant (Law 9) applies to refill records too; updating in place would lose history. |
+| S7-A7 | `SacredDoseChannelTest.doseChannel_isHighImportance_andTheOnlyChannel` updated: asserts the dose channel is the ONLY `IMPORTANCE_HIGH` channel (not that it's the only channel). | The refill channel (IMPORTANCE_DEFAULT) is now a second channel — the old "exactly 1 channel" assertion was a proxy for the real invariant: only the dose channel may be high importance. |
+| S7-A8 | `WorkManager` dependency added at 2.9.1. This is the first WorkManager usage in the app. | Needed for LowSupplyCheckWorker; stable release compatible with AGP 8.13.2 / Gradle 8.14.4. |
+
 ## Open decisions deferred to their slice (not blockers)
 
 - App package id confirmed `com.beryndil.pharos`.

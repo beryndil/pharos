@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.StrictMode
 import android.util.Log
 import com.beryndil.pharos.core.db.AppContainer
+import com.beryndil.pharos.refill.LowSupplyCheckWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +25,7 @@ class PharosApplication : Application() {
         appContainer = AppContainer(applicationContext)
 
         rearmAlarmsOnStartup()
+        scheduleLowSupplyCheck()
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
@@ -38,6 +40,23 @@ class PharosApplication : Application() {
                     .penaltyLog()
                     .build(),
             )
+        }
+    }
+
+    /**
+     * Enqueue the daily low-supply check via WorkManager (spec §2.9, DECISIONS.md S7-A4).
+     * WorkManager is acceptable here because refill alerts are not time-critical (unlike dose
+     * reminders, which use AlarmManager exact alarms — CLAUDE.md: "Never WorkManager for reminders").
+     * Also ensures the refill notification channel exists before the first check fires.
+     */
+    private fun scheduleLowSupplyCheck() {
+        runCatching {
+            appContainer.refillNotifier.ensureRefillChannel()
+            LowSupplyCheckWorker.schedule(applicationContext)
+        }.onFailure {
+            if (BuildConfig.DEBUG) {
+                Log.w("PharosApplication", "low-supply check schedule failed: ${it.javaClass.simpleName}")
+            }
         }
     }
 

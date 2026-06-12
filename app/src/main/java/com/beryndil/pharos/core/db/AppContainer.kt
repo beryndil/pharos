@@ -21,6 +21,9 @@ import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.RegimenDatabaseFactory
 import com.beryndil.pharos.data.schedule.ScheduleRepository
 import com.beryndil.pharos.onboarding.OnboardingRepository
+import com.beryndil.pharos.refill.AndroidRefillNotifier
+import com.beryndil.pharos.refill.RefillNotifier
+import com.beryndil.pharos.refill.RefillRepository
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
@@ -125,6 +128,32 @@ class AppContainer(private val applicationContext: Context) {
      */
     val onboardingRepository: OnboardingRepository by lazy {
         OnboardingRepository(regimenDatabase.settingDao())
+    }
+
+    // ── Refill tracking (Slice 7, spec §2.9) ─────────────────────────────────
+
+    /**
+     * Refill repository: tracks per-med supply counts, derives days-until-empty, and provides
+     * the list of low-supply medications for the WorkManager check job.
+     *
+     * Architecturally isolated from the dose state machine and alarm engine — a zero supply
+     * count can NEVER suppress a dose reminder (zero-supply invariant, Law 1, spec §2.9).
+     */
+    val refillRepository: RefillRepository by lazy {
+        RefillRepository(
+            refillRecordDao = regimenDatabase.refillRecordDao(),
+            medicationDao = regimenDatabase.medicationDao(),
+            scheduleDao = regimenDatabase.scheduleDao(),
+            schedulePhaseDao = regimenDatabase.schedulePhaseDao(),
+        )
+    }
+
+    /**
+     * Posts low-supply alerts exclusively on the REFILL channel — never on the sacred dose
+     * channel (Law 1, §2.8).
+     */
+    val refillNotifier: RefillNotifier by lazy {
+        AndroidRefillNotifier(applicationContext)
     }
 
     /** Single-fire-and-reschedule coordinator: the brain of the alarm engine. */

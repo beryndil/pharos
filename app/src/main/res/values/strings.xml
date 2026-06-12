@@ -319,4 +319,89 @@
     <!-- Timestamp format used in the dashboard rows -->
     <!-- %1$s = time, %2$s = date -->
     <string name="reliability_timestamp">%1$s · %2$s</string>
+
+    <!-- ── Refill tracking (Slice 7, spec §2.9) ────────────────────────────── -->
+    <!-- Screen title and navigation -->
+    <string name="screen_refill">Refill</string>
+    <!-- %1$s = medication name -->
+    <string name="cd_track_refill">Track refill for %1$s</string>
+    <string name="action_track_refill">Track refill</string>
+
+    <!-- Supply status section -->
+    <string name="refill_section_supply">Supply</string>
+    <string name="refill_quantity_label">On hand</string>
+    <!-- %1$d = quantity, %2$s = unit -->
+    <string name="refill_quantity_value">%1$d %2$s</string>
+    <string name="refill_days_until_empty_label">Days remaining</string>
+    <string name="refill_days_empty">Empty</string>
+    <!-- %1$d = number of days; use pluralStringResource in Compose -->
+
+    <!-- Zero-supply note (displayed separately from dose reminders — spec §2.9) -->
+    <string name="refill_no_supply_on_record">No supply on record. Dose reminders continue as scheduled.</string>
+    <string name="refill_refill_by_label">Refill by</string>
+    <string name="refill_refill_by_not_set">Not set</string>
+    <string name="refill_pharmacy_label">Pharmacy</string>
+    <!-- PRN: on-hand count shown but no run-out date (spec §2.9) -->
+    <string name="refill_prn_no_runout">On-hand count is tracked. A run-out date cannot be computed for as-needed medications.</string>
+
+    <!-- Low-supply status banner -->
+    <string name="refill_low_supply_title">Low supply</string>
+    <!-- %1$d = days remaining -->
+    <string name="refill_low_supply_body">%1$d days of supply remaining.</string>
+    <string name="refill_zero_supply_body">No supply on record. Dose reminders are not affected.</string>
+
+    <!-- Request refill checklist (UI-only, not persisted) -->
+    <string name="refill_section_request_checklist">Request refill checklist</string>
+    <string name="refill_checklist_prescription">Have prescription or prescription number</string>
+    <string name="refill_checklist_insurance">Have insurance card ready</string>
+    <string name="refill_checklist_pharmacy_phone">Pharmacy phone number saved</string>
+    <!-- %1$s = checklist item text -->
+    <string name="refill_checklist_item_cd">Checklist item: %1$s</string>
+
+    <!-- Action buttons -->
+    <string name="refill_action_set_count">Set initial count</string>
+    <string name="refill_action_pickup">Picked up refill</string>
+    <string name="refill_action_partial">Partial fill</string>
+    <string name="refill_action_stopped">Stopped before empty</string>
+    <string name="refill_action_set_refill_by">Set refill-by date</string>
+
+    <!-- Dialogs: set count -->
+    <string name="refill_dialog_set_count_title">Set quantity on hand</string>
+    <!-- Dialogs: pickup -->
+    <string name="refill_dialog_pickup_title">Picked up refill</string>
+    <!-- Dialogs: partial fill -->
+    <string name="refill_dialog_partial_title">Partial fill received</string>
+    <!-- Dialogs: stopped before empty -->
+    <string name="refill_dialog_stopped_title">Stopped before empty</string>
+    <string name="refill_dialog_stopped_body">This records your quantity as zero. Dose reminders continue as scheduled.</string>
+    <!-- Shared dialog fields -->
+    <string name="refill_dialog_quantity_label">Total quantity on hand</string>
+    <string name="refill_dialog_additional_quantity_label">Quantity received</string>
+    <string name="refill_dialog_unit_label">Unit (e.g., tablets, mL)</string>
+    <string name="refill_dialog_pharmacy_phone_label">Pharmacy phone (optional)</string>
+    <string name="refill_dialog_notes_label">Notes (optional)</string>
+    <string name="refill_dialog_confirm">Save</string>
+
+    <!-- Refill history section -->
+    <string name="refill_section_history">History</string>
+    <string name="refill_event_initial">Initial count set</string>
+    <string name="refill_event_pickup">Picked up refill</string>
+    <string name="refill_event_adjustment">Adjusted</string>
+    <!-- %1$d = quantity, %2$s = unit -->
+    <string name="refill_history_quantity">%1$d %2$s</string>
+    <!-- %1$s = quantity+unit string, %2$s = date string -->
+    <string name="refill_history_item_summary">%1$s · %2$s</string>
+
+    <!-- Notification channel for refill/low-supply (separate from dose channel — Law 1) -->
+    <string name="channel_refill_name">Refill reminders</string>
+    <string name="channel_refill_desc">Low-supply and refill alerts. Can be silenced without affecting dose reminders.</string>
+
+    <!-- Low-supply notification content -->
+    <!-- %1$s = medication name -->
+    <string name="refill_notification_low_title">Low supply: %1$s</string>
+    <!-- %1$d = days, %2$s = medication name -->
+    <string name="refill_notification_low_body">About %1$d days of %2$s remaining.</string>
+    <!-- %1$s = medication name -->
+    <string name="refill_notification_zero_title">No supply recorded: %1$s</string>
+    <string name="refill_notification_zero_body">%1$s has no supply on record. Dose reminders continue as scheduled.</string>
 </resources>

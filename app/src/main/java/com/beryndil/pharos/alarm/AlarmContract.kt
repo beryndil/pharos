@@ -57,7 +57,22 @@ object AlarmContract {
     // full-screen DUE alert has a channel to post on.
     const val CHANNEL_DOSE_DUE = "dose_due"
 
+    /**
+     * Separate, separately-disableable refill / low-supply channel (spec §2.8, §2.9, Law 1).
+     * The user can silence this channel without touching dose reminders.
+     * Nothing from the dose reminder path may post here; nothing from the refill path
+     * may post on [CHANNEL_DOSE_DUE].
+     */
+    const val CHANNEL_REFILL = "refill"
+
     /** Notification id for the active dose-due alert. One slot — the active DUE alert. */
     const val NOTIFICATION_DOSE_DUE = 5001
     const val NOTIFICATION_TEST = 5002
+
+    /**
+     * Base id for per-medication refill/low-supply notifications (spec §2.9).
+     * Each medication gets its own stable slot: NOTIFICATION_REFILL_BASE + (medId.hashCode & 0x0FFFFFFF).
+     * Range chosen to avoid collision with the dose and test slots above.
+     */
+    const val NOTIFICATION_REFILL_BASE = 6000
 }

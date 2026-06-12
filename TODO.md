@@ -144,6 +144,26 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       timestamp. The `DoseTransitionCause` (alarm/user/snooze-elapsed/miss-window) is stored
       but not yet surfaced. Add a secondary line in the accessibility/polish pass if useful.
 
+### Slice 7 — Refill tracking (2026-06-12)
+
+- [ ] **TAPER schedule doses/day** (DECISIONS.md S7-A3): `computeDosesPerDay` returns null for
+      TAPER schedules because the weighted average doesn't account for which phase the user is
+      currently in. Implement a phase-position-aware calculation if TAPER low-supply alerts
+      prove important to users.
+- [ ] **Refill channel in WorkManager tests**: `LowSupplyCheckWorker` is tested indirectly via
+      `RefillRepository`. A direct WorkManager integration test using `WorkManagerTestInitHelper`
+      would verify end-to-end worker execution — deferred (requires Android test runner).
+- [ ] **Configurable low-supply threshold**: Threshold is hardcoded at 7 days. Add a per-med
+      override in a future settings pass if users request it.
+- [ ] **Refill-by date picker in UI**: `RefillDialogState.SetRefillByDate` dialog skeleton is
+      present in the sealed class but the UI dialog case (`SetRefillByDate ->`) only returns
+      `Unit`. Wire a `DatePickerDialog` to `RefillEvent.ConfirmSetRefillByDate` in the
+      Slice 10 accessibility/polish pass.
+- [ ] **Pharmacy phone stored on medication vs refill record**: `RefillRecordEntity.pharmacyPhone`
+      stores phone per-refill event; `MedicationEntity.pharmacy` stores a free-text pharmacy
+      field. The RefillRepository merges them (refill record wins). Consider unifying in a
+      future schema version.
+
 ### Slice 6 — Onboarding + reliability dashboard (2026-06-12)
 
 - [ ] **FLAG_SECURE per-screen** (DECISIONS.md S6-A1): Global `FLAG_SECURE` covers onboarding

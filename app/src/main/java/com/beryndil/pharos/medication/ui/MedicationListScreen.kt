@@ -60,6 +60,7 @@ fun MedicationListScreen(
     uiState: MedicationListUiState,
     onAddMedication: () -> Unit,
     onMedicationClicked: (String) -> Unit,
+    onRefillClicked: (String) -> Unit,
     onEvent: (MedicationListEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -106,6 +107,7 @@ fun MedicationListScreen(
                     MedicationListItem(
                         medication = med,
                         onClick = { onMedicationClicked(med.id) },
+                        onRefillClicked = { onRefillClicked(med.id) },
                         onEvent = onEvent,
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
@@ -121,6 +123,7 @@ fun MedicationListScreen(
 private fun MedicationListItem(
     medication: MedicationEntity,
     onClick: () -> Unit,
+    onRefillClicked: () -> Unit,
     onEvent: (MedicationListEvent) -> Unit,
 ) {
     val formLabel = medication.form.toFormLabel()
@@ -160,6 +163,16 @@ private fun MedicationListItem(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
                 ) {
+                    // Track refill — available for all non-ended medications
+                    if (status != MedicationStatus.ENDED) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_track_refill)) },
+                            onClick = {
+                                menuExpanded = false
+                                onRefillClicked()
+                            },
+                        )
+                    }
                     if (status == MedicationStatus.ACTIVE) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_pause)) },
