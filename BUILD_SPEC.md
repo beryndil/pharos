@@ -129,9 +129,9 @@ State definitions:
 - **Dose instances are independent.** Missing the 08:00 dose has **zero effect** on the 12:00 dose. The 12:00 dose fires normally as its own instance.
 - **The app never combines doses.** It never says "you missed 8am, take both now," never tells the user to skip, double, or make up a dose. It records state and surfaces history. Any decision about a missed dose belongs to the user and their clinician.
 
-`◆ DECISION — Miss window (when DUE → MISSED):` **Default: 60 minutes after the due time, OR the start of the same medication's next scheduled dose, whichever comes first.** For windowed doses, the miss window is the end of the window. Override if you want a longer grace period for specific schedule types.
+`✅ RESOLVED — Miss window (when DUE → MISSED):` A dose flips to MISSED at **60 minutes after the due time, OR the start of the same medication's next scheduled dose, whichever comes first.** For windowed doses, the miss window is the end of the window. **The 60-minute value is the default but is per-medication configurable** — the user can tighten it for a critical med or loosen it for a low-stakes one. This mirrors the per-med model already used for criticality (§ Critical Alerts): miss tolerance, like criticality, is a property of the individual medication, not a global setting.
 
-`◆ DECISION — Snooze rules:` **Default: snooze interval 15 minutes; the user may snooze repeatedly, but snooze can never push a dose past its miss window — when the miss window closes, a snoozed dose becomes MISSED regardless.** This prevents indefinite snoozing of a dose that's no longer timely. Override the interval or add a hard snooze-count cap if preferred.
+`✅ RESOLVED — Snooze rules:` Snooze re-alerts every **15 minutes**. The user may snooze **repeatedly with no fixed cap** — but snooze can never push a dose past its miss window: **when the miss window closes, a snoozed dose becomes MISSED regardless.** The closing miss window is the natural and sufficient ceiling, so no arbitrary snooze-count limit is imposed. (Because the miss window is now per-medication configurable, the effective number of available snoozes scales automatically with how long that med stays actionable — a tighter window simply yields fewer snoozes before MISSED.)
 
 ## 2.7 PRN doses
 
