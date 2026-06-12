@@ -61,6 +61,7 @@ fun MedicationListScreen(
     onAddMedication: () -> Unit,
     onMedicationClicked: (String) -> Unit,
     onRefillClicked: (String) -> Unit,
+    onDrugReferenceClicked: (String) -> Unit,
     onEvent: (MedicationListEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -108,6 +109,7 @@ fun MedicationListScreen(
                         medication = med,
                         onClick = { onMedicationClicked(med.id) },
                         onRefillClicked = { onRefillClicked(med.id) },
+                        onDrugReferenceClicked = { onDrugReferenceClicked(med.id) },
                         onEvent = onEvent,
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
@@ -124,6 +126,7 @@ private fun MedicationListItem(
     medication: MedicationEntity,
     onClick: () -> Unit,
     onRefillClicked: () -> Unit,
+    onDrugReferenceClicked: () -> Unit,
     onEvent: (MedicationListEvent) -> Unit,
 ) {
     val formLabel = medication.form.toFormLabel()
@@ -163,6 +166,16 @@ private fun MedicationListItem(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
                 ) {
+                    // Drug reference — available for all non-free-text medications regardless of status.
+                    if (!medication.isFreeText) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_drug_reference)) },
+                            onClick = {
+                                menuExpanded = false
+                                onDrugReferenceClicked()
+                            },
+                        )
+                    }
                     // Track refill — available for all non-ended medications
                     if (status != MedicationStatus.ENDED) {
                         DropdownMenuItem(

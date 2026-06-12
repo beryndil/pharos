@@ -8,6 +8,7 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.beryndil.pharos.data.drugref.DrugLabelRepository
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
@@ -138,6 +139,12 @@ class AddEditMedicationViewModel(
      * tests pass an [UnconfinedTestDispatcher] so all work runs synchronously.
      */
     private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+    /**
+     * Optional drug label repository. When provided, a background fetch is triggered after a
+     * successful save so the reference screen has data ready (spec §2.10 "fetched on add").
+     * Null in existing tests that don't provide it — the label fetch is simply skipped.
+     */
+    private val drugLabelRepository: DrugLabelRepository? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditMedicationUiState())
@@ -394,6 +401,15 @@ class AddEditMedicationViewModel(
                 }
             }.onSuccess {
                 _uiState.update { it.copy(isSaving = false, savedSuccessfully = true) }
+                // Fire-and-forget: pre-populate the label cache so the reference screen loads fast
+                // (spec §2.10 "fetched per-drug on add"). Silently skipped for free-text meds
+                // (no rxcui) and when drugLabelRepository is not injected (tests).
+                val rxcui = entity.rxcui
+                if (rxcui != null && drugLabelRepository != null) {
+                    viewModelScope.launch(ioDispatcher) {
+                        drugLabelRepository.ensureLabelCached(rxcui)
+                    }
+                }
             }.onFailure {
                 _uiState.update { it.copy(isSaving = false, saveError = SaveError.GENERAL) }
             }
@@ -418,6 +434,7 @@ class AddEditMedicationViewModel(
         fun factory(
             repository: MedicationRepository,
             scheduleRepository: ScheduleRepository,
+            drugLabelRepository: DrugLabelRepository? = null,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -425,6 +442,7 @@ class AddEditMedicationViewModel(
                         repository = repository,
                         scheduleRepository = scheduleRepository,
                         savedStateHandle = createSavedStateHandle(),
+                        drugLabelRepository = drugLabelRepository,
                     )
                 }
             }

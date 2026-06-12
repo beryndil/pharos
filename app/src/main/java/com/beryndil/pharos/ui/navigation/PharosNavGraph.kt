@@ -25,6 +25,8 @@ import com.beryndil.pharos.onboarding.OnboardingViewModel
 import com.beryndil.pharos.onboarding.ui.OnboardingScreen
 import com.beryndil.pharos.refill.RefillViewModel
 import com.beryndil.pharos.refill.ui.RefillDetailScreen
+import com.beryndil.pharos.reference.DrugReferenceViewModel
+import com.beryndil.pharos.reference.ui.DrugReferenceScreen
 import com.beryndil.pharos.reliability.ReliabilityDashboardViewModel
 import com.beryndil.pharos.reliability.ui.ReliabilityDashboardScreen
 
@@ -49,6 +51,7 @@ fun PharosNavGraph(
     val scheduleRepository = app.appContainer.scheduleRepository
     val doseRepository = app.appContainer.doseRepository
     val refillRepository = app.appContainer.refillRepository
+    val drugLabelRepository = app.appContainer.drugLabelRepository
 
     NavHost(
         navController = navController,
@@ -137,6 +140,9 @@ fun PharosNavGraph(
                 onRefillClicked = { medId ->
                     navController.navigate(NavRoute.RefillDetail.buildRoute(medId))
                 },
+                onDrugReferenceClicked = { medId ->
+                    navController.navigate(NavRoute.DrugReference.buildRoute(medId))
+                },
                 onEvent = viewModel::onEvent,
             )
         }
@@ -147,6 +153,7 @@ fun PharosNavGraph(
                 factory = AddEditMedicationViewModel.factory(
                     repository = medicationRepository,
                     scheduleRepository = scheduleRepository,
+                    drugLabelRepository = drugLabelRepository,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -172,6 +179,7 @@ fun PharosNavGraph(
                 factory = AddEditMedicationViewModel.factory(
                     repository = medicationRepository,
                     scheduleRepository = scheduleRepository,
+                    drugLabelRepository = drugLabelRepository,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -200,6 +208,28 @@ fun PharosNavGraph(
             RefillDetailScreen(
                 uiState = uiState,
                 onEvent = viewModel::onEvent,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Drug reference (Slice 8, spec §2.10 — accessible from med list) ──
+        composable(
+            route = NavRoute.DrugReference.route,
+            arguments = listOf(
+                navArgument(NavRoute.DrugReference.ARG_MED_ID) { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val medId = backStackEntry.arguments?.getString(NavRoute.DrugReference.ARG_MED_ID).orEmpty()
+            val viewModel: DrugReferenceViewModel = viewModel(
+                factory = DrugReferenceViewModel.factory(
+                    medicationId = medId,
+                    medicationDao = app.appContainer.regimenDatabase.medicationDao(),
+                    drugLabelRepository = drugLabelRepository,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            DrugReferenceScreen(
+                uiState = uiState,
                 onBack = { navController.popBackStack() },
             )
         }
@@ -254,5 +284,11 @@ sealed class NavRoute(val route: String) {
         const val ARG_MED_ID = "medId"
 
         fun buildRoute(medId: String): String = "medications/$medId/refill"
+    }
+
+    data object DrugReference : NavRoute("medications/{medId}/reference") {
+        const val ARG_MED_ID = "medId"
+
+        fun buildRoute(medId: String): String = "medications/$medId/reference"
     }
 }

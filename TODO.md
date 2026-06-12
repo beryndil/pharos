@@ -8,6 +8,13 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 - [ ] Provision drug-DB CDN: Backblaze B2 bucket + Cloudflare in front. Pipeline builds
       against the documented contract + a local fixture until this exists. (Account +
       billing — Dave.)
+- [ ] **Replace CDN keypair and URL** (Slice 8): Follow the keypair replacement procedure in
+      DECISIONS.md. Replace `ManifestVerifier.APP_PUBLIC_KEY_HEX` with the real public key,
+      set `DrugDbUpdateWorker.CDN_BASE_URL` to the real CDN base URL, and store the private
+      key in the CDN build job only. The current placeholder uses the RFC 8032 test vector key.
+- [ ] **SPKI pinning for CDN domain** (Standards §6): Once the Cloudflare CDN domain is
+      provisioned, add a `<domain-config>` entry to `network_security_config.xml` with the
+      Cloudflare SPKI primary + backup pin and expiry date. Do NOT pin openFDA/NLM (gov rotation).
 - [ ] Generate/secure the release signing keystore out-of-tree; enroll **Play App
       Signing** at first Play upload. (Console + key custody — Dave.)
 - [ ] Google Play Console: Data Safety + Health Apps declaration; USE_EXACT_ALARM,
@@ -17,6 +24,7 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       TalkBack lived pass; full-screen-intent visuals. (Real hardware — Dave.)
 - [ ] Ed25519 signing keypair for the drug-DB manifest: generate, embed public key in
       app, keep private key in the CDN build job. (Key custody — Dave/pipeline split.)
+      ↳ Now tracked more specifically in the "Replace CDN keypair and URL" item above.
 
 ## Build-environment notes (for any future session)
 
@@ -143,6 +151,21 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 - [ ] **DoseHistory cause detail**: the history screen renders the destination state + a
       timestamp. The `DoseTransitionCause` (alarm/user/snooze-elapsed/miss-window) is stored
       but not yet surfaced. Add a secondary line in the accessibility/polish pass if useful.
+
+### Slice 8 — Drug reference + CDN pipeline (2026-06-12)
+
+- [ ] **CDN_BASE_URL** (DECISIONS.md S8-A7): `DrugDbUpdateWorker.CDN_BASE_URL` is blank;
+      the worker skips gracefully. Dave fills in the real Backblaze B2 + Cloudflare URL.
+- [ ] **Replace APP_PUBLIC_KEY_HEX** (DECISIONS.md S8-A3): Current fixture key is the RFC 8032
+      test vector. Dave generates a real keypair per the DECISIONS.md procedure and replaces.
+- [ ] **SPKI pinning** (Standards §6): Add `<domain-config>` with Cloudflare SPKI pins to
+      `network_security_config.xml` once the CDN domain is known. Template is documented in
+      DECISIONS.md.
+- [ ] **openFDA label refresh**: Cached labels are forever (spec §2.10). A future v1.x
+      enhancement could offer a "refresh" button on the reference screen for staleness.
+- [ ] **Drug reference for free-text meds**: The reference screen correctly shows a plain
+      message for free-text meds. If a user later re-resolves a med from the search
+      (edit mode), the label will be fetched on next AddEditMedication save.
 
 ### Slice 7 — Refill tracking (2026-06-12)
 

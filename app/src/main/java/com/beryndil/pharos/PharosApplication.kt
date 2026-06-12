@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.StrictMode
 import android.util.Log
 import com.beryndil.pharos.core.db.AppContainer
+import com.beryndil.pharos.data.drugref.DrugDbUpdateWorker
 import com.beryndil.pharos.refill.LowSupplyCheckWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class PharosApplication : Application() {
 
         rearmAlarmsOnStartup()
         scheduleLowSupplyCheck()
+        scheduleDrugDbUpdate()
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
@@ -56,6 +58,22 @@ class PharosApplication : Application() {
         }.onFailure {
             if (BuildConfig.DEBUG) {
                 Log.w("PharosApplication", "low-supply check schedule failed: ${it.javaClass.simpleName}")
+            }
+        }
+    }
+
+    /**
+     * Enqueue the daily CDN drug-DB update check (spec §3.2, §3.5, DECISIONS.md S8-A4).
+     * WorkManager is correct here: CDN updates are not time-critical (unlike dose reminders).
+     * Wi-Fi-preferred via [NetworkType.UNMETERED] constraint in [DrugDbUpdateWorker].
+     * CDN_BASE_URL is a placeholder until Dave provisions Backblaze B2 + Cloudflare (TODO.md).
+     */
+    private fun scheduleDrugDbUpdate() {
+        runCatching {
+            DrugDbUpdateWorker.schedule(applicationContext)
+        }.onFailure {
+            if (BuildConfig.DEBUG) {
+                Log.w("PharosApplication", "drug-DB update schedule failed: ${it.javaClass.simpleName}")
             }
         }
     }

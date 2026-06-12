@@ -100,6 +100,27 @@ relevant slice is built.
 - Release signing keystore: generated and stored out-of-tree at first release-build
   need; Play App Signing enrollment is a Dave/console task.
 
+## Slice 8 decisions (Drug reference + CDN drug-DB pipeline)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| S8-A1 | `DrugLabelRepository` is a standalone class (`data/drugref/`); `AddEditMedicationViewModel` triggers `ensureLabelCached` fire-and-forget after a successful save (when `rxcui` is not null). The `DrugReferenceViewModel` also triggers a fetch when the screen is opened and the cache is empty. | Spec §2.10 "fetched per-drug on add"; lazy-also-on-view ensures the reference is populated even for meds added before Slice 8 shipped. |
+| S8-A2 | `AddEditMedicationViewModel` accepts `drugLabelRepository: DrugLabelRepository? = null` as an optional parameter. Existing tests that don't provide it silently skip the label fetch (no behavioral change). Production `AddMedication` / `EditMedication` nav destinations inject the real repository from `AppContainer`. | Backward-compatible change with zero test impact; avoids refactoring the factory signature of every existing test. |
+| S8-A3 | Ed25519 manifest verification uses `com.google.crypto.tink.subtle.Ed25519Verify` (Tink is already a dependency for Keystore key wrapping). No additional crypto library needed. `APP_PUBLIC_KEY` is the RFC 8032 §6 test-vector public key — a real, valid Ed25519 key used as the fixture/development key. Dave replaces it with the real CDN key at provisioning time. Private key (seed): `9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae3d55`. Keep this private key in the CDN build job only — never commit it. | Tink is idiomatic, already in the dep graph, and works on all minSdk=26+ devices. RFC 8032 test vector gives a known-valid key pair for development. |
+| S8-A4 | CDN manifest contract (spec §3.2, §3.5): Manifest JSON at `{CDN_BASE_URL}/pharos_drug_ref_manifest.json`, signature (64 raw Ed25519 bytes) at `{CDN_BASE_URL}/pharos_drug_ref_manifest.json.sig`. Manifest fields: `schema_version` (int), `db_filename` (string), `db_schema_version` (int), `sha256_hex` (lowercase hex SHA-256 of the DB file), `size_bytes` (long). DB file at `{CDN_BASE_URL}/{db_filename}`. Signature is over the exact UTF-8 bytes of the manifest JSON file. `CDN_BASE_URL` is a blank placeholder in `DrugDbUpdateWorker.CDN_BASE_URL` until Dave provisions Backblaze B2 + Cloudflare. To generate a signed manifest for a new DB release: (1) compute `sha256sum pharos_drug_ref.db`, (2) write the manifest JSON, (3) sign it: `echo -n "$(cat pharos_drug_ref_manifest.json)" | openssl pkeyutl -sign -inkey private_key.pem -out pharos_drug_ref_manifest.json.sig`. | Self-contained manifest + separate signature file. Signature-before-parse (step 3 before step 4) prevents authenticated parsing bugs. Prior DB stays intact on any failure (Law 9). |
+| S8-A5 | `DrugDbUpdater.cdnBaseUrl` is injectable for testability. Tests use a local `file://` temp directory via `cdnDir.toURI().toString()`. Production uses `DrugDbUpdateWorker.CDN_BASE_URL`. The download methods detect `file://` vs `http://` via `is HttpURLConnection` check — no separate mock layer needed. | Clean seam without adding an HTTP mock library dependency. |
+| S8-A6 | Drug reference accessible from the Medications list via a new "Drug reference" dropdown menu item (alongside Track refill, Pause, Resume, End). Only shown for non-free-text medications (`!medication.isFreeText`). Free-text meds' reference screen shows an informative message explaining why no data is available. | Spec §2.10 "accessible from med detail". No separate detail screen exists yet; the dropdown is the minimal nav path without rebuilding the med list. |
+| S8-A7 | `DrugDbUpdateWorker.CDN_BASE_URL` is a blank string constant — the worker skips gracefully when blank. Dave fills in the real Backblaze B2 + Cloudflare URL before release (logged in TODO.md). | Blank URL → skip (not a crash or error). Safe default until the CDN is provisioned. |
+
+## CDN keypair replacement procedure (Dave action before release)
+
+1. Generate a new Ed25519 keypair: `openssl genpkey -algorithm ed25519 -out private_key.pem`
+2. Extract the public key (raw 32-byte hex): `openssl pkey -in private_key.pem -pubout -outform DER | xxd -p -c 32 | tail -1` (the last 32 hex bytes of the DER output).
+3. Replace `ManifestVerifier.APP_PUBLIC_KEY_HEX` with the output from step 2.
+4. Keep `private_key.pem` in the CDN build job; never commit it.
+5. Update `DrugDbUpdateWorker.CDN_BASE_URL` with the real CDN base URL.
+6. Set up SPKI pinning in `network_security_config.xml` for the CDN domain (see TODO.md).
+
 ## Slice 6 decisions (Onboarding + reliability dashboard)
 
 | ID | Decision | Rationale |

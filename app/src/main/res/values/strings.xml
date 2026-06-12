@@ -396,6 +396,32 @@
     <string name="channel_refill_name">Refill reminders</string>
     <string name="channel_refill_desc">Low-supply and refill alerts. Can be silenced without affecting dose reminders.</string>
 
+    <!-- ── Drug reference (Slice 8, spec §2.10) ─────────────────────────────── -->
+    <string name="screen_drug_reference">Drug reference</string>
+    <string name="action_drug_reference">Drug reference</string>
+    <!-- %1$s = medication name -->
+    <string name="cd_drug_reference">View drug reference for %1$s</string>
+
+    <!-- Label sections -->
+    <string name="drug_reference_section_side_effects">Side effects and adverse reactions</string>
+    <string name="drug_reference_section_interactions">Drug interactions</string>
+    <string name="drug_reference_section_none">No data available for this section in the source database.</string>
+
+    <!-- Source + freshness (Law 9) -->
+    <string name="drug_reference_source_label">Source</string>
+    <string name="drug_reference_fetched_label">Retrieved</string>
+    <!-- %1$s = source name, %2$s = date string -->
+    <string name="cd_drug_reference_metadata">Reference data from %1$s, retrieved %2$s</string>
+
+    <!-- Offline / not cached state (spec §2.10) -->
+    <string name="drug_reference_not_available_offline">Reference data is not available offline. Connect to the internet and re-open this screen to load it.</string>
+
+    <!-- Free-text med state (spec §2.11) -->
+    <string name="drug_reference_free_text">This medication was added without a drug database match. No label reference is available for custom medications.</string>
+
+    <!-- Reference disclaimer (spec §4.2 — required wherever label text appears) -->
+    <string name="drug_reference_disclaimer">This information is from the drug\'s label and is provided for reference only. It is not medical advice. Always check with your doctor or pharmacist before making any changes to your medication.</string>
+
     <!-- Low-supply notification content -->
     <!-- %1$s = medication name -->
     <string name="refill_notification_low_title">Low supply: %1$s</string>

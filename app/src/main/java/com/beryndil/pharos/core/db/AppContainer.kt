@@ -23,6 +23,11 @@ import com.beryndil.pharos.data.schedule.ScheduleRepository
 import com.beryndil.pharos.onboarding.OnboardingRepository
 import com.beryndil.pharos.refill.AndroidRefillNotifier
 import com.beryndil.pharos.refill.RefillNotifier
+import com.beryndil.pharos.data.drugref.DrugLabelRepository
+import com.beryndil.pharos.data.drugref.DrugDbUpdater
+import com.beryndil.pharos.data.drugref.DrugDbUpdateWorker
+import com.beryndil.pharos.data.drugref.ManifestVerifier
+import com.beryndil.pharos.data.drugref.OpenFdaDrugLabelService
 import com.beryndil.pharos.refill.RefillRepository
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
@@ -154,6 +159,32 @@ class AppContainer(private val applicationContext: Context) {
      */
     val refillNotifier: RefillNotifier by lazy {
         AndroidRefillNotifier(applicationContext)
+    }
+
+    // ── Drug reference (Slice 8, spec §2.10 / §3.2 / §3.5) ──────────────────
+
+    /**
+     * Cache-aside repository for drug label sections (side effects + drug interactions).
+     * Fetches from openFDA on demand; caches locally forever after (spec §2.10, Law 9).
+     */
+    val drugLabelRepository: DrugLabelRepository by lazy {
+        DrugLabelRepository(
+            labelCacheDao = drugRefDatabase.labelCacheDao(),
+            drugLabelService = OpenFdaDrugLabelService(),
+        )
+    }
+
+    /**
+     * CDN pipeline: downloads, Ed25519-verifies, and atomically swaps the drug-reference DB
+     * (spec §3.2, §3.5, Standards §6). WorkManager wraps this in [DrugDbUpdateWorker].
+     * CDN base URL is a placeholder until Dave provisions Backblaze B2 + Cloudflare (TODO.md).
+     */
+    val drugDbUpdater: DrugDbUpdater by lazy {
+        DrugDbUpdater(
+            context = applicationContext,
+            cdnBaseUrl = DrugDbUpdateWorker.CDN_BASE_URL,
+            manifestVerifier = ManifestVerifier.production(),
+        )
     }
 
     /** Single-fire-and-reschedule coordinator: the brain of the alarm engine. */
