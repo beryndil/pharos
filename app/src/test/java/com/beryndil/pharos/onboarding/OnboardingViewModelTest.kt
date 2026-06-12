@@ -243,4 +243,7 @@ private class FakeSettingDaoForOnboarding : com.beryndil.pharos.data.regimen.dao
 
     override fun observeAll(): kotlinx.coroutines.flow.Flow<List<com.beryndil.pharos.data.regimen.entity.SettingEntity>> =
         kotlinx.coroutines.flow.MutableStateFlow(map.values.toList())
+
+    override suspend fun getAll(): List<com.beryndil.pharos.data.regimen.entity.SettingEntity> =
+        map.values.toList()
 }

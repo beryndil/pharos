@@ -152,6 +152,29 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       timestamp. The `DoseTransitionCause` (alarm/user/snooze-elapsed/miss-window) is stored
       but not yet surfaced. Add a secondary line in the accessibility/polish pass if useful.
 
+### Slice 9 — Backup / restore / export (2026-06-12)
+
+- [ ] **PDF export uses PdfDocument canvas — no text wrapping**: Long medication names or
+      schedule descriptions may overflow the page width. For v1 the layout is sufficient;
+      add word-wrap / multi-line text in a PDF polish pass if needed.
+- [ ] **Backup destination shown in success toast**: currently only "Backup saved." is shown;
+      the actual URI is not surfaced. Consider adding a "Share" action to the snackbar (e.g.
+      `Intent.ACTION_SEND`) in a future polish pass so users can immediately email themselves
+      the file.
+- [ ] **Restore does not re-arm alarms**: After a restore, `AlarmCoordinator.reScheduleAll()`
+      should be called to schedule dose alarms for the restored data. Wire this in
+      `BackupRepository.restore` (post-import step) or have `BackupViewModel` trigger it via
+      a callback. Deferred to avoid the circular dep between backup/ and alarm/ packages —
+      clean seam is a `BackupRepository` constructor parameter or a post-restore callback.
+      File under Slice 11 hardening.
+- [ ] **Passphrase field does not prevent screenshots**: `FLAG_SECURE` is global so the
+      passphrase dialog is covered. If per-screen FLAG_SECURE is later enabled (S6-A1 TODO),
+      ensure the passphrase dialog screen is added to the secure set.
+- [ ] **Access token revocation on restore** (nice-to-have): after a replace-all restore,
+      any pending WorkManager jobs (low-supply check, CDN update) were scheduled for the old
+      data. They will re-enqueue harmlessly on next app start but could fire once on stale
+      medication IDs. Cancel and re-enqueue WorkManager on restore in Slice 11 hardening.
+
 ### Slice 8 — Drug reference + CDN pipeline (2026-06-12)
 
 - [ ] **CDN_BASE_URL** (DECISIONS.md S8-A7): `DrugDbUpdateWorker.CDN_BASE_URL` is blank;

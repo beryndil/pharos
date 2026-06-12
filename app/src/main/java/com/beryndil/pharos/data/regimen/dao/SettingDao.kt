@@ -19,4 +19,8 @@ interface SettingDao {
 
     @Query("SELECT * FROM settings")
     fun observeAll(): Flow<List<SettingEntity>>
+
+    /** Returns every settings row — backup export only. */
+    @Query("SELECT * FROM settings ORDER BY key ASC")
+    suspend fun getAll(): List<SettingEntity>
 }

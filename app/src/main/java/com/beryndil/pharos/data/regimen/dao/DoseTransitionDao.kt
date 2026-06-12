@@ -38,5 +38,9 @@ interface DoseTransitionDao {
     @Query("SELECT COUNT(*) FROM dose_transitions WHERE doseInstanceId = :doseInstanceId")
     suspend fun countByDose(doseInstanceId: String): Int
 
+    /** Returns every transition row — backup export only. */
+    @Query("SELECT * FROM dose_transitions ORDER BY atEpochMs ASC, id ASC")
+    suspend fun getAll(): List<DoseTransitionEntity>
+
     // No DELETE / @Update — dose history is permanent (spec §3.3, Law 9).
 }

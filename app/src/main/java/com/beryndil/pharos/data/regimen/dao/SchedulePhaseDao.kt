@@ -17,5 +17,9 @@ interface SchedulePhaseDao {
     )
     suspend fun getPhasesForSchedule(scheduleId: String): List<SchedulePhaseEntity>
 
+    /** Returns every phase row — backup export only. */
+    @Query("SELECT * FROM schedule_phases ORDER BY scheduleId ASC, phaseOrder ASC")
+    suspend fun getAll(): List<SchedulePhaseEntity>
+
     // No UPDATE or DELETE. Phases belong to an immutable schedule version.
 }

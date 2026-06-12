@@ -27,6 +27,8 @@ import com.beryndil.pharos.refill.RefillViewModel
 import com.beryndil.pharos.refill.ui.RefillDetailScreen
 import com.beryndil.pharos.reference.DrugReferenceViewModel
 import com.beryndil.pharos.reference.ui.DrugReferenceScreen
+import com.beryndil.pharos.backup.BackupViewModel
+import com.beryndil.pharos.backup.ui.BackupScreen
 import com.beryndil.pharos.reliability.ReliabilityDashboardViewModel
 import com.beryndil.pharos.reliability.ui.ReliabilityDashboardScreen
 
@@ -52,6 +54,7 @@ fun PharosNavGraph(
     val doseRepository = app.appContainer.doseRepository
     val refillRepository = app.appContainer.refillRepository
     val drugLabelRepository = app.appContainer.drugLabelRepository
+    val backupRepository = app.appContainer.backupRepository
 
     NavHost(
         navController = navController,
@@ -142,6 +145,9 @@ fun PharosNavGraph(
                 },
                 onDrugReferenceClicked = { medId ->
                     navController.navigate(NavRoute.DrugReference.buildRoute(medId))
+                },
+                onOpenBackup = {
+                    navController.navigate(NavRoute.BackupRestore.route)
                 },
                 onEvent = viewModel::onEvent,
             )
@@ -234,6 +240,19 @@ fun PharosNavGraph(
             )
         }
 
+        // ── Backup / restore / export (Slice 9, spec §2.12) ─────────────
+        composable(NavRoute.BackupRestore.route) {
+            val viewModel: BackupViewModel = viewModel(
+                factory = BackupViewModel.factory(repository = backupRepository),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            BackupScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
         // ── Reliability dashboard (Law 6 — reliability is visible) ────────
         composable(NavRoute.ReliabilityDashboard.route) {
             val viewModel: ReliabilityDashboardViewModel = viewModel(
@@ -291,4 +310,6 @@ sealed class NavRoute(val route: String) {
 
         fun buildRoute(medId: String): String = "medications/$medId/reference"
     }
+
+    data object BackupRestore : NavRoute("backup")
 }

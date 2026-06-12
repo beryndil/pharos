@@ -148,5 +148,9 @@ interface DoseInstanceDao {
     )
     suspend fun getLastTakenForSchedule(scheduleId: String): DoseInstanceEntity?
 
+    /** Returns every dose instance row — backup export only. */
+    @Query("SELECT * FROM dose_instances ORDER BY dueEpochMs ASC")
+    suspend fun getAll(): List<DoseInstanceEntity>
+
     // No DELETE method. Dose history is permanent (spec §3.3, Law 9).
 }

@@ -60,6 +60,11 @@ android {
         // SQLCipher ships multiple copies of these; keep the first.
         resources.pickFirsts += "lib/*/libsqlcipher.so"
         resources.pickFirsts += "lib/*/libsqlcipher_android.so"
+        // BouncyCastle ships signed jars; exclude signing metadata that causes merge conflicts.
+        resources.excludes += "META-INF/BCKEY.DSA"
+        resources.excludes += "META-INF/BCKEY.SF"
+        resources.excludes += "META-INF/BC2048KE.DSA"
+        resources.excludes += "META-INF/BC2048KE.SF"
     }
     sourceSets {
         // Expose Room schema JSONs as debug assets so MigrationTestHelper can find them via
@@ -119,6 +124,14 @@ dependencies {
     // NOT used for dose reminders — those use AlarmManager (CLAUDE.md: never WorkManager for reminders).
     implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.androidx.work.testing)
+
+    // Argon2id KDF for backup encryption (Standards §6, spec §2.12, DECISIONS.md S9-A1).
+    // BouncyCastle 1.78.1 provides Argon2BytesGenerator as a pure-Java implementation.
+    // Used directly (not via JCE provider) to avoid the platform-BC namespace conflict
+    // on API 26–30 devices. Argon2 classes did not exist in Android's bundled BC (<1.66),
+    // so our dep's classes load from the app classloader without conflict.
+    // API 31+ has no platform BC to conflict with. See DECISIONS.md S9-A1.
+    implementation(libs.bouncycastle.prov)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

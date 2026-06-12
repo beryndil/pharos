@@ -38,5 +38,9 @@ interface ScheduleDao {
     @Query("SELECT * FROM schedules WHERE medicationId = :medicationId ORDER BY createdAtEpochMs ASC")
     suspend fun getAllVersionsForMedication(medicationId: String): List<ScheduleEntity>
 
+    /** Returns every schedule row (all versions, active + inactive) — backup export only. */
+    @Query("SELECT * FROM schedules ORDER BY createdAtEpochMs ASC")
+    suspend fun getAll(): List<ScheduleEntity>
+
     // No DELETE method — see class-level comment.
 }

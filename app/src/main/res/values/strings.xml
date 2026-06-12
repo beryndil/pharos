@@ -422,6 +422,46 @@
     <!-- Reference disclaimer (spec §4.2 — required wherever label text appears) -->
     <string name="drug_reference_disclaimer">This information is from the drug\'s label and is provided for reference only. It is not medical advice. Always check with your doctor or pharmacist before making any changes to your medication.</string>
 
+    <!-- ── Backup / restore / export (Slice 9, spec §2.12) ──────────────────── -->
+    <!-- Screen title -->
+    <string name="screen_backup">Backup &amp; restore</string>
+    <!-- Navigation entry in settings / today menu -->
+    <string name="action_backup">Backup &amp; restore</string>
+    <string name="cd_open_backup">Backup and restore</string>
+
+    <!-- Encrypted backup section -->
+    <string name="backup_section_encrypted">Encrypted backup</string>
+    <string name="backup_encrypted_description">Creates an encrypted file protected by a passphrase you choose. Only you can open it. Save it to Downloads, Google Drive, or email it to yourself. The passphrase is never stored in the app — keep it somewhere safe.</string>
+    <string name="backup_action_create">Create backup</string>
+    <string name="backup_action_restore">Restore from backup</string>
+
+    <!-- Passphrase dialog: create -->
+    <string name="backup_passphrase_title_create">Choose a passphrase</string>
+    <string name="backup_passphrase_body_create">Your backup will be encrypted with this passphrase. You will need it to restore. The app does not store your passphrase.</string>
+    <!-- Passphrase dialog: restore -->
+    <string name="backup_passphrase_title_restore">Enter your passphrase</string>
+    <string name="backup_passphrase_body_restore">This will replace all current data with the backup contents. The operation is all-or-nothing — a corrupt or wrong-passphrase file will not be imported.</string>
+
+    <string name="backup_passphrase_label">Passphrase</string>
+    <string name="backup_passphrase_field_cd">Passphrase field</string>
+
+    <!-- Export section (plaintext, not encrypted) -->
+    <string name="backup_section_export">Exportable list</string>
+    <string name="backup_export_description">A human-readable medication list. Not encrypted — anyone can open it. Use this to share your medication list with a doctor or pharmacist, or to keep a printed copy.</string>
+    <string name="backup_action_export_pdf">Export PDF</string>
+    <string name="backup_action_export_csv">Export CSV</string>
+
+    <!-- Progress / result messages -->
+    <string name="backup_in_progress">Working…</string>
+    <string name="backup_success">Backup saved.</string>
+    <string name="backup_restore_success">Restore complete. Your medications have been loaded.</string>
+    <string name="backup_export_success">Exported.</string>
+
+    <!-- Post-wipe restore offer (empty medications state) -->
+    <string name="backup_restore_offer_title">Have a backup?</string>
+    <string name="backup_restore_offer_body">Restore your medications from a backup file.</string>
+    <string name="backup_restore_offer_button">Restore from backup</string>
+
     <!-- Low-supply notification content -->
     <!-- %1$s = medication name -->
     <string name="refill_notification_low_title">Low supply: %1$s</string>

@@ -335,4 +335,6 @@ private class FakeSettingDao : SettingDao {
         _all.value.find { it.key == key }
 
     override fun observeAll(): Flow<List<SettingEntity>> = _all.asStateFlow()
+
+    override suspend fun getAll(): List<SettingEntity> = _all.value
 }

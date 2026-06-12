@@ -34,6 +34,10 @@ interface MedicationDao {
     @Query("SELECT * FROM medications WHERE status = 'ACTIVE' ORDER BY name ASC")
     suspend fun getActiveOnce(): List<MedicationEntity>
 
+    /** Returns every medication row — used by the backup export path only. */
+    @Query("SELECT * FROM medications ORDER BY createdAtEpochMs ASC")
+    suspend fun getAll(): List<MedicationEntity>
+
     // NOTE: No DELETE method. Medications are never physically removed (spec §3.3).
     // To end a medication, update its status to ENDED via [update].
 }

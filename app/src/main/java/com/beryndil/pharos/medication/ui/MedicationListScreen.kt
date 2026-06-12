@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -62,6 +63,8 @@ fun MedicationListScreen(
     onMedicationClicked: (String) -> Unit,
     onRefillClicked: (String) -> Unit,
     onDrugReferenceClicked: (String) -> Unit,
+    /** Navigate to backup/restore screen — used in the post-wipe empty-state card. */
+    onOpenBackup: () -> Unit,
     onEvent: (MedicationListEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -91,6 +94,7 @@ fun MedicationListScreen(
     ) { innerPadding ->
         if (uiState.medications.isEmpty()) {
             EmptyMedicationsState(
+                onOpenBackup = onOpenBackup,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
@@ -227,7 +231,10 @@ private fun MedicationListItem(
 }
 
 @Composable
-private fun EmptyMedicationsState(modifier: Modifier = Modifier) {
+private fun EmptyMedicationsState(
+    onOpenBackup: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center,
@@ -235,6 +242,7 @@ private fun EmptyMedicationsState(modifier: Modifier = Modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 32.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Medication,
@@ -251,6 +259,22 @@ private fun EmptyMedicationsState(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            // Post-wipe / first-install restore offer (spec §2.12).
+            // Shown only on the empty state so returning users aren't distracted by it.
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.backup_restore_offer_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = stringResource(R.string.backup_restore_offer_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = onOpenBackup) {
+                Text(stringResource(R.string.backup_restore_offer_button))
+            }
         }
     }
 }

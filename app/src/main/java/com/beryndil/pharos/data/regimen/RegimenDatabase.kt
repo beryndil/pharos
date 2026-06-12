@@ -6,6 +6,7 @@ import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
 import com.beryndil.pharos.data.regimen.dao.DoseTransitionDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
 import com.beryndil.pharos.data.regimen.dao.RefillRecordDao
+import com.beryndil.pharos.data.regimen.dao.RestoreDao
 import com.beryndil.pharos.data.regimen.dao.ScheduleDao
 import com.beryndil.pharos.data.regimen.dao.SchedulePhaseDao
 import com.beryndil.pharos.data.regimen.dao.SettingDao
@@ -52,4 +53,7 @@ abstract class RegimenDatabase : RoomDatabase() {
     abstract fun doseTransitionDao(): DoseTransitionDao
     abstract fun refillRecordDao(): RefillRecordDao
     abstract fun settingDao(): SettingDao
+
+    /** Backup/restore operations — see [RestoreDao] for usage contract. */
+    abstract fun restoreDao(): RestoreDao
 }

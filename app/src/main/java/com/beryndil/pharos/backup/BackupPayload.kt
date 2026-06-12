@@ -1,0 +1,128 @@
+package com.beryndil.pharos.backup
+
+import kotlinx.serialization.Serializable
+
+/**
+ * Top-level schema for the encrypted backup JSON payload (spec §2.12, D4).
+ *
+ * [schemaVersion] is checked on restore: if the restoring app does not understand the version
+ * it rejects the backup rather than attempting a partial import.
+ *
+ * All entity fields mirror the Room entity definitions exactly so that serialisation is
+ * a direct mapping without transformation. Timestamps are UTC epoch-milliseconds (Standards §2).
+ */
+@Serializable
+data class BackupPayload(
+    val schemaVersion: Int = CURRENT_SCHEMA_VERSION,
+    /** UTC epoch-ms when this backup was exported (for display, not used in restore logic). */
+    val exportedAtEpochMs: Long,
+    val medications: List<MedicationBackup>,
+    val schedules: List<ScheduleBackup>,
+    val schedulePhases: List<SchedulePhaseBackup>,
+    val doseInstances: List<DoseInstanceBackup>,
+    val doseTransitions: List<DoseTransitionBackup>,
+    val refillRecords: List<RefillRecordBackup>,
+    val settings: List<SettingBackup>,
+) {
+    companion object {
+        const val CURRENT_SCHEMA_VERSION = 1
+    }
+}
+
+// ── Entity backup DTOs ────────────────────────────────────────────────────────
+// Each mirrors the corresponding Room entity's fields verbatim.
+
+@Serializable
+data class MedicationBackup(
+    val id: String,
+    val name: String,
+    val rxcui: String?,
+    val ingredientsJson: String,
+    val strength: String,
+    val form: String,
+    val doseAmount: String,
+    val prescriber: String?,
+    val pharmacy: String?,
+    val purpose: String?,
+    val isFreeText: Boolean,
+    val status: String,
+    val startEpochMs: Long,
+    val endEpochMs: Long?,
+    val createdAtEpochMs: Long,
+    val updatedAtEpochMs: Long,
+)
+
+@Serializable
+data class ScheduleBackup(
+    val id: String,
+    val medicationId: String,
+    val type: String,
+    val scheduledTimesJson: String?,
+    val daysOfWeekJson: String?,
+    val intervalHours: Int?,
+    val intervalAnchorType: String?,
+    val windowStartTime: String?,
+    val windowEndTime: String?,
+    val dailyMaxDoses: Int?,
+    val zoneId: String,
+    val isActive: Boolean,
+    val startEpochMs: Long?,
+    val endEpochMs: Long?,
+    val createdAtEpochMs: Long,
+)
+
+@Serializable
+data class SchedulePhaseBackup(
+    val id: String,
+    val scheduleId: String,
+    val phaseOrder: Int,
+    val doseDescription: String,
+    val durationDays: Int,
+    val scheduledTimesJson: String,
+)
+
+@Serializable
+data class DoseInstanceBackup(
+    val id: String,
+    val medicationId: String,
+    val scheduleId: String,
+    val dueEpochMs: Long,
+    val windowEndEpochMs: Long?,
+    val state: String,
+    val takenEpochMs: Long?,
+    val skippedEpochMs: Long?,
+    val missedEpochMs: Long?,
+    val snoozeUntilEpochMs: Long?,
+    val createdAtEpochMs: Long,
+)
+
+@Serializable
+data class DoseTransitionBackup(
+    val id: String,
+    val doseInstanceId: String,
+    val medicationId: String,
+    val fromState: String?,
+    val toState: String,
+    val cause: String,
+    val atEpochMs: Long,
+)
+
+@Serializable
+data class RefillRecordBackup(
+    val id: String,
+    val medicationId: String,
+    val quantityOnHand: Int,
+    val quantityUnit: String,
+    val refillByEpochMs: Long?,
+    val pharmacyPhone: String?,
+    val notes: String?,
+    val type: String,
+    val createdAtEpochMs: Long,
+)
+
+@Serializable
+data class SettingBackup(
+    val key: String,
+    val value: String,
+    val updatedAtEpochMs: Long,
+)

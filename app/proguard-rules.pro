@@ -21,3 +21,14 @@
 # Tink — keep all Tink classes (registered primitives, key managers, proto-based serialization).
 -keep class com.google.crypto.tink.** { *; }
 -keepclassmembers class com.google.crypto.tink.** { *; }
+
+# BouncyCastle — keep Argon2id generator and its dependencies (backup KDF, Standards §6).
+# We use the direct API (not JCE provider), so only the generator chain needs keeping.
+-keep class org.bouncycastle.crypto.generators.Argon2BytesGenerator { *; }
+-keep class org.bouncycastle.crypto.params.Argon2Parameters { *; }
+-keep class org.bouncycastle.crypto.params.Argon2Parameters$Builder { *; }
+-keep class org.bouncycastle.util.Arrays { *; }
+
+# Backup entities — keep for kotlinx.serialization reflection.
+-keep class com.beryndil.pharos.backup.** { *; }
+-keepclassmembers class com.beryndil.pharos.backup.** { *; }

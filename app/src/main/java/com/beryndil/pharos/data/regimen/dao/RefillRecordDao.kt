@@ -25,5 +25,9 @@ interface RefillRecordDao {
     )
     suspend fun getLatest(medicationId: String): RefillRecordEntity?
 
+    /** Returns every refill record row — backup export only. */
+    @Query("SELECT * FROM refill_records ORDER BY createdAtEpochMs ASC")
+    suspend fun getAll(): List<RefillRecordEntity>
+
     // No UPDATE or DELETE. Each refill event is a permanent ledger entry.
 }

@@ -1,0 +1,152 @@
+package com.beryndil.pharos.backup
+
+import android.net.Uri
+import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+@Immutable
+data class BackupUiState(
+    val operation: BackupOperation = BackupOperation.Idle,
+    /** SAF intent to fire (set while waiting for the launcher to return a URI). */
+    val pendingAction: PendingAction? = null,
+)
+
+sealed interface BackupOperation {
+    data object Idle : BackupOperation
+    data object InProgress : BackupOperation
+    data class BackupSuccess(val uri: Uri) : BackupOperation
+    data class RestoreSuccess(val medicationCount: Int) : BackupOperation
+    data object ExportSuccess : BackupOperation
+    data class Error(val message: String) : BackupOperation
+}
+
+/**
+ * Which SAF document picker the user opened — tracked so the viewmodel knows what to do
+ * with the URI the user picks.
+ */
+enum class PendingAction {
+    CREATE_BACKUP,
+    OPEN_BACKUP,
+    EXPORT_PDF,
+    EXPORT_CSV,
+}
+
+sealed interface BackupEvent {
+    /** User typed a passphrase and confirmed — create backup to [uri]. */
+    data class CreateBackup(val passphrase: CharArray, val uri: Uri) : BackupEvent
+
+    /** User typed a passphrase and confirmed — restore from [uri]. */
+    data class Restore(val passphrase: CharArray, val uri: Uri) : BackupEvent
+
+    /** Export a PDF medication list to [uri]. */
+    data class ExportPdf(val uri: Uri) : BackupEvent
+
+    /** Export a CSV medication list to [uri]. */
+    data class ExportCsv(val uri: Uri) : BackupEvent
+
+    /** Clear any result/error toast so the screen returns to Idle. */
+    data object DismissResult : BackupEvent
+}
+
+/**
+ * ViewModel for the Backup & Restore screen (spec §2.12).
+ *
+ * All crypto operations run on [kotlinx.coroutines.Dispatchers.IO] via [BackupRepository].
+ * Passphrase [CharArray]s are not stored in the state; they are forwarded to [BackupRepository]
+ * which zeros them after key derivation (Standards §6).
+ */
+class BackupViewModel(
+    private val repository: BackupRepository,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(BackupUiState())
+    val uiState: StateFlow<BackupUiState> = _uiState.asStateFlow()
+
+    fun onEvent(event: BackupEvent) {
+        when (event) {
+            is BackupEvent.CreateBackup -> createBackup(event.passphrase, event.uri)
+            is BackupEvent.Restore -> restore(event.passphrase, event.uri)
+            is BackupEvent.ExportPdf -> exportPdf(event.uri)
+            is BackupEvent.ExportCsv -> exportCsv(event.uri)
+            is BackupEvent.DismissResult -> _uiState.update { it.copy(operation = BackupOperation.Idle) }
+        }
+    }
+
+    private fun createBackup(passphrase: CharArray, uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(operation = BackupOperation.InProgress) }
+            val result = repository.createBackup(passphrase, uri)
+            _uiState.update {
+                it.copy(
+                    operation = when (result) {
+                        is BackupResult.Success -> BackupOperation.BackupSuccess(uri)
+                        is BackupResult.Error -> BackupOperation.Error(result.message)
+                    },
+                )
+            }
+        }
+    }
+
+    private fun restore(passphrase: CharArray, uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(operation = BackupOperation.InProgress) }
+            val result = repository.restore(passphrase, uri)
+            _uiState.update {
+                it.copy(
+                    operation = when (result) {
+                        is RestoreResult.Success -> BackupOperation.RestoreSuccess(result.medicationCount)
+                        is RestoreResult.Error -> BackupOperation.Error(result.message)
+                    },
+                )
+            }
+        }
+    }
+
+    private fun exportPdf(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(operation = BackupOperation.InProgress) }
+            val result = repository.exportPdf(uri)
+            _uiState.update {
+                it.copy(
+                    operation = when (result) {
+                        is ExportResult.Success -> BackupOperation.ExportSuccess
+                        is ExportResult.Error -> BackupOperation.Error(result.message)
+                    },
+                )
+            }
+        }
+    }
+
+    private fun exportCsv(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(operation = BackupOperation.InProgress) }
+            val result = repository.exportCsv(uri)
+            _uiState.update {
+                it.copy(
+                    operation = when (result) {
+                        is ExportResult.Success -> BackupOperation.ExportSuccess
+                        is ExportResult.Error -> BackupOperation.Error(result.message)
+                    },
+                )
+            }
+        }
+    }
+
+    companion object {
+        fun factory(repository: BackupRepository): ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer {
+                    BackupViewModel(repository = repository)
+                }
+            }
+    }
+}

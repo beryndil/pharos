@@ -29,6 +29,7 @@ import com.beryndil.pharos.data.drugref.DrugDbUpdateWorker
 import com.beryndil.pharos.data.drugref.ManifestVerifier
 import com.beryndil.pharos.data.drugref.OpenFdaDrugLabelService
 import com.beryndil.pharos.refill.RefillRepository
+import com.beryndil.pharos.backup.BackupRepository
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
@@ -184,6 +185,19 @@ class AppContainer(private val applicationContext: Context) {
             context = applicationContext,
             cdnBaseUrl = DrugDbUpdateWorker.CDN_BASE_URL,
             manifestVerifier = ManifestVerifier.production(),
+        )
+    }
+
+    // ── Backup / restore / export (Slice 9, spec §2.12) ──────────────────────
+
+    /**
+     * Orchestrates encrypted backup creation, restore, and plaintext export.
+     * Law 7: backup/restore are free forever; Law 4: only writes to user-chosen SAF URIs.
+     */
+    val backupRepository: BackupRepository by lazy {
+        BackupRepository(
+            db = regimenDatabase,
+            context = applicationContext,
         )
     }
 
