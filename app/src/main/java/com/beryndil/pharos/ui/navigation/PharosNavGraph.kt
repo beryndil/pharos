@@ -31,6 +31,7 @@ fun PharosNavGraph(
 ) {
     val app = LocalContext.current.applicationContext as PharosApplication
     val medicationRepository = app.appContainer.medicationRepository
+    val scheduleRepository = app.appContainer.scheduleRepository
 
     NavHost(
         navController = navController,
@@ -40,7 +41,10 @@ fun PharosNavGraph(
         // ── Medication list ───────────────────────────────────────────────
         composable(NavRoute.MedicationList.route) {
             val viewModel: MedicationListViewModel = viewModel(
-                factory = MedicationListViewModel.factory(medicationRepository),
+                factory = MedicationListViewModel.factory(
+                    medicationRepository = medicationRepository,
+                    scheduleRepository = scheduleRepository,
+                ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             MedicationListScreen(
@@ -51,13 +55,17 @@ fun PharosNavGraph(
                 onMedicationClicked = { medId ->
                     navController.navigate(NavRoute.EditMedication.buildRoute(medId))
                 },
+                onEvent = viewModel::onEvent,
             )
         }
 
         // ── Add medication ────────────────────────────────────────────────
         composable(NavRoute.AddMedication.route) {
             val viewModel: AddEditMedicationViewModel = viewModel(
-                factory = AddEditMedicationViewModel.factory(medicationRepository),
+                factory = AddEditMedicationViewModel.factory(
+                    repository = medicationRepository,
+                    scheduleRepository = scheduleRepository,
+                ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             AddEditMedicationScreen(
@@ -79,7 +87,10 @@ fun PharosNavGraph(
             // SavedStateHandle in AddEditMedicationViewModel picks up medId automatically
             // because navigation-compose wires nav args into CreationExtras.
             val viewModel: AddEditMedicationViewModel = viewModel(
-                factory = AddEditMedicationViewModel.factory(medicationRepository),
+                factory = AddEditMedicationViewModel.factory(
+                    repository = medicationRepository,
+                    scheduleRepository = scheduleRepository,
+                ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             AddEditMedicationScreen(

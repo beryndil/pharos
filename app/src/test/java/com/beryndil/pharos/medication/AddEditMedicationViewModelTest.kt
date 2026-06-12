@@ -12,6 +12,7 @@ import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
 import com.beryndil.pharos.data.regimen.entity.MedicationStatus
+import com.beryndil.pharos.data.schedule.ScheduleRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -50,6 +51,7 @@ class AddEditMedicationViewModelTest {
     private lateinit var regimenDb: RegimenDatabase
     private lateinit var drugRefDb: DrugRefDatabase
     private lateinit var repo: MedicationRepository
+    private lateinit var scheduleRepo: ScheduleRepository
 
     @Before
     fun setUp() {
@@ -74,6 +76,11 @@ class AddEditMedicationViewModelTest {
             medicationDao = regimenDb.medicationDao(),
             productDao = drugRefDb.productDao(),
             ingredientDao = drugRefDb.ingredientDao(),
+        )
+        scheduleRepo = ScheduleRepository(
+            scheduleDao = regimenDb.scheduleDao(),
+            schedulePhaseDao = regimenDb.schedulePhaseDao(),
+            doseInstanceDao = regimenDb.doseInstanceDao(),
         )
         // runBlocking: seed DB synchronously — no scheduler interaction needed.
         runBlocking { seedDrugRefFixture() }
@@ -246,6 +253,7 @@ class AddEditMedicationViewModelTest {
         // TestCoroutineScheduler as viewModelScope — advanceUntilIdle() drains both.
         return AddEditMedicationViewModel(
             repository = repo,
+            scheduleRepository = scheduleRepo,
             savedStateHandle = ssh,
             ioDispatcher = testDispatcher,
         )

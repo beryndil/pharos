@@ -5,6 +5,7 @@ import com.beryndil.pharos.data.drugref.dao.ProductDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
+import com.beryndil.pharos.data.regimen.entity.MedicationStatus
 import com.beryndil.pharos.medication.model.DrugSearchResult
 import com.beryndil.pharos.medication.model.DuplicateWarning
 import kotlinx.coroutines.flow.Flow
@@ -130,6 +131,39 @@ class MedicationRepository(
     /** Fetch a medication by ID. Returns null if not found. */
     suspend fun getMedication(id: String): MedicationEntity? =
         medicationDao.getById(id)
+
+    /** Pause a medication (status → PAUSED). No-op if not found. */
+    suspend fun pauseMedication(medId: String) {
+        val med = medicationDao.getById(medId) ?: return
+        medicationDao.update(
+            med.copy(
+                status = MedicationStatus.PAUSED.name,
+                updatedAtEpochMs = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    /** Resume a paused medication (status → ACTIVE). No-op if not found. */
+    suspend fun resumeMedication(medId: String) {
+        val med = medicationDao.getById(medId) ?: return
+        medicationDao.update(
+            med.copy(
+                status = MedicationStatus.ACTIVE.name,
+                updatedAtEpochMs = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    /** End a medication (status → ENDED). No-op if not found. */
+    suspend fun endMedication(medId: String) {
+        val med = medicationDao.getById(medId) ?: return
+        medicationDao.update(
+            med.copy(
+                status = MedicationStatus.ENDED.name,
+                updatedAtEpochMs = System.currentTimeMillis(),
+            ),
+        )
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────
 

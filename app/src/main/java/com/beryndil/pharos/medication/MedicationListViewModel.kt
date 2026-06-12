@@ -8,21 +8,36 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
+import com.beryndil.pharos.data.schedule.ScheduleRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.Instant
 
 @Immutable
 data class MedicationListUiState(
     val medications: List<MedicationEntity> = emptyList(),
+    val pendingPauseResumeEndMedId: String? = null,
 )
 
+sealed interface MedicationListEvent {
+    data class PauseMedication(val medId: String) : MedicationListEvent
+    data class ResumeMedication(val medId: String) : MedicationListEvent
+    data class EndMedication(val medId: String) : MedicationListEvent
+}
+
 class MedicationListViewModel(
-    repository: MedicationRepository,
+    private val medicationRepository: MedicationRepository,
+    private val scheduleRepository: ScheduleRepository,
 ) : ViewModel() {
 
-    val uiState: StateFlow<MedicationListUiState> = repository
+    val uiState: StateFlow<MedicationListUiState> = medicationRepository
         .observeActiveMedications()
         .map { meds -> MedicationListUiState(medications = meds) }
         .stateIn(
@@ -31,10 +46,48 @@ class MedicationListViewModel(
             initialValue = MedicationListUiState(),
         )
 
+    fun onEvent(event: MedicationListEvent) {
+        when (event) {
+            is MedicationListEvent.PauseMedication -> {
+                viewModelScope.launch {
+                    withContext(Dispatchers.IO) {
+                        medicationRepository.pauseMedication(event.medId)
+                    }
+                }
+            }
+            is MedicationListEvent.ResumeMedication -> {
+                viewModelScope.launch {
+                    withContext(Dispatchers.IO) {
+                        medicationRepository.resumeMedication(event.medId)
+                        // Re-generate instances so the user gets upcoming doses
+                        val from = Instant.now()
+                        val to = from.plusMillis(90L * 86_400_000L)
+                        scheduleRepository.generateInstancesForMed(event.medId, from, to)
+                    }
+                }
+            }
+            is MedicationListEvent.EndMedication -> {
+                viewModelScope.launch {
+                    withContext(Dispatchers.IO) {
+                        medicationRepository.endMedication(event.medId)
+                    }
+                }
+            }
+        }
+    }
+
     companion object {
-        fun factory(repository: MedicationRepository): ViewModelProvider.Factory =
+        fun factory(
+            medicationRepository: MedicationRepository,
+            scheduleRepository: ScheduleRepository,
+        ): ViewModelProvider.Factory =
             viewModelFactory {
-                initializer { MedicationListViewModel(repository) }
+                initializer {
+                    MedicationListViewModel(
+                        medicationRepository = medicationRepository,
+                        scheduleRepository = scheduleRepository,
+                    )
+                }
             }
     }
 }

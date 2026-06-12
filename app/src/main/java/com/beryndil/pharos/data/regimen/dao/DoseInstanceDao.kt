@@ -79,5 +79,14 @@ interface DoseInstanceDao {
     @Query("SELECT COUNT(*) FROM dose_instances WHERE id = :id")
     suspend fun countById(id: String): Int
 
+    @Query("SELECT dueEpochMs FROM dose_instances WHERE scheduleId = :scheduleId")
+    suspend fun getDueTimesForSchedule(scheduleId: String): List<Long>
+
+    @Query(
+        "SELECT * FROM dose_instances WHERE scheduleId = :scheduleId AND state = 'TAKEN' " +
+            "ORDER BY takenEpochMs DESC LIMIT 1",
+    )
+    suspend fun getLastTakenForSchedule(scheduleId: String): DoseInstanceEntity?
+
     // No DELETE method. Dose history is permanent (spec §3.3, Law 9).
 }

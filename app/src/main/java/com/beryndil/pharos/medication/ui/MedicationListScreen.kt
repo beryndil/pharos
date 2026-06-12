@@ -14,11 +14,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Medication
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -37,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
+import com.beryndil.pharos.data.regimen.entity.MedicationStatus
+import com.beryndil.pharos.medication.MedicationListEvent
 import com.beryndil.pharos.medication.MedicationListUiState
 
 /**
@@ -50,6 +60,7 @@ fun MedicationListScreen(
     uiState: MedicationListUiState,
     onAddMedication: () -> Unit,
     onMedicationClicked: (String) -> Unit,
+    onEvent: (MedicationListEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -66,10 +77,7 @@ fun MedicationListScreen(
             FloatingActionButton(
                 onClick = onAddMedication,
                 modifier = Modifier.semantics {
-                    contentDescription =
-                        // Loaded via ContentDescription from string resource at composition.
-                        // The direct string is set via the outer semantics call.
-                        ""
+                    contentDescription = ""
                 },
             ) {
                 Icon(
@@ -98,6 +106,7 @@ fun MedicationListScreen(
                     MedicationListItem(
                         medication = med,
                         onClick = { onMedicationClicked(med.id) },
+                        onEvent = onEvent,
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
                 }
@@ -112,9 +121,15 @@ fun MedicationListScreen(
 private fun MedicationListItem(
     medication: MedicationEntity,
     onClick: () -> Unit,
+    onEvent: (MedicationListEvent) -> Unit,
 ) {
     val formLabel = medication.form.toFormLabel()
     val itemDesc = stringResource(R.string.cd_med_item, medication.name, medication.strength, formLabel)
+    var menuExpanded by remember { mutableStateOf(false) }
+    val optionsCd = stringResource(R.string.cd_med_options, medication.name)
+
+    val status = runCatching { MedicationStatus.valueOf(medication.status) }
+        .getOrElse { MedicationStatus.ACTIVE }
 
     ListItem(
         headlineContent = {
@@ -129,6 +144,51 @@ private fun MedicationListItem(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        },
+        trailingContent = {
+            Box {
+                IconButton(
+                    onClick = { menuExpanded = true },
+                    modifier = Modifier.semantics { contentDescription = optionsCd },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = null,
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    if (status == MedicationStatus.ACTIVE) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_pause)) },
+                            onClick = {
+                                menuExpanded = false
+                                onEvent(MedicationListEvent.PauseMedication(medication.id))
+                            },
+                        )
+                    }
+                    if (status == MedicationStatus.PAUSED) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_resume)) },
+                            onClick = {
+                                menuExpanded = false
+                                onEvent(MedicationListEvent.ResumeMedication(medication.id))
+                            },
+                        )
+                    }
+                    if (status != MedicationStatus.ENDED) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_end)) },
+                            onClick = {
+                                menuExpanded = false
+                                onEvent(MedicationListEvent.EndMedication(medication.id))
+                            },
+                        )
+                    }
+                }
+            }
         },
         modifier = Modifier
             .fillMaxWidth()

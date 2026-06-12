@@ -8,6 +8,7 @@ import com.beryndil.pharos.data.drugref.DrugRefDatabaseFactory
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.RegimenDatabaseFactory
+import com.beryndil.pharos.data.schedule.ScheduleRepository
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
@@ -46,6 +47,15 @@ class AppContainer(private val applicationContext: Context) {
             medicationDao = regimenDatabase.medicationDao(),
             productDao = drugRefDatabase.productDao(),
             ingredientDao = drugRefDatabase.ingredientDao(),
+        )
+    }
+
+    /** Repository for schedule management (Slice 3). */
+    val scheduleRepository: ScheduleRepository by lazy {
+        ScheduleRepository(
+            scheduleDao = regimenDatabase.scheduleDao(),
+            schedulePhaseDao = regimenDatabase.schedulePhaseDao(),
+            doseInstanceDao = regimenDatabase.doseInstanceDao(),
         )
     }
 }

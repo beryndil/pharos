@@ -12,8 +12,11 @@ import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
 import com.beryndil.pharos.data.regimen.entity.MedicationStatus
+import com.beryndil.pharos.data.regimen.entity.ScheduleType
+import com.beryndil.pharos.data.schedule.ScheduleRepository
 import com.beryndil.pharos.medication.model.DrugSearchResult
 import com.beryndil.pharos.medication.model.DuplicateWarning
+import com.beryndil.pharos.schedule.model.ScheduleInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.UUID
 
@@ -83,6 +87,10 @@ data class AddEditMedicationUiState(
     /** Preserved from the existing entity so edit mode doesn't clobber createdAt. */
     val originalCreatedAtMs: Long? = null,
 
+    // ── Schedule ──────────────────────────────────────────────────────────
+    val scheduleInput: ScheduleInput = ScheduleInput(),
+    val scheduleValidationError: Boolean = false,
+
     // ── Validation ────────────────────────────────────────────────────────
     val strengthError: Boolean = false,
     val formError: Boolean = false,
@@ -113,6 +121,7 @@ sealed interface AddEditMedEvent {
     data class PrescriberChanged(val value: String) : AddEditMedEvent
     data class PharmacyChanged(val value: String) : AddEditMedEvent
     data class PurposeChanged(val value: String) : AddEditMedEvent
+    data class ScheduleInputChanged(val input: ScheduleInput) : AddEditMedEvent
     data object SaveRequested : AddEditMedEvent
     data object DuplicateWarningConfirmed : AddEditMedEvent
     data object DuplicateWarningDismissed : AddEditMedEvent
@@ -122,6 +131,7 @@ sealed interface AddEditMedEvent {
 @OptIn(FlowPreview::class)
 class AddEditMedicationViewModel(
     private val repository: MedicationRepository,
+    private val scheduleRepository: ScheduleRepository,
     savedStateHandle: SavedStateHandle,
     /**
      * IO dispatcher injected for testability — production code always passes [Dispatchers.IO];
@@ -167,6 +177,8 @@ class AddEditMedicationViewModel(
                 _uiState.update { it.copy(pharmacy = event.value) }
             is AddEditMedEvent.PurposeChanged ->
                 _uiState.update { it.copy(purpose = event.value) }
+            is AddEditMedEvent.ScheduleInputChanged ->
+                _uiState.update { it.copy(scheduleInput = event.input, scheduleValidationError = false) }
             is AddEditMedEvent.SaveRequested -> onSaveRequested()
             is AddEditMedEvent.DuplicateWarningConfirmed -> performSave()
             is AddEditMedEvent.DuplicateWarningDismissed ->
@@ -186,6 +198,18 @@ class AddEditMedicationViewModel(
             val ingredientNames = withContext(ioDispatcher) {
                 repository.getIngredientNames(ingredientRxcuis)
             }
+
+            // Load existing schedule
+            val scheduleInput = withContext(ioDispatcher) {
+                val schedule = scheduleRepository.getActiveSchedule(medId)
+                if (schedule != null) {
+                    val phases = scheduleRepository.getSchedulePhases(schedule.id)
+                    scheduleRepository.entityToScheduleInput(schedule, phases)
+                } else {
+                    ScheduleInput()
+                }
+            }
+
             _uiState.update {
                 it.copy(
                     step = FormStep.DETAILS,
@@ -205,6 +229,7 @@ class AddEditMedicationViewModel(
                     pharmacy = med.pharmacy ?: "",
                     purpose = med.purpose ?: "",
                     originalCreatedAtMs = med.createdAtEpochMs,
+                    scheduleInput = scheduleInput,
                 )
             }
         }
@@ -294,6 +319,10 @@ class AddEditMedicationViewModel(
             _uiState.update { it.copy(startDateError = true) }
             hasError = true
         }
+        if (!validateScheduleInput(state.scheduleInput)) {
+            _uiState.update { it.copy(scheduleValidationError = true) }
+            hasError = true
+        }
         if (hasError) return
 
         _uiState.update { it.copy(isSaving = true) }
@@ -324,8 +353,11 @@ class AddEditMedicationViewModel(
         val state = _uiState.value
         val nowMs = System.currentTimeMillis()
 
+        val medId = state.editMedId ?: UUID.randomUUID().toString()
+        val startDate = requireNotNull(state.startDate) { "startDate must not be null at save" }
+
         val entity = MedicationEntity(
-            id = state.editMedId ?: UUID.randomUUID().toString(),
+            id = medId,
             name = state.displayName.trim(),
             rxcui = state.pendingDrug?.rxcui,
             ingredientsJson = repository.encodeIngredientsJson(state.ingredientRxcuis),
@@ -337,7 +369,7 @@ class AddEditMedicationViewModel(
             purpose = state.purpose.trim().ifEmpty { null },
             isFreeText = state.isFreeText,
             status = MedicationStatus.ACTIVE.name,
-            startEpochMs = requireNotNull(state.startDate) { "startDate must not be null at save" }
+            startEpochMs = startDate
                 .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
             endEpochMs = state.endDate
                 ?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
@@ -351,6 +383,14 @@ class AddEditMedicationViewModel(
                 withContext(ioDispatcher) {
                     if (state.editMedId == null) repository.saveMedication(entity)
                     else repository.updateMedication(entity)
+
+                    scheduleRepository.saveSchedule(
+                        medId = medId,
+                        input = state.scheduleInput,
+                        startDate = startDate,
+                        endDate = state.endDate,
+                        zoneId = ZoneId.systemDefault(),
+                    )
                 }
             }.onSuccess {
                 _uiState.update { it.copy(isSaving = false, savedSuccessfully = true) }
@@ -360,12 +400,30 @@ class AddEditMedicationViewModel(
         }
     }
 
+    /**
+     * Per-type schedule validation. Returns true if the input is valid enough to save.
+     */
+    private fun validateScheduleInput(input: ScheduleInput): Boolean = when (input.type) {
+        ScheduleType.FIXED_DAILY, ScheduleType.TEMPORARY -> input.times.isNotEmpty()
+        ScheduleType.DAYS_OF_WEEK -> input.times.isNotEmpty() && input.daysOfWeek.isNotEmpty()
+        ScheduleType.INTERVAL -> input.intervalHours in 1..168
+        ScheduleType.DOSE_WINDOW -> input.windowEnd.isAfter(input.windowStart)
+        ScheduleType.PRN -> true
+        ScheduleType.TAPER -> input.phases.isNotEmpty() && input.phases.all {
+            it.doseDescription.isNotBlank() && it.durationDays > 0 && it.times.isNotEmpty()
+        }
+    }
+
     companion object {
-        fun factory(repository: MedicationRepository): ViewModelProvider.Factory =
+        fun factory(
+            repository: MedicationRepository,
+            scheduleRepository: ScheduleRepository,
+        ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     AddEditMedicationViewModel(
                         repository = repository,
+                        scheduleRepository = scheduleRepository,
                         savedStateHandle = createSavedStateHandle(),
                     )
                 }

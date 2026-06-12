@@ -49,6 +49,27 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       Production bundle requires the full trimmed RxNorm dataset via the CDN pipeline
       (Slice 8 / parallel track). Dave task: provision Backblaze B2 + Cloudflare CDN.
 
+### Slice 3 — Schedules (2026-06-12)
+
+- [ ] **TimePicker is24Hour** (ScheduleSection.kt `TimePickerDialog`): Hard-coded
+      `is24Hour = false`. Should derive from `DateFormat.is24HourFormat(context)` for proper
+      locale/user-preference handling. Fix in Slice 10 accessibility pass.
+- [ ] **`Icons.Default.Add` as clock icon in `TimePickerField`**: Material3 doesn't expose
+      an outlined clock via the standard icon set without `material-icons-extended`. Currently
+      uses the `Add` icon as the picker trigger. Replace with a proper clock icon (e.g.
+      `Icons.Outlined.AccessTime`) once extended icons are confirmed available, or in the
+      accessibility pass.
+- [ ] **INTERVAL anchor-time field**: When `INTERVAL` type is selected, the UI
+      shows interval hours but does not expose a "start time" picker for the anchor
+      (the first dose time). The anchor defaults to `times[0]` (08:00). If the user
+      wants a non-08:00 anchor, they'd need to set it in the times list. Add an explicit
+      "first dose at" field in a UX polish pass.
+- [ ] **AddEditMedicationViewModelTest `saveRequested_validFields_savedSuccessfully`**:
+      Test exercises the save path, which now calls `scheduleRepository.saveSchedule`.
+      The test injects a real in-memory DB; confirm test still passes after Slice 3 lands
+      (no mock needed, but verify). Will surface any FK violation if medication isn't
+      inserted before schedule.
+
 ### Slice 2 — Medication identity & entry (2026-06-12)
 
 - [ ] **FLAG_SECURE per-screen** (DECISIONS.md S2-A11): Currently applied globally in

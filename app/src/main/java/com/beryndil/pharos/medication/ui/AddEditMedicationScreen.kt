@@ -20,7 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -68,6 +67,7 @@ import com.beryndil.pharos.medication.FormStep
 import com.beryndil.pharos.medication.SaveError
 import com.beryndil.pharos.medication.model.DrugSearchResult
 import com.beryndil.pharos.medication.model.DuplicateWarning
+import com.beryndil.pharos.schedule.ui.ScheduleSection
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -469,7 +469,12 @@ private fun DetailsStep(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            ScheduleStub()
+            ScheduleSection(
+                input = uiState.scheduleInput,
+                error = uiState.scheduleValidationError,
+                onInputChanged = { onEvent(AddEditMedEvent.ScheduleInputChanged(it)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(16.dp))
         }
 
@@ -646,41 +651,6 @@ private fun DateField(
         } else null,
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun ScheduleStub() {
-    val desc = stringResource(R.string.cd_schedule_stub)
-    OutlinedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { contentDescription = desc },
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Schedule,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-            Column {
-                Text(
-                    text = stringResource(R.string.schedule_stub_label),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = stringResource(R.string.schedule_stub_value),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
 }
 
 // ── Duplicate-ingredient warning dialog ───────────────────────────────────

@@ -58,10 +58,83 @@
     <string name="section_required">Required</string>
     <string name="section_optional">Optional</string>
 
-    <!-- Schedule stub (Slice 3 placeholder) -->
-    <string name="schedule_stub_label">Schedule</string>
-    <string name="schedule_stub_value">Set in the next step</string>
-    <string name="cd_schedule_stub">Schedule — to be set in the next step</string>
+    <!-- ── Schedule (Slice 3) ──────────────────────────────────────────── -->
+    <!-- Schedule type chips -->
+    <string name="schedule_type_fixed_daily">Fixed daily</string>
+    <string name="schedule_type_days_of_week">Days of week</string>
+    <string name="schedule_type_interval">Every N hours</string>
+    <string name="schedule_type_dose_window">Time window</string>
+    <string name="schedule_type_prn">As needed</string>
+    <string name="schedule_type_temporary">Course</string>
+    <string name="schedule_type_taper">Taper</string>
+
+    <!-- Day-of-week short labels (chips) -->
+    <string name="day_short_mon">M</string>
+    <string name="day_short_tue">T</string>
+    <string name="day_short_wed">W</string>
+    <string name="day_short_thu">T</string>
+    <string name="day_short_fri">F</string>
+    <string name="day_short_sat">S</string>
+    <string name="day_short_sun">S</string>
+    <!-- Day-of-week full names (accessibility) -->
+    <string name="day_full_mon">Monday</string>
+    <string name="day_full_tue">Tuesday</string>
+    <string name="day_full_wed">Wednesday</string>
+    <string name="day_full_thu">Thursday</string>
+    <string name="day_full_fri">Friday</string>
+    <string name="day_full_sat">Saturday</string>
+    <string name="day_full_sun">Sunday</string>
+
+    <!-- Schedule section labels -->
+    <string name="section_schedule">Schedule</string>
+    <string name="schedule_add_time">Add time</string>
+    <string name="cd_schedule_add_time">Add a dose time</string>
+    <string name="schedule_times_label">Times</string>
+    <string name="schedule_days_label">Days</string>
+    <string name="schedule_interval_label">Every</string>
+    <string name="schedule_interval_hours_suffix">hours</string>
+    <string name="schedule_anchor_schedule">From schedule</string>
+    <string name="schedule_anchor_last_dose">From last dose taken</string>
+    <string name="schedule_daily_window">Daily window</string>
+    <string name="schedule_window_start">Window opens</string>
+    <string name="schedule_window_end">Window closes</string>
+    <string name="schedule_prn_daily_max">Daily maximum</string>
+    <string name="schedule_prn_daily_max_hint">Maximum doses per day</string>
+    <!-- %1$d = phase number (1-based) -->
+    <string name="schedule_taper_phase_label">Phase %1$d</string>
+    <string name="schedule_taper_phase_dose_label">Dose</string>
+    <string name="schedule_taper_phase_duration_label">Duration (days)</string>
+    <string name="schedule_taper_add_phase">Add phase</string>
+    <string name="schedule_taper_remove_phase">Remove phase</string>
+
+    <!-- Schedule validation errors -->
+    <string name="schedule_error_no_times">Add at least one time.</string>
+    <string name="schedule_error_no_days">Select at least one day.</string>
+    <string name="schedule_error_invalid_interval">Enter a valid interval (1–168 hours).</string>
+    <string name="schedule_error_invalid_window">Window end must be after window start.</string>
+    <string name="schedule_error_taper_empty">Add at least one phase.</string>
+    <string name="schedule_error_taper_phase">Each phase needs a description, duration, and at least one time.</string>
+
+    <!-- Pause / resume / end -->
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_end">End medication</string>
+    <!-- %1$s = medication name -->
+    <string name="cd_med_options">Options for %1$s</string>
+
+    <!-- Time picker dialog -->
+    <string name="time_picker_title">Select time</string>
+
+    <!-- Time chip accessibility -->
+    <!-- %1$s = formatted time string -->
+    <string name="cd_time_chip">%1$s. Tap to edit.</string>
+    <string name="cd_remove_time">Remove time %1$s</string>
+    <!-- %1$s = full day name -->
+    <string name="cd_day_selected">%1$s, selected</string>
+    <string name="cd_day_not_selected">%1$s, not selected</string>
+    <!-- %1$s = schedule type label -->
+    <string name="cd_schedule_type_selected">%1$s, selected</string>
+    <string name="cd_schedule_type_not_selected">%1$s</string>
 
     <!-- Form chips -->
     <string name="form_tablet">Tablet</string>
