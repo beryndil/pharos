@@ -76,7 +76,10 @@ fun PharosNavGraph(
                 uiState = uiState,
                 onEvent = viewModel::onEvent,
                 onDone = {
-                    navController.navigate(NavRoute.Today.route) {
+                    // After onboarding the regimen is empty, so land on the medication list — it
+                    // shows the "No medications / Restore from backup" empty state with the add (+)
+                    // action, the natural first-run home. Onboarding is cleared from the back stack.
+                    navController.navigate(NavRoute.MedicationList.route) {
                         popUpTo(NavRoute.Onboarding.route) { inclusive = true }
                     }
                 },

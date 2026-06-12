@@ -126,6 +126,30 @@ class DrugRefDatabaseTest {
         assertEquals(prod, retrieved)
     }
 
+    // ── seed callback (regression: raw INSERT column names must match the Room schema) ──────────
+
+    /**
+     * Builds the DB through the REAL [DrugRefDatabaseFactory.build] so the [SeedCallback]'s raw
+     * execSQL runs against the actual Room-generated schema. The in-memory tests above seed via
+     * Room-generated DAO inserts, so they never exercised the raw SQL — which is how a wrong column
+     * name (`ingredients_json` vs `ingredientsJson`) shipped and crashed on first launch. This test
+     * fails loudly if the seed SQL and schema ever drift again.
+     */
+    @Test
+    fun factoryBuild_seedCallbackPopulatesWithoutSchemaError() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.getDatabasePath(DrugRefDatabaseFactory.DATABASE_NAME).delete()
+        val realDb = DrugRefDatabaseFactory.build(context)
+        try {
+            // Querying triggers onCreate -> SeedCallback raw INSERTs. A column mismatch throws here.
+            assertTrue("SeedCallback must populate products", realDb.productDao().count() > 0)
+            assertTrue("SeedCallback must populate ingredients", realDb.ingredientDao().count() > 0)
+        } finally {
+            realDb.close()
+            context.getDatabasePath(DrugRefDatabaseFactory.DATABASE_NAME).delete()
+        }
+    }
+
     // ── newer-schema guard ────────────────────────────────────────────────
 
     @Test

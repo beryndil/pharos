@@ -64,6 +64,24 @@ class MedicationRepositoryTest {
         drugRefDb.close()
     }
 
+    // ── Graceful degradation (drug-ref DB unavailable must not crash) ──────
+
+    @Test
+    fun searchDrugs_returnsEmptyWhenDrugRefDbUnavailable() = runTest {
+        // Simulate the read-only reference DB being unreadable: queries throw. The repository must
+        // degrade to "no matches" (free-text fallback, spec §2.11), never propagate the crash.
+        drugRefDb.close()
+        val results = repo.searchDrugs("acetaminophen")
+        assertTrue("searchDrugs must degrade to empty, not throw", results.isEmpty())
+    }
+
+    @Test
+    fun getIngredientNames_fallsBackToRxcuiWhenDrugRefDbUnavailable() = runTest {
+        drugRefDb.close()
+        val names = repo.getIngredientNames(listOf("161", "5640"))
+        assertEquals(listOf("161", "5640"), names)
+    }
+
     // ── RxNorm local resolution ───────────────────────────────────────────
 
     @Test

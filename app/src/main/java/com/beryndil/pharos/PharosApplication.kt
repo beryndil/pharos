@@ -23,6 +23,8 @@ class PharosApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        installCrashLogger()
+
         appContainer = AppContainer(applicationContext)
 
         rearmAlarmsOnStartup()
@@ -42,6 +44,39 @@ class PharosApplication : Application() {
                     .penaltyLog()
                     .build(),
             )
+        }
+    }
+
+    /**
+     * Last-resort crash backstop (Standards §6). Expected errors are handled at their boundaries
+     * (DB access, network, parsing) so they never reach here; this only catches the truly
+     * unforeseen. It writes a PHI-free record (exception class + stack frames, NO field values or
+     * messages) to a local file, then delegates to the previous handler so the OS still shows its
+     * dialog and restarts the process. It never swallows the crash to keep a corrupted process
+     * running — that would be worse than a clean restart for a safety-critical app.
+     */
+    private fun installCrashLogger() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            runCatching {
+                val frames = throwable.stackTrace.take(20).joinToString("\n") {
+                    "  at ${it.className}.${it.methodName}(${it.fileName}:${it.lineNumber})"
+                }
+                // Class names + a cause chain of classes only — never throwable.message (may carry
+                // a SQL statement or other values). No PHI.
+                val causes = generateSequence(throwable.cause) { it.cause }
+                    .take(5).joinToString(" <- ") { it.javaClass.name }
+                val record = buildString {
+                    append("thread=").append(thread.name).append('\n')
+                    append("exception=").append(throwable.javaClass.name).append('\n')
+                    if (causes.isNotEmpty()) append("causes=").append(causes).append('\n')
+                    append(frames)
+                }
+                java.io.File(filesDir, "last_crash.log").writeText(record)
+                Log.e("PharosApplication", "Uncaught ${throwable.javaClass.name}")
+            }
+            // Always delegate so the OS handles the crash normally (dialog + restart).
+            previous?.uncaughtException(thread, throwable)
         }
     }
 

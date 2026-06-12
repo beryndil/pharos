@@ -109,7 +109,17 @@ object DrugRefDatabaseFactory {
     private class SeedCallback(private val context: Context) :
         androidx.room.RoomDatabase.Callback() {
         override fun onCreate(db: SupportSQLiteDatabase) {
-            val data = BundledDrugRefLoader(context).load() ?: return
+            // Drug reference is non-critical, replaceable public data (Law 9, spec §2.11). A seed
+            // failure (bad fixture, schema drift, corrupt CDN file) must NEVER crash the app — it
+            // degrades to an empty reference DB and the user falls back to free-text entry. So the
+            // whole seed is wrapped: on any failure we roll back the transaction, log (no PHI), and
+            // return, leaving an empty-but-valid table set.
+            val data = try {
+                BundledDrugRefLoader(context).load() ?: return
+            } catch (e: Exception) {
+                Log.e(TAG, "Drug-ref fixture load failed; reference DB left empty.", e)
+                return
+            }
             db.beginTransaction()
             try {
                 for (ing in data.ingredients) {
@@ -119,9 +129,11 @@ object DrugRefDatabaseFactory {
                     )
                 }
                 for (prod in data.products) {
+                    // Column is `ingredientsJson` (camelCase) — Room derives it from the entity
+                    // field name with no @ColumnInfo rename. Must match the schema exactly.
                     db.execSQL(
                         "INSERT OR REPLACE INTO products " +
-                            "(rxcui, name, ingredients_json, form, strength) VALUES (?,?,?,?,?)",
+                            "(rxcui, name, ingredientsJson, form, strength) VALUES (?,?,?,?,?)",
                         arrayOf(
                             prod.rxcui,
                             prod.name,
@@ -132,6 +144,9 @@ object DrugRefDatabaseFactory {
                     )
                 }
                 db.setTransactionSuccessful()
+            } catch (e: Exception) {
+                // Transaction not marked successful -> rolled back in finally. Empty DB is valid.
+                Log.e(TAG, "Drug-ref seeding failed; reference DB left empty.", e)
             } finally {
                 db.endTransaction()
             }
