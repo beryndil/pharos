@@ -164,6 +164,25 @@ class OnboardingViewModelTest {
         assertEquals(1, vm.uiState.value.currentStepIndex)
     }
 
+    @Test
+    fun previousStep_returnsToPriorStep() {
+        val vm = makeVm()
+        vm.onEvent(OnboardingEvent.NextStep)
+        assertEquals(OnboardingStep.NOTIFICATION_PERMISSION, vm.uiState.value.currentStep)
+        vm.onEvent(OnboardingEvent.PreviousStep)
+        assertEquals(OnboardingStep.WELCOME, vm.uiState.value.currentStep)
+        assertEquals(0, vm.uiState.value.currentStepIndex)
+    }
+
+    @Test
+    fun previousStep_onFirstStep_isNoOp() {
+        val vm = makeVm()
+        assertEquals(0, vm.uiState.value.currentStepIndex)
+        vm.onEvent(OnboardingEvent.PreviousStep)
+        assertEquals(OnboardingStep.WELCOME, vm.uiState.value.currentStep)
+        assertEquals(0, vm.uiState.value.currentStepIndex)
+    }
+
     // ── Test reminder ─────────────────────────────────────────────────────────────────────────
 
     @Test

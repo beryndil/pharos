@@ -215,6 +215,7 @@
     <!-- Shared -->
     <!-- %1$d = current step (1-based), %2$d = total steps -->
     <string name="onboarding_step_progress">Step %1$d of %2$d</string>
+    <string name="onboarding_back">Go back</string>
     <string name="onboarding_btn_skip">Skip</string>
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_done">Done</string>

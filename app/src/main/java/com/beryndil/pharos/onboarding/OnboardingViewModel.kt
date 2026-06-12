@@ -58,6 +58,9 @@ sealed class OnboardingEvent {
     /** Advance to the next step. */
     object NextStep : OnboardingEvent()
 
+    /** Return to the previous step. No-op on the first step. */
+    object PreviousStep : OnboardingEvent()
+
     /** Schedule the test alarm (Law 6). Best-effort: failure marks [OnboardingUiState.testReminderSent] true anyway. */
     object SendTestReminder : OnboardingEvent()
 
@@ -99,6 +102,7 @@ class OnboardingViewModel(
     fun onEvent(event: OnboardingEvent) {
         when (event) {
             is OnboardingEvent.NextStep -> advanceStep()
+            is OnboardingEvent.PreviousStep -> goBackStep()
             is OnboardingEvent.SendTestReminder -> sendTestReminder()
             is OnboardingEvent.CompleteOnboarding -> completeOnboarding()
         }
@@ -111,6 +115,18 @@ class OnboardingViewModel(
                 it.copy(
                     currentStep = steps[nextIndex],
                     currentStepIndex = nextIndex,
+                )
+            }
+        }
+    }
+
+    private fun goBackStep() {
+        val prevIndex = _uiState.value.currentStepIndex - 1
+        if (prevIndex >= 0) {
+            _uiState.update {
+                it.copy(
+                    currentStep = steps[prevIndex],
+                    currentStepIndex = prevIndex,
                 )
             }
         }
