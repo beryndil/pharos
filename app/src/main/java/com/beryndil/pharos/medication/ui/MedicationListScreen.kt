@@ -79,15 +79,14 @@ fun MedicationListScreen(
             )
         },
         floatingActionButton = {
+            val addMedCd = stringResource(R.string.cd_add_medication)
             FloatingActionButton(
                 onClick = onAddMedication,
-                modifier = Modifier.semantics {
-                    contentDescription = ""
-                },
+                modifier = Modifier.semantics { contentDescription = addMedCd },
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.cd_add_medication),
+                    contentDescription = null,
                 )
             }
         },

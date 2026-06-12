@@ -33,7 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
@@ -120,13 +123,21 @@ private fun DoseCard(
     val timeText = DateFormat.getTimeFormat(context).format(Date(dose.dueEpochMs))
     val actionable = dose.state == DoseState.DUE || dose.state == DoseState.SNOOZED
 
+    val takenCd = stringResource(R.string.cd_dose_taken_action, dose.medName)
+    val snoozeCd = stringResource(R.string.cd_dose_snooze_action, dose.medName)
+    val skipCd  = stringResource(R.string.cd_dose_skip_action,  dose.medName)
+
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
         Text(
             text = dose.medName,
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onHistory),
+                .heightIn(min = 48.dp)
+                .clickable(
+                    onClickLabel = stringResource(R.string.cd_dose_history_action, dose.medName),
+                    onClick = onHistory,
+                ),
         )
         Text(
             text = stringResource(R.string.today_dose_summary, dose.strength, timeText),
@@ -144,7 +155,10 @@ private fun DoseCard(
         if (actionable) {
             Button(
                 onClick = onTake,
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .semantics { contentDescription = takenCd },
             ) {
                 Text(stringResource(R.string.dose_action_taken))
             }
@@ -152,10 +166,16 @@ private fun DoseCard(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedButton(onClick = onSnooze, modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = onSnooze,
+                    modifier = Modifier.weight(1f).semantics { contentDescription = snoozeCd },
+                ) {
                     Text(stringResource(R.string.dose_action_snooze))
                 }
-                TextButton(onClick = onSkip, modifier = Modifier.weight(1f)) {
+                TextButton(
+                    onClick = onSkip,
+                    modifier = Modifier.weight(1f).semantics { contentDescription = skipCd },
+                ) {
                     Text(stringResource(R.string.dose_action_skip))
                 }
             }

@@ -231,3 +231,29 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 - [ ] **Drug DB version / last-updated**: These keys (`drugref.version`, `drugref.updated_at`)
       are written by the Slice 8 CDN pipeline. Dashboard shows "Bundled (local)" / "Not yet
       updated from CDN" until Slice 8 lands.
+
+## Slice 10 — Accessibility (on-device pass required, Dave)
+
+- [ ] **TalkBack lived experience pass** (Law 10, §4.4): Navigate every core flow — add med,
+      mark taken/snooze/skip, view schedule, refill, backup/restore, onboarding, reliability
+      dashboard, drug reference — end to end with TalkBack enabled on a real device. Confirm:
+      (1) every interactive element is announced meaningfully; (2) no two controls are
+      indistinguishable in TalkBack; (3) focus order is logical on each screen;
+      (4) dose action announcements include the medication name.
+      Automated Robolectric tests (AccessibilitySemanticsTest) cover node presence; this
+      covers lived navigation quality that can only be assessed on device.
+
+- [ ] **Large font scale visual pass** (Law 10, Standards §8): Set system font scale to 2.0×
+      and walk every screen. Confirm no text truncation, no button overlap, no layout breakage.
+      The `heightIn(min = 48.dp)` and `fillMaxWidth` patterns in the code handle most cases
+      but must be confirmed at actual max-font rendering.
+
+- [ ] **High-contrast / dark-mode visual pass**: Confirm all status icons + text remain
+      legible against their backgrounds in both light and dark themes (WCAG AA contrast ≥ 4.5:1
+      for normal text, ≥ 3:1 for large text / UI components). Material 3 dynamic color handles
+      most of this, but verify dose state labels (DUE, MISSED, TAKEN) and warning banners.
+
+- [ ] **Monochrome notification small icon** (carried from Slice 4): `FullScreenDoseNotifier`
+      uses `ic_launcher_foreground` as the notification small icon. Add a dedicated
+      monochrome/transparent-background icon (24×24dp, white on transparent). Required by
+      Android notification styling and for correct display in the status bar.

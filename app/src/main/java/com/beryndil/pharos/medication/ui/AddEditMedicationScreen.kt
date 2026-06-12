@@ -664,9 +664,6 @@ private fun DuplicateWarningDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.semantics {
-            contentDescription = ""
-        },
         title = {
             Text(
                 text = stringResource(R.string.duplicate_warning_title),

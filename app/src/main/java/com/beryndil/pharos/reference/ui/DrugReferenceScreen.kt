@@ -110,11 +110,11 @@ fun DrugReferenceScreen(
 
 @Composable
 private fun LoadingState(modifier: Modifier = Modifier) {
+    // Hoist stringResource out of the semantics {} lambda (not a composable scope).
+    val loadingCd = stringResource(R.string.cd_loading_drug_reference)
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
-            modifier = Modifier.semantics {
-                contentDescription = ""
-            },
+            modifier = Modifier.semantics { contentDescription = loadingCd },
         )
     }
 }
@@ -139,9 +139,6 @@ private fun FreeTextState(medName: String, modifier: Modifier = Modifier) {
             text = stringResource(R.string.drug_reference_free_text),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.semantics {
-                contentDescription = ""
-            },
         )
     }
 }
@@ -166,9 +163,6 @@ private fun OfflineState(medName: String, modifier: Modifier = Modifier) {
             text = stringResource(R.string.drug_reference_not_available_offline),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.semantics {
-                contentDescription = ""
-            },
         )
         Spacer(modifier = Modifier.height(24.dp))
         Disclaimer()

@@ -252,6 +252,16 @@ private fun IntervalSection(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp),
     )
+    val scheduleAnchorLabel = stringResource(R.string.schedule_anchor_schedule)
+    val lastDoseAnchorLabel = stringResource(R.string.schedule_anchor_last_dose)
+    val scheduleAnchorCd = if (input.intervalAnchor == IntervalAnchorType.SCHEDULE_ANCHORED)
+        stringResource(R.string.cd_schedule_type_selected, scheduleAnchorLabel)
+    else
+        stringResource(R.string.cd_schedule_type_not_selected, scheduleAnchorLabel)
+    val lastDoseAnchorCd = if (input.intervalAnchor == IntervalAnchorType.LAST_TAKEN)
+        stringResource(R.string.cd_schedule_type_selected, lastDoseAnchorLabel)
+    else
+        stringResource(R.string.cd_schedule_type_not_selected, lastDoseAnchorLabel)
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -259,12 +269,14 @@ private fun IntervalSection(
         FilterChip(
             selected = input.intervalAnchor == IntervalAnchorType.SCHEDULE_ANCHORED,
             onClick = { onInputChanged(input.copy(intervalAnchor = IntervalAnchorType.SCHEDULE_ANCHORED)) },
-            label = { Text(stringResource(R.string.schedule_anchor_schedule)) },
+            label = { Text(scheduleAnchorLabel) },
+            modifier = Modifier.semantics { contentDescription = scheduleAnchorCd },
         )
         FilterChip(
             selected = input.intervalAnchor == IntervalAnchorType.LAST_TAKEN,
             onClick = { onInputChanged(input.copy(intervalAnchor = IntervalAnchorType.LAST_TAKEN)) },
-            label = { Text(stringResource(R.string.schedule_anchor_last_dose)) },
+            label = { Text(lastDoseAnchorLabel) },
+            modifier = Modifier.semantics { contentDescription = lastDoseAnchorCd },
         )
     }
 
@@ -272,7 +284,9 @@ private fun IntervalSection(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {},
     ) {
         Text(
             text = stringResource(R.string.schedule_daily_window),
@@ -326,7 +340,9 @@ private fun PrnSection(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {},
     ) {
         Text(
             text = stringResource(R.string.schedule_prn_daily_max),

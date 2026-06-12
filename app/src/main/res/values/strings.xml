@@ -470,4 +470,15 @@
     <!-- %1$s = medication name -->
     <string name="refill_notification_zero_title">No supply recorded: %1$s</string>
     <string name="refill_notification_zero_body">%1$s has no supply on record. Dose reminders continue as scheduled.</string>
+
+    <!-- ── Slice 10: Accessibility pass (Law 10 / Standards §8) ─────────────── -->
+    <!-- Dose action buttons with medication-name context (distinguishes multiple cards). -->
+    <!-- %1$s = medication name -->
+    <string name="cd_dose_taken_action">Mark %1$s as taken</string>
+    <string name="cd_dose_snooze_action">Snooze %1$s</string>
+    <string name="cd_dose_skip_action">Skip %1$s</string>
+    <!-- Clickable med-name link to dose history in Today screen. %1$s = medication name. -->
+    <string name="cd_dose_history_action">View history for %1$s</string>
+    <!-- Loading indicator for drug reference screen. -->
+    <string name="cd_loading_drug_reference">Loading drug reference</string>
 </resources>
