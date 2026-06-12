@@ -13,3 +13,6 @@ keystore.properties
 *.iml
 .DS_Store
 captures/
+
+# Bearings/Claude session-local data
+.claude/
