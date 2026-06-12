@@ -29,4 +29,22 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 
 ## Deferred during build
 
-_(executors append here)_
+### Slice 1 — Schema & two-DB structure (2026-06-12)
+
+- [ ] **StrongBox backing for Tink wrapping key** (DECISIONS.md A8): `StrongBoxUnavailableException`
+      requires API 28 but minSdk=26. Address in a security hardening pass by version-gating
+      the StrongBox path with `@RequiresApi(28)` and `Build.VERSION.SDK_INT >= 28` guard.
+      Current TEE-backed Keystore key is production-ready.
+- [ ] **SQLCipher integration test** (DECISIONS.md A9): Robolectric unit tests open the regimen DB
+      with standard SQLite (no encryption). Add an instrumented test (on-device) that opens
+      the DB with `SupportOpenHelperFactory` and a real passphrase. Part of Dave's device-test
+      matrix (PIPELINE.md §Testing reality).
+- [ ] **`/tmp/pharos-test-home` persistence** (DECISIONS.md A12): `/tmp` is cleared on reboot.
+      Each new session must `mkdir -p /tmp/pharos-test-home` before running tests, OR the
+      Gradle daemon will recreate it on the first `tasks.withType<Test>` run. The Robolectric
+      SDK JAR download (~120 MB per SDK version) will re-run if `/tmp` was cleared.
+      Mitigation: the `tasks.withType<Test>` config creates the dir at test time; no manual
+      action needed per session.
+- [ ] **Real RxNorm CDN bundle**: `drug_ref_fixture.db` contains 5 sample medications.
+      Production bundle requires the full trimmed RxNorm dataset via the CDN pipeline
+      (Slice 8 / parallel track). Dave task: provision Backblaze B2 + Cloudflare CDN.

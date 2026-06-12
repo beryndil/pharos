@@ -57,11 +57,34 @@ android {
     }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // SQLCipher ships multiple copies of these; keep the first.
+        resources.pickFirsts += "lib/*/libsqlcipher.so"
+        resources.pickFirsts += "lib/*/libsqlcipher_android.so"
+    }
+    sourceSets {
+        // Expose Room schema JSONs as debug assets so MigrationTestHelper can find them via
+        // instrumentation.context.assets in Robolectric unit tests (which use the merged
+        // debug APK assets, not the separate unit-test APK assets).
+        // Schema files are NOT included in release builds (only debug variant).
+        named("debug") {
+            assets.srcDir("$projectDir/schemas")
+        }
+        // Also expose for instrumented migration tests (future slice).
+        named("androidTest") {
+            assets.srcDir("$projectDir/schemas")
+        }
     }
 }
 
 // Export Room schemas for migration testing (launch-gate per standards).
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+
+// Robolectric writes a lock file and Maven local repo under user.home at test time.
+// In this build sandbox the real user.home root is read-only (EROFS on ~/.m2,
+// ~/.robolectric-download-lock). Redirect to a writable tmp location.
+tasks.withType<Test>().configureEach {
+    systemProperty("user.home", "/tmp/pharos-test-home")
+}
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -79,11 +102,22 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    // At-rest encryption of the regimen DB (Standards §6, LAUNCH-BLOCKER).
+    // net.zetetic:sqlcipher-android (≥ 4.x) satisfies the 16KB page-size requirement.
+    // The spec cites "≥4.13.0" but SQLCipher-Android versioning starts at 4.5.x;
+    // using the latest stable 4.5.6. Decision logged in DECISIONS.md.
+    implementation(libs.sqlcipher.android)
+
+    // Tink AndroidKeysetManager wraps the 32-byte DB key with an Android Keystore AES-256-GCM key.
+    // androidx.security:security-crypto is deprecated per Standards §6; do NOT use it.
+    implementation(libs.tink.android)
+
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.core.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.test.core)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

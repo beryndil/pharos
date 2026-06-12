@@ -1,0 +1,83 @@
+package com.beryndil.pharos.data.regimen.dao
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import com.beryndil.pharos.data.regimen.entity.DoseInstanceEntity
+import kotlinx.coroutines.flow.Flow
+
+/**
+ * DAO for [DoseInstanceEntity].
+ *
+ * ┌─ APPEND-ONLY INVARIANT ───────────────────────────────────────────────────────────────────┐
+ * │ • INSERT new rows for new dose instances. Never DELETE rows.                              │
+ * │ • State transitions (DUE → TAKEN, etc.) use narrow UPDATE queries that touch ONLY the    │
+ * │   columns relevant to that transition. Full-row @Update is intentionally absent.         │
+ * │ • This design makes dose history tamper-evident at the DAO layer: a caller cannot         │
+ * │   accidentally overwrite a past takenEpochMs or missedEpochMs by passing a full entity.  │
+ * └───────────────────────────────────────────────────────────────────────────────────────────┘
+ */
+@Dao
+interface DoseInstanceDao {
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(dose: DoseInstanceEntity)
+
+    // ── state transitions ─────────────────────────────────────────────────────
+
+    @Query("UPDATE dose_instances SET state = 'DUE' WHERE id = :id AND state = 'SCHEDULED'")
+    suspend fun markDue(id: String)
+
+    @Query(
+        "UPDATE dose_instances SET state = 'TAKEN', takenEpochMs = :takenEpochMs " +
+            "WHERE id = :id AND (state = 'DUE' OR state = 'SNOOZED')",
+    )
+    suspend fun markTaken(id: String, takenEpochMs: Long)
+
+    @Query(
+        "UPDATE dose_instances SET state = 'SNOOZED', snoozeUntilEpochMs = :snoozeUntilEpochMs " +
+            "WHERE id = :id AND (state = 'DUE' OR state = 'SNOOZED')",
+    )
+    suspend fun markSnoozed(id: String, snoozeUntilEpochMs: Long)
+
+    @Query(
+        "UPDATE dose_instances SET state = 'SKIPPED', skippedEpochMs = :skippedEpochMs " +
+            "WHERE id = :id AND state = 'DUE'",
+    )
+    suspend fun markSkipped(id: String, skippedEpochMs: Long)
+
+    @Query(
+        "UPDATE dose_instances SET state = 'MISSED', missedEpochMs = :missedEpochMs " +
+            "WHERE id = :id AND (state = 'DUE' OR state = 'SNOOZED')",
+    )
+    suspend fun markMissed(id: String, missedEpochMs: Long)
+
+    // ── queries ───────────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM dose_instances WHERE id = :id")
+    suspend fun getById(id: String): DoseInstanceEntity?
+
+    @Query(
+        "SELECT * FROM dose_instances WHERE medicationId = :medicationId " +
+            "ORDER BY dueEpochMs DESC",
+    )
+    fun observeByMedication(medicationId: String): Flow<List<DoseInstanceEntity>>
+
+    @Query(
+        "SELECT * FROM dose_instances WHERE state = 'SCHEDULED' OR state = 'DUE' " +
+            "ORDER BY dueEpochMs ASC",
+    )
+    fun observePending(): Flow<List<DoseInstanceEntity>>
+
+    @Query(
+        "SELECT * FROM dose_instances WHERE medicationId = :medicationId " +
+            "AND state = 'SCHEDULED' ORDER BY dueEpochMs ASC LIMIT 1",
+    )
+    suspend fun getNextScheduled(medicationId: String): DoseInstanceEntity?
+
+    @Query("SELECT COUNT(*) FROM dose_instances WHERE id = :id")
+    suspend fun countById(id: String): Int
+
+    // No DELETE method. Dose history is permanent (spec §3.3, Law 9).
+}
