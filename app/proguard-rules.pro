@@ -32,3 +32,10 @@
 # Backup entities — keep for kotlinx.serialization reflection.
 -keep class com.beryndil.pharos.backup.** { *; }
 -keepclassmembers class com.beryndil.pharos.backup.** { *; }
+
+# WorkManager workers — R8 must not strip workers instantiated by WorkManager via reflection.
+-keep class * extends androidx.work.ListenableWorker { *; }
+
+# Kotlin coroutines: keep DebugMetadata and related coroutine metadata.
+-keepclassmembers class kotlinx.coroutines.** { *; }
+-dontwarn kotlinx.coroutines.debug.*

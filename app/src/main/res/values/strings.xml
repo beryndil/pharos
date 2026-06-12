@@ -481,4 +481,37 @@
     <string name="cd_dose_history_action">View history for %1$s</string>
     <!-- Loading indicator for drug reference screen. -->
     <string name="cd_loading_drug_reference">Loading drug reference</string>
+
+    <!-- ── Legal screen (Slice 11, spec §4.2) ────────────────────────────── -->
+    <!-- Screen title and navigation entry -->
+    <string name="screen_legal">Legal</string>
+    <string name="action_legal">Legal</string>
+    <string name="cd_open_legal">Legal</string>
+
+    <!-- Medical disclaimer — spec §4.2 verbatim intent + Law 3 framing. -->
+    <string name="legal_section_medical_disclaimer">Medical disclaimer</string>
+    <string name="legal_medical_disclaimer_body">This app is a reminder tool. It does not provide medical advice. Always consult your healthcare provider before changing your medication schedule.</string>
+    <!-- Shown in onboarding Welcome step (brief, Law 3). -->
+    <string name="onboarding_legal_disclaimer_note">Pharos is a reminder tool. It does not provide medical advice. By continuing, you agree to the Terms of Service and Privacy Policy.</string>
+    <string name="onboarding_legal_link">View legal terms</string>
+
+    <!-- Privacy policy — describes local storage, CDN fetch, openFDA fetch, opt-in crash. -->
+    <string name="legal_section_privacy_policy">Privacy policy</string>
+    <string name="legal_privacy_intro">Pharos stores all your medication and health data locally on this device. No account is required. No personal data is sent to Beryndil or any third party as part of normal operation.</string>
+    <string name="legal_privacy_data_out_heading">What leaves your device</string>
+    <string name="legal_privacy_cdn">Drug database updates: Pharos periodically checks a content delivery network operated by Beryndil for updates to the drug reference database. This check transmits no personal data — only a version number is compared.</string>
+    <string name="legal_privacy_openfda">Drug label data: When you add a medication resolved from the drug database, Pharos may fetch its label text from the openFDA public API (U.S. Food and Drug Administration). This request includes the drug\'s RxCUI identifier — no personal information. Fetched data is cached locally on your device.</string>
+    <string name="legal_privacy_data_in_heading">What stays on your device</string>
+    <string name="legal_privacy_local_storage">Your medication list, schedule, dose history, refill records, and backup files are stored locally and encrypted at rest. They are not transmitted to any server.</string>
+    <string name="legal_privacy_no_cloud_backup">Android device backup (Google Backup) is disabled for all health data. Your medication data is not backed up to Google\'s servers.</string>
+    <string name="legal_privacy_crash_reporting">Crash reporting is off by default. If opt-in crash reporting is added in a future version, it will require your explicit consent and will be described in an update to this policy.</string>
+    <string name="legal_privacy_version_note">This policy applies to Pharos version 1.0.0.</string>
+
+    <!-- Terms of service — disclaimers, liability limitation. -->
+    <string name="legal_section_terms">Terms of service</string>
+    <string name="legal_terms_purpose">Pharos is provided for personal medication reminder use. It does not provide medical advice. The medical disclaimer above applies at all times.</string>
+    <string name="legal_terms_as_is">This app is offered as-is. Beryndil makes no warranties, express or implied, about its accuracy, reliability, or fitness for any particular purpose. Pharos is a reminder tool — your healthcare provider is the authority on your medication schedule.</string>
+    <string name="legal_terms_liability">To the extent permitted by applicable law, Beryndil is not liable for any direct, indirect, incidental, or consequential damages arising from your use of this app, including missed doses, incorrect dose records, or device failures.</string>
+    <string name="legal_terms_agreement">By using Pharos, you agree to these terms.</string>
+    <string name="legal_terms_version_note">Applies to Pharos version 1.0.0.</string>
 </resources>

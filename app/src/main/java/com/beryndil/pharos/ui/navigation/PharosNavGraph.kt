@@ -29,6 +29,7 @@ import com.beryndil.pharos.reference.DrugReferenceViewModel
 import com.beryndil.pharos.reference.ui.DrugReferenceScreen
 import com.beryndil.pharos.backup.BackupViewModel
 import com.beryndil.pharos.backup.ui.BackupScreen
+import com.beryndil.pharos.legal.ui.LegalScreen
 import com.beryndil.pharos.reliability.ReliabilityDashboardViewModel
 import com.beryndil.pharos.reliability.ui.ReliabilityDashboardScreen
 
@@ -79,6 +80,7 @@ fun PharosNavGraph(
                         popUpTo(NavRoute.Onboarding.route) { inclusive = true }
                     }
                 },
+                onOpenLegal = { navController.navigate(NavRoute.Legal.route) },
             )
         }
 
@@ -149,6 +151,7 @@ fun PharosNavGraph(
                 onOpenBackup = {
                     navController.navigate(NavRoute.BackupRestore.route)
                 },
+                onOpenLegal = { navController.navigate(NavRoute.Legal.route) },
                 onEvent = viewModel::onEvent,
             )
         }
@@ -253,6 +256,11 @@ fun PharosNavGraph(
             )
         }
 
+        // ── Legal (spec §4.2 — ToS, Privacy Policy, Medical Disclaimer) ─────
+        composable(NavRoute.Legal.route) {
+            LegalScreen(onBack = { navController.popBackStack() })
+        }
+
         // ── Reliability dashboard (Law 6 — reliability is visible) ────────
         composable(NavRoute.ReliabilityDashboard.route) {
             val viewModel: ReliabilityDashboardViewModel = viewModel(
@@ -312,4 +320,6 @@ sealed class NavRoute(val route: String) {
     }
 
     data object BackupRestore : NavRoute("backup")
+
+    data object Legal : NavRoute("legal")
 }

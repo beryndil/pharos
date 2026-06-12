@@ -63,6 +63,7 @@ fun OnboardingScreen(
     uiState: OnboardingUiState,
     onEvent: (OnboardingEvent) -> Unit,
     onDone: () -> Unit,
+    onOpenLegal: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Navigate away as soon as completion is persisted.
@@ -102,6 +103,7 @@ fun OnboardingScreen(
             when (uiState.currentStep) {
                 OnboardingStep.WELCOME -> WelcomeStep(
                     onNext = { onEvent(OnboardingEvent.NextStep) },
+                    onOpenLegal = onOpenLegal,
                 )
                 OnboardingStep.NOTIFICATION_PERMISSION -> NotificationPermissionStep(
                     onNext = { onEvent(OnboardingEvent.NextStep) },
@@ -173,12 +175,30 @@ private fun StepContent(
 // ── Individual step composables ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun WelcomeStep(onNext: () -> Unit) {
+private fun WelcomeStep(onNext: () -> Unit, onOpenLegal: () -> Unit) {
     StepContent(
         icon = Icons.Outlined.CheckCircleOutline,
         headline = stringResource(R.string.onboarding_welcome_headline),
         body = stringResource(R.string.onboarding_welcome_body),
     ) {
+        // Medical disclaimer + legal link shown before the user proceeds (spec §4.2, Law 3).
+        Text(
+            text = stringResource(R.string.onboarding_legal_disclaimer_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(
+            onClick = onOpenLegal,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+        ) {
+            Text(stringResource(R.string.onboarding_legal_link))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = onNext,
             modifier = Modifier

@@ -15,16 +15,28 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 - [ ] **SPKI pinning for CDN domain** (Standards §6): Once the Cloudflare CDN domain is
       provisioned, add a `<domain-config>` entry to `network_security_config.xml` with the
       Cloudflare SPKI primary + backup pin and expiry date. Do NOT pin openFDA/NLM (gov rotation).
-- [ ] Generate/secure the release signing keystore out-of-tree; enroll **Play App
-      Signing** at first Play upload. (Console + key custody — Dave.)
-- [ ] Google Play Console: Data Safety + Health Apps declaration; USE_EXACT_ALARM,
-      USE_FULL_SCREEN_INTENT, FGS-type declarations; store-listing medical-disclaimer
-      copy review. (Console — Dave.)
-- [ ] On-device test matrix (spec §4.3): reboot/Doze/DST/timezone across ≥3 OEM brands;
-      TalkBack lived pass; full-screen-intent visuals. (Real hardware — Dave.)
+- [ ] **Generate and secure the release signing keystore out-of-tree** (DECISIONS.md S11-A1):
+      Create `keystore.properties` at project root (gitignored) pointing to the real release
+      keystore. Enroll **Play App Signing** at first Play upload. (Console + key custody — Dave.)
+      Without `keystore.properties`, `assembleRelease` uses the debug keystore fallback — safe
+      for local verification but the resulting APK must NOT be submitted to the Play Store.
+- [ ] **Google Play Console** (spec §4.1, docs/play-listing.md):
+      - Complete Data Safety + Health Apps declaration
+      - Declare USE_EXACT_ALARM, USE_FULL_SCREEN_INTENT with the justification text in
+        `docs/play-listing.md`
+      - Review and paste store-listing copy from `docs/play-listing.md`
+      - Link the Privacy Policy URL in the listing (host the policy text at a stable URL)
+      - Submit and monitor Play review for USE_EXACT_ALARM and USE_FULL_SCREEN_INTENT
+- [ ] **On-device test matrix** (spec §4.3, docs/testing-matrix.md):
+      All [DEVICE] items in `docs/testing-matrix.md`. Minimum: Samsung Galaxy, Google Pixel,
+      Xiaomi across all alarm-reliability scenarios plus TalkBack and full-screen-intent visual
+      verification. (Real hardware — Dave.)
 - [ ] Ed25519 signing keypair for the drug-DB manifest: generate, embed public key in
       app, keep private key in the CDN build job. (Key custody — Dave/pipeline split.)
       ↳ Now tracked more specifically in the "Replace CDN keypair and URL" item above.
+- [ ] **Privacy policy hosting**: Host the Privacy Policy text (from the Legal screen in-app
+      copy) at a stable public URL before Play Console submission. Required for apps declaring
+      health-related permissions.
 
 ## Build-environment notes (for any future session)
 
@@ -231,6 +243,26 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 - [ ] **Drug DB version / last-updated**: These keys (`drugref.version`, `drugref.updated_at`)
       are written by the Slice 8 CDN pipeline. Dashboard shows "Bundled (local)" / "Not yet
       updated from CDN" until Slice 8 lands.
+
+### Slice 11 — Launch gates + release (2026-06-12)
+
+- [ ] **Restore → re-arm alarms** (DECISIONS.md S9 note, carried forward): After a restore,
+      `AlarmCoordinator.reScheduleAll()` should be called to arm dose alarms for the imported
+      data. Currently the restore completes but alarms for restored medications are not
+      re-registered until the next `BOOT_COMPLETED` or app restart. Fix: add a
+      `BackupRepository` callback or pass `AlarmCoordinator` as a constructor parameter.
+      The dependency cycle (backup/ → alarm/) must be broken cleanly (e.g. via a
+      post-restore interface or by calling the coordinator in the ViewModel post-restore event).
+- [ ] **WorkManager jobs after restore** (Slice 9 TODO): Cancel and re-enqueue
+      `LowSupplyCheckWorker` and `DrugDbUpdateWorker` after a replace-all restore so stale
+      job state for the old medication IDs doesn't linger.
+- [ ] **Privacy policy URL**: Once the policy is hosted at a stable URL, add a clickable link
+      to `LegalScreen.kt` (currently plain text — no link since no URL exists yet).
+- [ ] **Legal screen version string**: Update `legal_privacy_version_note` and
+      `legal_terms_version_note` in `strings.xml` whenever the legal text changes in a future
+      version. The version string is intentional (readers need to know which version they agreed to).
+- [ ] **Per-dose alarm request-code collision** (carried from Slice 5): see TODO item in
+      Slice 5 section above.
 
 ## Slice 10 — Accessibility (on-device pass required, Dave)
 

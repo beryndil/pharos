@@ -102,6 +102,17 @@ relevant slice is built.
 | S9-A6 | Argon2id params: m=64 MiB, t=3, p=4, output=32 bytes (Standards §6). These params are stored verbatim in the backup envelope header so that future app versions can read older backups even if the default params change. | Params-in-header enables backward compatibility without a lookup table. |
 | S9-A7 | PDF export uses `android.graphics.pdf.PdfDocument` (Android framework, no third-party dep). | Available API 19+, no additional library. Sufficient for a flat medication list. Complex layouts (tables, multi-column) deferred if users request them. |
 
+## Slice 11 decisions (Launch gates + release)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| S11-A1 | Release signing: reads `keystore.properties` when present; falls back to the debug keystore in CI/sandbox so `assembleRelease` can produce a verifiable R8-minified APK without the real credentials. Real keystore + Play App Signing are Dave's wall — logged in TODO.md. | Enables the mandated release-build green gate without blocking on a physical credential wall. |
+| S11-A2 | Legal screen is a stateless composable (no ViewModel) in `legal/ui/LegalScreen.kt`. All copy in `strings.xml`. | The screen renders static legal text; no repository I/O or state management needed. A ViewModel would be pure overhead. |
+| S11-A3 | Legal screen surfaced from (a) the MedicationList top-bar overflow menu and (b) the onboarding WelcomeStep (link + brief disclaimer note). No dedicated Settings screen in v1 — the MedicationList overflow serves as the primary settings-like entry point. | Spec §4.2 requires the screen to be reachable from settings and shown/linked at onboarding. The MedicationList overflow satisfies "reachable from settings" without adding a Settings screen to the v1 scope. |
+| S11-A4 | versionCode = 11 (11 slices: foundation + slices 1–10). versionName = "1.0.0". | Monotonically increasing versionCode per Android requirement; 1.0.0 is the first public release per SemVer and Beryndil policy. |
+| S11-A5 | CI workflow uses debug-keystore fallback for `assembleRelease` in the CI job. The `ANDROID_USER_HOME`-relative debug keystore is not available in GitHub Actions (different path), so the CI runner will use `~/.android/debug.keystore` created automatically by the Android SDK setup action. | The CI runner's debug keystore path is `~/.android/debug.keystore`; the sandbox env var `ANDROID_USER_HOME` is not set in CI, so `System.getenv("ANDROID_USER_HOME")` returns null and the code falls back to `${user.home}/.android` — which is where GitHub Actions places the debug keystore. No additional setup needed. |
+| S11-A6 | WorkManager workers (`DrugDbUpdateWorker`, `LowSupplyCheckWorker`) added to `proguard-rules.pro` via `-keep class * extends androidx.work.ListenableWorker`. | WorkManager instantiates workers by class name via reflection; R8 would strip them without a keep rule, causing silent failure in the release build. |
+
 ## Open decisions deferred to their slice (not blockers)
 
 - App package id confirmed `com.beryndil.pharos`.

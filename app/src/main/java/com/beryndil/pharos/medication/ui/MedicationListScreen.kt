@@ -65,16 +65,41 @@ fun MedicationListScreen(
     onDrugReferenceClicked: (String) -> Unit,
     /** Navigate to backup/restore screen — used in the post-wipe empty-state card. */
     onOpenBackup: () -> Unit,
+    /** Navigate to the Legal screen (spec §4.2 — Terms, Privacy, Medical Disclaimer). */
+    onOpenLegal: () -> Unit = {},
     onEvent: (MedicationListEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    var globalMenuExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
                 title = { Text(stringResource(R.string.screen_medications)) },
+                actions = {
+                    Box {
+                        IconButton(onClick = { globalMenuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.cd_open_legal),
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = globalMenuExpanded,
+                            onDismissRequest = { globalMenuExpanded = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_legal)) },
+                                onClick = {
+                                    globalMenuExpanded = false
+                                    onOpenLegal()
+                                },
+                            )
+                        }
+                    }
+                },
                 scrollBehavior = scrollBehavior,
             )
         },

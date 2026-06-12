@@ -14,11 +14,28 @@ android {
         applicationId = "com.beryndil.pharos"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 11
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // Locale-friendly from commit 1: default locale pinned, infra ready for more.
-        resourceConfigurations += setOf("en")
+    }
+
+    // Locale-friendly from commit 1: en-US only in v1; infra ready for more locales.
+    androidResources {
+        localeFilters += setOf("en")
+    }
+
+    signingConfigs {
+        // Release signing: CI / sandbox falls back to the debug keystore so assembleRelease
+        // can produce a verifiable R8-minified APK without real credentials (DECISIONS.md S11-A1).
+        // Dave supplies the real keystore by creating keystore.properties (gitignored) — see TODO.md.
+        create("release") {
+            val androidUserHome = System.getenv("ANDROID_USER_HOME")
+                ?: "${System.getProperty("user.home")}/.android"
+            storeFile = file("$androidUserHome/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -28,6 +45,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
