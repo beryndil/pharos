@@ -27,18 +27,28 @@ class AlarmReceiver : BroadcastReceiver() {
         val action = intent.action ?: return
         val app = context.applicationContext as PharosApplication
         val coordinator = app.appContainer.alarmCoordinator
+        val doseStateMachine = app.appContainer.doseStateMachine
+        val doseId = intent.getStringExtra(AlarmContract.EXTRA_DOSE_ID)
         val pending = goAsync()
         scope.launch {
             try {
                 when (action) {
                     AlarmContract.ACTION_DOSE_DUE -> {
-                        val doseId = intent.getStringExtra(AlarmContract.EXTRA_DOSE_ID)
                         if (doseId != null) coordinator.onDoseAlarmFired(doseId)
                     }
 
                     AlarmContract.ACTION_TEST_REMINDER -> coordinator.fireTestReminder()
 
                     AlarmContract.ACTION_DAILY_ROLLOVER -> coordinator.onDailyRollover()
+
+                    // Slice 5 dose state machine timed transitions (D2/D3, escalation).
+                    AlarmContract.ACTION_DOSE_REALERT -> {
+                        if (doseId != null) doseStateMachine.onReAlert(doseId)
+                    }
+
+                    AlarmContract.ACTION_DOSE_MISS_CHECK -> {
+                        if (doseId != null) doseStateMachine.onMissCheck(doseId)
+                    }
                 }
             } catch (t: Throwable) {
                 // Never silently swallow (Standards §1): log without PHI, then recover by leaving

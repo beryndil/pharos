@@ -118,3 +118,28 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       they re-enter the SEARCH→CONFIRM flow. Current implementation does not offer a
       "re-resolve this drug" path from the DETAILS step in edit mode — deferred to UX
       refinement (no user request yet).
+
+### Slice 5 — Dose state machine (2026-06-12)
+
+- [ ] **PRN-log UI entry point** (DECISIONS.md S5-A7): `DoseStateMachine.logPrnTaken` +
+      `DoseRepository.logPrn` + the non-blocking daily-max warning (`prn_daily_max_warning`)
+      are implemented and unit-tested, but no screen yet surfaces a "Log dose" affordance
+      for PRN meds (PRN meds have no SCHEDULED instances, so they don't appear in the Today
+      list). Add a PRN log button (Today or med detail) in Slice 6 onboarding/home polish,
+      rendering `prn_daily_max_warning` when `PrnLogResult.exceedsMax`.
+- [ ] **Multi-DUE notification fan-out** (DECISIONS.md S5-A8): two meds DUE at the same
+      instant currently share one visual dose notification (single `NOTIFICATION_DOSE_DUE`
+      slot); the LAST posted alert wins the tray. Dose *state* independence is preserved in
+      the DB. Consider per-dose notification ids (keyed off dose-id hash) in a notifications
+      polish pass so both DUE doses are individually actionable from the shade.
+- [ ] **Per-dose alarm request-code collision** (DECISIONS.md S5-A3): miss/re-alert
+      PendingIntent request codes derive from `doseId.hashCode()`. UUID hash collisions in a
+      realistic dose set are astronomically unlikely, but a per-dose monotonic int column on
+      `dose_instances` would make it provably collision-free — Slice 11 hardening candidate.
+- [ ] **Today view = single-day window**: `DoseRepository.observeTodayDoses()` bounds at
+      start-of-tomorrow in the current zone and recomputes only on screen re-entry. A live
+      midnight rollover while the screen is open won't refresh the bound until recomposition.
+      Acceptable for v1; revisit if a persistent home dashboard lands (Slice 6).
+- [ ] **DoseHistory cause detail**: the history screen renders the destination state + a
+      timestamp. The `DoseTransitionCause` (alarm/user/snooze-elapsed/miss-window) is stored
+      but not yet surfaced. Add a secondary line in the accessibility/polish pass if useful.

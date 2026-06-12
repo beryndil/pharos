@@ -51,10 +51,16 @@
             android:taskAffinity=""
             android:theme="@style/Theme.Pharos" />
 
-        <!-- Receives our own fired alarms (dose-due, test, daily rollover). Not exported: only
-             AlarmManager-delivered PendingIntents created by this app target it. -->
+        <!-- Receives our own fired alarms (dose-due, test, daily rollover, dose-state timed
+             transitions). Not exported: only AlarmManager-delivered PendingIntents target it. -->
         <receiver
             android:name=".alarm.AlarmReceiver"
+            android:exported="false" />
+
+        <!-- Receives Take/Snooze/Skip taps from the dose notification (Slice 5). Not exported:
+             only our own notification-action PendingIntents target it. -->
+        <receiver
+            android:name=".alarm.DoseActionReceiver"
             android:exported="false" />
 
         <!-- Rebuilds the pending alarm after protected system broadcasts (Standards §2, §3.4).

@@ -17,6 +17,19 @@ interface DoseNotifier {
      */
     fun postDoseDueAlert(doseId: String, medName: String, dueEpochMs: Long)
 
+    /**
+     * Post the dose-due alert at an escalation [escalationLevel] (0 = first alert; higher = more
+     * intense re-alert per spec §2.8). Default delegates to the base alert so Slice 4 callers and
+     * test fakes need no change; [com.beryndil.pharos.alarm.FullScreenDoseNotifier] raises
+     * intensity with the level. The alert always carries the dose action buttons (Take/Snooze/Skip).
+     */
+    fun postDoseDueAlert(doseId: String, medName: String, dueEpochMs: Long, escalationLevel: Int) {
+        postDoseDueAlert(doseId, medName, dueEpochMs)
+    }
+
+    /** Cancel the active dose-due alert for [doseId] (the dose was acted on or missed). */
+    fun cancelDoseAlert(doseId: String) = Unit
+
     /** Post the "test reminder" alert (Law 6 — every alarm is testable). */
     fun postTestReminder()
 

@@ -43,9 +43,19 @@ interface DoseInstanceDao {
 
     @Query(
         "UPDATE dose_instances SET state = 'SKIPPED', skippedEpochMs = :skippedEpochMs " +
-            "WHERE id = :id AND state = 'DUE'",
+            "WHERE id = :id AND (state = 'DUE' OR state = 'SNOOZED')",
     )
     suspend fun markSkipped(id: String, skippedEpochMs: Long)
+
+    /**
+     * Re-enter DUE from SNOOZED when the snooze interval elapses (spec §2.6 SNOOZED → DUE).
+     * Clears the snooze target so the next escalation/miss math is clean.
+     */
+    @Query(
+        "UPDATE dose_instances SET state = 'DUE', snoozeUntilEpochMs = NULL " +
+            "WHERE id = :id AND state = 'SNOOZED'",
+    )
+    suspend fun markDueFromSnooze(id: String)
 
     @Query(
         "UPDATE dose_instances SET state = 'MISSED', missedEpochMs = :missedEpochMs " +
@@ -75,6 +85,40 @@ interface DoseInstanceDao {
             "AND state = 'SCHEDULED' ORDER BY dueEpochMs ASC LIMIT 1",
     )
     suspend fun getNextScheduled(medicationId: String): DoseInstanceEntity?
+
+    /**
+     * The same medication's next SCHEDULED dose strictly AFTER [afterEpochMs] — the second half
+     * of the D2 miss-window rule ("…OR the start of the same medication's next scheduled dose,
+     * whichever comes first"). Returns null when this is the med's last dose.
+     */
+    @Query(
+        "SELECT * FROM dose_instances WHERE medicationId = :medicationId " +
+            "AND state = 'SCHEDULED' AND dueEpochMs > :afterEpochMs " +
+            "ORDER BY dueEpochMs ASC LIMIT 1",
+    )
+    suspend fun getNextScheduledAfter(medicationId: String, afterEpochMs: Long): DoseInstanceEntity?
+
+    /**
+     * Doses the user can still act on (DUE or SNOOZED) plus near-term SCHEDULED, for the
+     * today/upcoming surface. Ordered by due time. Includes all states except the terminal ones
+     * are filtered by the caller via [dueEpochMs] bounds.
+     */
+    @Query(
+        "SELECT * FROM dose_instances " +
+            "WHERE state IN ('DUE', 'SNOOZED', 'SCHEDULED') " +
+            "AND dueEpochMs < :beforeEpochMs ORDER BY dueEpochMs ASC",
+    )
+    fun observeActionable(beforeEpochMs: Long): Flow<List<DoseInstanceEntity>>
+
+    /**
+     * Count of TAKEN doses for a medication on/after [sinceEpochMs] — drives the PRN daily-max
+     * warning (spec §2.7). PRN logs are TAKEN rows; this counts how many were logged today.
+     */
+    @Query(
+        "SELECT COUNT(*) FROM dose_instances WHERE medicationId = :medicationId " +
+            "AND state = 'TAKEN' AND takenEpochMs >= :sinceEpochMs",
+    )
+    suspend fun countTakenSince(medicationId: String, sinceEpochMs: Long): Int
 
     /**
      * The single earliest SCHEDULED dose instance across ALL medications, or null if none.

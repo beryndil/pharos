@@ -3,12 +3,14 @@ package com.beryndil.pharos.data.regimen
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
+import com.beryndil.pharos.data.regimen.dao.DoseTransitionDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
 import com.beryndil.pharos.data.regimen.dao.RefillRecordDao
 import com.beryndil.pharos.data.regimen.dao.ScheduleDao
 import com.beryndil.pharos.data.regimen.dao.SchedulePhaseDao
 import com.beryndil.pharos.data.regimen.dao.SettingDao
 import com.beryndil.pharos.data.regimen.entity.DoseInstanceEntity
+import com.beryndil.pharos.data.regimen.entity.DoseTransitionEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.RefillRecordEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleEntity
@@ -34,10 +36,11 @@ import com.beryndil.pharos.data.regimen.entity.SettingEntity
         ScheduleEntity::class,
         SchedulePhaseEntity::class,
         DoseInstanceEntity::class,
+        DoseTransitionEntity::class,
         RefillRecordEntity::class,
         SettingEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class RegimenDatabase : RoomDatabase() {
@@ -46,6 +49,7 @@ abstract class RegimenDatabase : RoomDatabase() {
     abstract fun scheduleDao(): ScheduleDao
     abstract fun schedulePhaseDao(): SchedulePhaseDao
     abstract fun doseInstanceDao(): DoseInstanceDao
+    abstract fun doseTransitionDao(): DoseTransitionDao
     abstract fun refillRecordDao(): RefillRecordDao
     abstract fun settingDao(): SettingDao
 }

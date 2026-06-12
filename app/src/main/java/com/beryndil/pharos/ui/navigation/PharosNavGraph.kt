@@ -10,6 +10,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.beryndil.pharos.PharosApplication
 import com.beryndil.pharos.appContainer
+import com.beryndil.pharos.dose.ui.DoseHistoryScreen
+import com.beryndil.pharos.dose.ui.DoseHistoryViewModel
+import com.beryndil.pharos.dose.ui.TodayScreen
+import com.beryndil.pharos.dose.ui.TodayViewModel
 import com.beryndil.pharos.medication.AddEditMedicationViewModel
 import com.beryndil.pharos.medication.MedicationListViewModel
 import com.beryndil.pharos.medication.ui.AddEditMedicationScreen
@@ -32,12 +36,50 @@ fun PharosNavGraph(
     val app = LocalContext.current.applicationContext as PharosApplication
     val medicationRepository = app.appContainer.medicationRepository
     val scheduleRepository = app.appContainer.scheduleRepository
+    val doseRepository = app.appContainer.doseRepository
 
     NavHost(
         navController = navController,
-        startDestination = NavRoute.MedicationList.route,
+        startDestination = NavRoute.Today.route,
         modifier = modifier,
     ) {
+        // ── Today (actionable dose surface) ───────────────────────────────
+        composable(NavRoute.Today.route) {
+            val viewModel: TodayViewModel = viewModel(
+                factory = TodayViewModel.factory(doseRepository = doseRepository),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            TodayScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onOpenMedications = { navController.navigate(NavRoute.MedicationList.route) },
+                onOpenHistory = { medId ->
+                    navController.navigate(NavRoute.DoseHistory.buildRoute(medId))
+                },
+            )
+        }
+
+        // ── Per-med dose history (append-only) ────────────────────────────
+        composable(
+            route = NavRoute.DoseHistory.route,
+            arguments = listOf(
+                navArgument(NavRoute.DoseHistory.ARG_MED_ID) { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val medId = backStackEntry.arguments?.getString(NavRoute.DoseHistory.ARG_MED_ID).orEmpty()
+            val viewModel: DoseHistoryViewModel = viewModel(
+                factory = DoseHistoryViewModel.factory(
+                    doseRepository = doseRepository,
+                    medicationId = medId,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            DoseHistoryScreen(
+                uiState = uiState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
         // ── Medication list ───────────────────────────────────────────────
         composable(NavRoute.MedicationList.route) {
             val viewModel: MedicationListViewModel = viewModel(
@@ -104,6 +146,14 @@ fun PharosNavGraph(
 
 /** Sealed route definitions keep all route strings in one place. */
 sealed class NavRoute(val route: String) {
+
+    data object Today : NavRoute("today")
+
+    data object DoseHistory : NavRoute("medications/{medId}/history") {
+        const val ARG_MED_ID = "medId"
+
+        fun buildRoute(medId: String): String = "medications/$medId/history"
+    }
 
     data object MedicationList : NavRoute("medications")
 

@@ -15,17 +15,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.beryndil.pharos.MainActivity
 import com.beryndil.pharos.R
+import com.beryndil.pharos.appContainer
 import com.beryndil.pharos.ui.theme.PharosTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Date
 
 /**
@@ -49,6 +55,7 @@ class DueAlertActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         enableEdgeToEdge()
 
+        val doseId = intent.getStringExtra(AlarmContract.EXTRA_DOSE_ID).orEmpty()
         val medName = intent.getStringExtra(AlarmContract.EXTRA_MED_NAME).orEmpty()
         val dueEpochMs = intent.getLongExtra(AlarmContract.EXTRA_DUE_EPOCH_MS, 0L)
 
@@ -61,6 +68,9 @@ class DueAlertActivity : ComponentActivity() {
                     DueAlertContent(
                         medName = medName,
                         dueTimeText = formatTime(dueEpochMs),
+                        onTaken = { act(doseId) { onTaken(it, System.currentTimeMillis()) } },
+                        onSnooze = { act(doseId) { onSnooze(it, System.currentTimeMillis()) } },
+                        onSkip = { act(doseId) { onSkip(it, System.currentTimeMillis()) } },
                         onOpen = {
                             startActivity(
                                 Intent(this, MainActivity::class.java)
@@ -72,6 +82,23 @@ class DueAlertActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Run a dose action against the state machine off the main thread, then dismiss the alert.
+     * An illegal transition (e.g. the dose was already handled elsewhere) is swallowed — the alert
+     * still dismisses; the state machine remains the single source of truth.
+     */
+    private fun act(doseId: String, action: suspend com.beryndil.pharos.dose.DoseStateMachine.(String) -> Unit) {
+        if (doseId.isEmpty()) {
+            finish()
+            return
+        }
+        val stateMachine = application.appContainer.doseStateMachine
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { stateMachine.action(doseId) }
+        }
+        finish()
     }
 
     /** Locale-aware time (honors the device 12/24h toggle) per Standards §7 — never hand-built. */
@@ -101,6 +128,9 @@ class DueAlertActivity : ComponentActivity() {
 private fun DueAlertContent(
     medName: String,
     dueTimeText: String,
+    onTaken: () -> Unit,
+    onSnooze: () -> Unit,
+    onSkip: () -> Unit,
     onOpen: () -> Unit,
 ) {
     Column(
@@ -134,11 +164,37 @@ private fun DueAlertContent(
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
+
+        // One clear primary action (Taken); Snooze and Skip are secondary (DESIGN.md).
         Button(
-            onClick = onOpen,
+            onClick = onTaken,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 32.dp),
+        ) {
+            Text(text = stringResource(R.string.dose_action_taken))
+        }
+        OutlinedButton(
+            onClick = onSnooze,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+        ) {
+            Text(text = stringResource(R.string.dose_action_snooze))
+        }
+        TextButton(
+            onClick = onSkip,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+        ) {
+            Text(text = stringResource(R.string.dose_action_skip))
+        }
+        TextButton(
+            onClick = onOpen,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
         ) {
             Text(text = stringResource(R.string.dose_due_open))
         }

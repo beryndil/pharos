@@ -34,6 +34,7 @@ class AlarmCoordinator(
     private val reliabilityLog: ReliabilityLog,
     private val now: () -> Long = { System.currentTimeMillis() },
     private val zoneProvider: () -> ZoneId = { ZoneId.systemDefault() },
+    private val doseDueListener: DoseDueListener = DoseDueListener.NoOp,
 ) {
 
     /** Result of a re-arm, for tests and the reliability log. */
@@ -82,6 +83,9 @@ class AlarmCoordinator(
         notifier.postDoseDueAlert(doseId, medName, dose?.dueEpochMs ?: firedAt)
         reliabilityLog.recordAlarmFired(AlarmKind.DOSE, firedAt)
         rearmNextDoseAlarm()
+        // Hand off to the dose state machine (Slice 5): arm the D2 miss-window deadline and the
+        // escalation re-alerts. NoOp in a bare Slice 4 wiring.
+        doseDueListener.onEnteredDue(doseId, firedAt)
     }
 
     /**

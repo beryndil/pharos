@@ -16,6 +16,21 @@ object AlarmContract {
     const val ACTION_TEST_REMINDER = "com.beryndil.pharos.action.TEST_REMINDER"
     const val ACTION_DAILY_ROLLOVER = "com.beryndil.pharos.action.DAILY_ROLLOVER"
 
+    // ── Slice 5 dose state machine: per-dose timed transitions (delivered to AlarmReceiver) ──
+    /** The escalating re-alert / snooze-wake tick for a DUE or SNOOZED dose (spec §2.6, §2.8). */
+    const val ACTION_DOSE_REALERT = "com.beryndil.pharos.action.DOSE_REALERT"
+
+    /** The hard miss-window deadline: fire MISSED even if the app is closed (D2). */
+    const val ACTION_DOSE_MISS_CHECK = "com.beryndil.pharos.action.DOSE_MISS_CHECK"
+
+    // ── Slice 5: user dose actions from the notification (delivered to DoseActionReceiver) ──
+    const val ACTION_USER_TAKEN = "com.beryndil.pharos.action.USER_TAKEN"
+    const val ACTION_USER_SNOOZE = "com.beryndil.pharos.action.USER_SNOOZE"
+    const val ACTION_USER_SKIP = "com.beryndil.pharos.action.USER_SKIP"
+
+    /** Escalation level carried on a re-alert so the notifier can raise intensity (spec §2.8). */
+    const val EXTRA_ESCALATION_LEVEL = "com.beryndil.pharos.extra.ESCALATION_LEVEL"
+
     // ── Intent extras ─────────────────────────────────────────────────────────────
     const val EXTRA_DOSE_ID = "com.beryndil.pharos.extra.DOSE_ID"
     const val EXTRA_MED_NAME = "com.beryndil.pharos.extra.MED_NAME"

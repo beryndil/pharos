@@ -10,6 +10,10 @@ import com.beryndil.pharos.alarm.ReliabilityLog
 import com.beryndil.pharos.alarm.SettingsReliabilityLog
 import com.beryndil.pharos.core.crypto.PassphraseProvider
 import com.beryndil.pharos.core.crypto.TinkPassphraseProvider
+import com.beryndil.pharos.data.dose.DoseRepository
+import com.beryndil.pharos.dose.AndroidDoseTransitionScheduler
+import com.beryndil.pharos.dose.DoseStateMachine
+import com.beryndil.pharos.dose.DoseTransitionScheduler
 import com.beryndil.pharos.data.drugref.DrugRefDatabase
 import com.beryndil.pharos.data.drugref.DrugRefDatabaseFactory
 import com.beryndil.pharos.data.medication.MedicationRepository
@@ -79,6 +83,39 @@ class AppContainer(private val applicationContext: Context) {
         SettingsReliabilityLog(regimenDatabase.settingDao())
     }
 
+    // ── Dose state machine (Slice 5, spec §2.6 / §2.7 / §2.8) ─────────────────
+
+    /** Schedules the per-dose miss-window and escalation re-alert alarms (app-closed safe). */
+    val doseTransitionScheduler: DoseTransitionScheduler by lazy {
+        AndroidDoseTransitionScheduler(applicationContext)
+    }
+
+    /**
+     * The single authority for every dose transition (D2/D3, escalation, append-only history).
+     * Used as both the [com.beryndil.pharos.alarm.DoseActionHandler] (Take/Snooze/Skip) and the
+     * [com.beryndil.pharos.alarm.DoseDueListener] (arms timers when a dose enters DUE).
+     */
+    val doseStateMachine: DoseStateMachine by lazy {
+        DoseStateMachine(
+            doseInstanceDao = regimenDatabase.doseInstanceDao(),
+            doseTransitionDao = regimenDatabase.doseTransitionDao(),
+            medicationDao = regimenDatabase.medicationDao(),
+            scheduleDao = regimenDatabase.scheduleDao(),
+            transitionScheduler = doseTransitionScheduler,
+            notifier = doseNotifier,
+        )
+    }
+
+    /** Read/act facade for the today and per-med history UIs (Slice 5). */
+    val doseRepository: DoseRepository by lazy {
+        DoseRepository(
+            doseInstanceDao = regimenDatabase.doseInstanceDao(),
+            doseTransitionDao = regimenDatabase.doseTransitionDao(),
+            medicationDao = regimenDatabase.medicationDao(),
+            stateMachine = doseStateMachine,
+        )
+    }
+
     /** Single-fire-and-reschedule coordinator: the brain of the alarm engine. */
     val alarmCoordinator: AlarmCoordinator by lazy {
         AlarmCoordinator(
@@ -88,6 +125,7 @@ class AppContainer(private val applicationContext: Context) {
             medicationDao = regimenDatabase.medicationDao(),
             scheduleRepository = scheduleRepository,
             reliabilityLog = reliabilityLog,
+            doseDueListener = doseStateMachine,
         )
     }
 }

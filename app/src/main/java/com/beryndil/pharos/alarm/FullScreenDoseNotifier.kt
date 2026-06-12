@@ -49,6 +49,15 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
     }
 
     override fun postDoseDueAlert(doseId: String, medName: String, dueEpochMs: Long) {
+        postDoseDueAlert(doseId, medName, dueEpochMs, escalationLevel = 0)
+    }
+
+    override fun postDoseDueAlert(
+        doseId: String,
+        medName: String,
+        dueEpochMs: Long,
+        escalationLevel: Int,
+    ) {
         ensureChannels()
 
         val fullScreenIntent = Intent(context, DueAlertActivity::class.java).apply {
@@ -73,11 +82,33 @@ class FullScreenDoseNotifier(private val context: Context) : DoseNotifier {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setOngoing(true)
             .setAutoCancel(false)
+            // Escalation (spec §2.8): each re-alert sounds again rather than alerting only once.
+            .setOnlyAlertOnce(false)
             .setFullScreenIntent(fullScreenPi, true)
             .setContentIntent(fullScreenPi)
+            .addAction(0, context.getString(R.string.dose_action_taken), actionPi(doseId, AlarmContract.ACTION_USER_TAKEN))
+            .addAction(0, context.getString(R.string.dose_action_snooze), actionPi(doseId, AlarmContract.ACTION_USER_SNOOZE))
+            .addAction(0, context.getString(R.string.dose_action_skip), actionPi(doseId, AlarmContract.ACTION_USER_SKIP))
             .build()
 
         post(AlarmContract.NOTIFICATION_DOSE_DUE, notification)
+    }
+
+    override fun cancelDoseAlert(doseId: String) {
+        NotificationManagerCompat.from(context).cancel(AlarmContract.NOTIFICATION_DOSE_DUE)
+    }
+
+    /** A notification-action [PendingIntent] routed to [DoseActionReceiver] carrying the dose id. */
+    private fun actionPi(doseId: String, action: String): PendingIntent {
+        val intent = Intent(context, DoseActionReceiver::class.java)
+            .setAction(action)
+            .putExtra(AlarmContract.EXTRA_DOSE_ID, doseId)
+        return PendingIntent.getBroadcast(
+            context,
+            (doseId.hashCode() and 0x0FFFFFFF) xor action.hashCode(),
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
     }
 
     override fun postTestReminder() {

@@ -178,6 +178,32 @@
     <string name="test_reminder_title">Test reminder</string>
     <string name="test_reminder_body">This is a test of your dose reminder alert.</string>
 
+    <!-- ── Dose state machine & today/history (Slice 5, spec §2.6 / §2.7 / §2.8) ──── -->
+    <string name="screen_today">Today</string>
+    <string name="screen_dose_history">Dose history</string>
+    <string name="cd_open_medications">Medications</string>
+    <!-- %1$s = strength, %2$s = time -->
+    <string name="today_dose_summary">%1$s · %2$s</string>
+    <string name="empty_today_body">No doses scheduled for today.</string>
+    <string name="empty_history_body">No dose history yet.</string>
+
+    <!-- Dose actions (Take / Snooze / Skip). No advice language (Law 3). -->
+    <string name="dose_action_taken">Taken</string>
+    <string name="dose_action_snooze">Snooze</string>
+    <string name="dose_action_skip">Skip</string>
+
+    <!-- Dose state labels (paired with text, never color alone — Law 10). -->
+    <string name="dose_state_scheduled">Scheduled</string>
+    <string name="dose_state_due">Due now</string>
+    <string name="dose_state_snoozed">Snoozed</string>
+    <string name="dose_state_taken">Taken</string>
+    <string name="dose_state_skipped">Skipped</string>
+    <string name="dose_state_missed">Missed</string>
+
+    <!-- PRN daily-max warning (spec §2.7). Non-blocking; points outward (Law 3). -->
+    <!-- %1$d = this dose number today, %2$d = the maximum the user set -->
+    <string name="prn_daily_max_warning">This is dose %1$d today; the maximum you set was %2$d. Check with your doctor or pharmacist.</string>
+
     <!-- ── Duplicate-ingredient warning (spec §2.4 / Law 3) ──────────── -->
     <!-- Dialog title -->
     <string name="duplicate_warning_title">Check with your doctor or pharmacist</string>

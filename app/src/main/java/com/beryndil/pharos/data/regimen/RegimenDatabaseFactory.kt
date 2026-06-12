@@ -4,6 +4,8 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 
 /**
@@ -21,7 +23,44 @@ object RegimenDatabaseFactory {
      * AND by the newer-schema guard to detect on-disk databases from future app versions.
      * Keep in sync with [RegimenDatabase]'s `@Database` annotation.
      */
-    const val CURRENT_VERSION = 1
+    const val CURRENT_VERSION = 2
+
+    /**
+     * v1 → v2 (Slice 5): adds the append-only [dose_transitions] history table. Additive only —
+     * no existing column is touched, so dose history is preserved (Standards §5: never a
+     * destructive migration on a path users reach).
+     */
+    val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `dose_transitions` (" +
+                    "`id` TEXT NOT NULL, " +
+                    "`doseInstanceId` TEXT NOT NULL, " +
+                    "`medicationId` TEXT NOT NULL, " +
+                    "`fromState` TEXT, " +
+                    "`toState` TEXT NOT NULL, " +
+                    "`cause` TEXT NOT NULL, " +
+                    "`atEpochMs` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`id`), " +
+                    "FOREIGN KEY(`doseInstanceId`) REFERENCES `dose_instances`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE RESTRICT, " +
+                    "FOREIGN KEY(`medicationId`) REFERENCES `medications`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE RESTRICT)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_dose_transitions_doseInstanceId` " +
+                    "ON `dose_transitions` (`doseInstanceId`)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_dose_transitions_medicationId` " +
+                    "ON `dose_transitions` (`medicationId`)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_dose_transitions_atEpochMs` " +
+                    "ON `dose_transitions` (`atEpochMs`)",
+            )
+        }
+    }
 
     /**
      * Builds [RegimenDatabase] with a newer-schema version guard.
@@ -38,6 +77,7 @@ object RegimenDatabaseFactory {
         enforceSchemaVersion(context)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
+            .addMigrations(MIGRATION_1_2)
             .build()
     }
 

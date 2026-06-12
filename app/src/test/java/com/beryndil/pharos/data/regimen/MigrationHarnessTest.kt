@@ -2,6 +2,7 @@ package com.beryndil.pharos.data.regimen
 
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -69,6 +70,43 @@ class MigrationHarnessTest {
                     "Query on empty dose_instances must return 0 rows",
                     !cursor.moveToFirst(),
                 )
+            }
+        }
+    }
+
+    /**
+     * v1 → v2 (Slice 5): the append-only [dose_transitions] table is created without touching
+     * existing data. A row inserted at v1 must survive the migration (Standards §5: never a
+     * destructive migration on a path users reach).
+     */
+    @Test
+    fun migrateV1ToV2_addsDoseTransitionsTable_preservingData() {
+        migrationHelper.createDatabase(RegimenDatabaseFactory.DATABASE_NAME, 1).use { v1 ->
+            v1.execSQL(
+                "INSERT INTO medications (id, name, rxcui, ingredientsJson, strength, form, " +
+                    "doseAmount, prescriber, pharmacy, purpose, isFreeText, status, startEpochMs, " +
+                    "endEpochMs, createdAtEpochMs, updatedAtEpochMs) VALUES " +
+                    "('m1','Metoprolol',NULL,'[]','25 mg','TABLET','1 tablet',NULL,NULL,NULL,0," +
+                    "'ACTIVE',0,NULL,0,0)",
+            )
+        }
+
+        val v2 = migrationHelper.runMigrationsAndValidate(
+            RegimenDatabaseFactory.DATABASE_NAME,
+            2,
+            true,
+            RegimenDatabaseFactory.MIGRATION_1_2,
+        )
+        v2.use {
+            // The pre-existing medication row survived the migration.
+            v2.query("SELECT COUNT(*) FROM medications", emptyArray<Any?>()).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            // The new append-only table exists and is queryable.
+            v2.query("SELECT COUNT(*) FROM dose_transitions", emptyArray<Any?>()).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(0, c.getInt(0))
             }
         }
     }
