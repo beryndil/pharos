@@ -315,3 +315,10 @@ These items require real hardware and cannot be automated in the pipeline (spec 
 - [ ] **Section C: Channel-not-modifiable caveat** — Document what happens if the user manually modifies the critical channel via system settings (Android then controls bypass state, not the app). Surface this limitation in the reliability dashboard help text if needed.
 - [ ] **Section C: ACCESS_NOTIFICATION_POLICY Play justification** — File the `ACCESS_NOTIFICATION_POLICY` declaration in the Play Console using the text in `docs/play-listing.md`. Google may review this permission; have the user-flow screenshots (lazy DND prompt on first critical med) ready.
 - [ ] **Section C: USE_FULL_SCREEN_INTENT on Android 14+ verification** — Confirm `Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT` opens correctly and grants permission. Dashboard shows correct state after grant/revoke.
+
+## A3 update (2026-06-12): launcher icon done early
+- The "Teal launcher + splash icon" A3 polish item is SUPERSEDED — Dave supplied the lighthouse
+  artwork and it's now the launcher icon in all locations (see DECISIONS.md ICON-1..4, commit below).
+- STILL OPEN for A3: dedicated **monochrome notification small icon** — a white-on-transparent
+  lighthouse silhouette to replace the reused "+" vector (`ic_launcher_foreground`) in
+  FullScreenDoseNotifier (3 refs) + AndroidRefillNotifier (1 ref). 24dp, Android tints it.
