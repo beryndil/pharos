@@ -51,6 +51,19 @@ relevant slice is built.
 | S3-A7 | Schedule save is NOT wrapped in a cross-DAO transaction. Med entity is saved first, then schedule + instances. | Room doesn't support cross-repository `@Transaction`; acceptable for v1 where the failure window is narrow. Log in TODO.md for Slice 11 hardening if needed. |
 | S3-A8 | Test assertion `intervalScheduleAnchoredEvery8h` corrected from 6 to 5 instances. With anchor=08:00 and to=midnight+2days (exclusive), the midnight-of-day-3 instance falls exactly on `to` and is excluded. | The [from, to) half-open convention is the correct and consistent API; the original test comment ("2 days × 3 doses/day") was wrong about the count. |
 
+## Slice 4 decisions (Alarm engine & reliability)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| S4-A1 | `AlarmScheduler` interface + `AndroidAlarmScheduler` impl over `AlarmManager`; `AlarmCoordinator` owns the single-fire-and-reschedule loop. Both unit-tested with Robolectric `ShadowAlarmManager` asserting exact trigger times. | Standards §3/§10; keeps the risk-core logic testable without a device. |
+| S4-A2 | Re-registration runs at `BOOT_COMPLETED` (post-unlock), **not** `LOCKED_BOOT_COMPLETED`. | The regimen DB is credential-encrypted PHI (DECISIONS.md A3) and is unreadable before the user unlocks; a direct-boot receiver could not read it to recompute alarms. Logged in TODO.md. |
+| S4-A3 | Dose/test alarms use `setAlarmClock()` (exact, Doze-exempt, status-bar visible); the daily rollover uses `setExactAndAllowWhileIdle()` (maintenance — no status-bar alarm-clock affordance). Both fall back to `setWindow()` (10-min window) when `canScheduleExactAlarms()` is false — never drop the reminder (Law 6, §3.4). | Spec §3.4 graceful degradation; setAlarmClock is the spec-mandated primary. |
+| S4-A4 | Single pending dose alarm (one `PendingIntent` slot, stable request code). `getEarliestScheduled()` (new `DoseInstanceDao` query — no schema change) drives it; on fire the dose is marked `DUE` so it drops out, then the next is scheduled. A past-due trigger (device was off) is scheduled at its past time so AlarmManager fires it immediately (reboot recovery, no dropped dose). | Spec §3.4 single-fire-and-reschedule; never `setRepeating`. |
+| S4-A5 | The alarm-fire transition marks the dose `DUE` only. The full `DUE→TAKEN/SNOOZED/SKIPPED/MISSED` machine, escalation, sacred-channel enforcement, and D2/D3 miss-window/snooze rules are Slice 5, plugging into the `DoseActionHandler` seam. | Slice boundary per build order; Slice 4 is firing + alert plumbing. |
+| S4-A6 | Reliability events persisted via the existing key-value `SettingDao` (`reliability.*` keys), not a new entity. | Avoids a Room version bump/migration; Slice 6 dashboard reads these keys. |
+| S4-A7 | Test reminders schedule a `TEST`-kind alarm through the SAME scheduler and fire a transient notification — they do **not** create a `DoseInstance` row. | Law 6 (every alarm testable) without polluting append-only dose history. |
+| S4-A8 | Timezone change re-arms from the stored absolute instant (epoch-ms), not a wall-clock recompute. Time-zone *travel* re-anchoring UX is v1.x (§3.4); v1 fires doses at the instant matching the schedule's original-zone wall clock. | Stored instants are DST-correct via `DoseClock`; re-reading them is the correct v1 math. |
+
 ## Open decisions deferred to their slice (not blockers)
 
 - App package id confirmed `com.beryndil.pharos`.

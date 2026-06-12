@@ -166,6 +166,18 @@
     <string name="error_start_date_required">Start date is required</string>
     <string name="error_save_failed">Save failed. Please try again.</string>
 
+    <!-- ── Alarm engine & dose-due alert (Slice 4, spec §2.8 / §3.4) ──── -->
+    <!-- Dose notification channel: sacred (Law 1) — dose-due alerts only. -->
+    <string name="channel_dose_due_name">Dose reminders</string>
+    <string name="channel_dose_due_desc">Alerts when a dose is due. This channel carries dose reminders only.</string>
+    <!-- Full-screen DUE alert -->
+    <string name="dose_due_heading">Dose due</string>
+    <string name="dose_due_notification_title">Dose due</string>
+    <string name="dose_due_open">Open Pharos</string>
+    <!-- Test reminder (Law 6 — every alarm is testable) -->
+    <string name="test_reminder_title">Test reminder</string>
+    <string name="test_reminder_body">This is a test of your dose reminder alert.</string>
+
     <!-- ── Duplicate-ingredient warning (spec §2.4 / Law 3) ──────────── -->
     <!-- Dialog title -->
     <string name="duplicate_warning_title">Check with your doctor or pharmacist</string>

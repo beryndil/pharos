@@ -1,6 +1,13 @@
 package com.beryndil.pharos.core.db
 
 import android.content.Context
+import com.beryndil.pharos.alarm.AlarmCoordinator
+import com.beryndil.pharos.alarm.AlarmScheduler
+import com.beryndil.pharos.alarm.AndroidAlarmScheduler
+import com.beryndil.pharos.alarm.DoseNotifier
+import com.beryndil.pharos.alarm.FullScreenDoseNotifier
+import com.beryndil.pharos.alarm.ReliabilityLog
+import com.beryndil.pharos.alarm.SettingsReliabilityLog
 import com.beryndil.pharos.core.crypto.PassphraseProvider
 import com.beryndil.pharos.core.crypto.TinkPassphraseProvider
 import com.beryndil.pharos.data.drugref.DrugRefDatabase
@@ -56,6 +63,31 @@ class AppContainer(private val applicationContext: Context) {
             scheduleDao = regimenDatabase.scheduleDao(),
             schedulePhaseDao = regimenDatabase.schedulePhaseDao(),
             doseInstanceDao = regimenDatabase.doseInstanceDao(),
+        )
+    }
+
+    // ── Alarm engine (Slice 4, spec §3.4) ────────────────────────────────────
+
+    /** Schedules exact alarms over [android.app.AlarmManager] with windowed fallback. */
+    val alarmScheduler: AlarmScheduler by lazy { AndroidAlarmScheduler(applicationContext) }
+
+    /** Posts the full-screen dose-due alert on the (sacred) dose channel. */
+    val doseNotifier: DoseNotifier by lazy { FullScreenDoseNotifier(applicationContext) }
+
+    /** Records reliability facts the Slice 6 dashboard reads. */
+    val reliabilityLog: ReliabilityLog by lazy {
+        SettingsReliabilityLog(regimenDatabase.settingDao())
+    }
+
+    /** Single-fire-and-reschedule coordinator: the brain of the alarm engine. */
+    val alarmCoordinator: AlarmCoordinator by lazy {
+        AlarmCoordinator(
+            scheduler = alarmScheduler,
+            notifier = doseNotifier,
+            doseInstanceDao = regimenDatabase.doseInstanceDao(),
+            medicationDao = regimenDatabase.medicationDao(),
+            scheduleRepository = scheduleRepository,
+            reliabilityLog = reliabilityLog,
         )
     }
 }

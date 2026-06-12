@@ -76,6 +76,22 @@ interface DoseInstanceDao {
     )
     suspend fun getNextScheduled(medicationId: String): DoseInstanceEntity?
 
+    /**
+     * The single earliest SCHEDULED dose instance across ALL medications, or null if none.
+     *
+     * This is the heart of the single-fire-and-reschedule alarm model (spec §3.4): the alarm
+     * engine schedules exactly ONE exact alarm — for the row this query returns — and on fire
+     * marks it DUE (so it drops out of this query) and re-runs this to schedule the next.
+     * A row whose [DoseInstanceEntity.dueEpochMs] is already in the past (e.g., a dose that came
+     * due while the device was powered off) is returned too, so reboot recovery fires it
+     * immediately rather than dropping it.
+     */
+    @Query(
+        "SELECT * FROM dose_instances WHERE state = 'SCHEDULED' " +
+            "ORDER BY dueEpochMs ASC LIMIT 1",
+    )
+    suspend fun getEarliestScheduled(): DoseInstanceEntity?
+
     @Query("SELECT COUNT(*) FROM dose_instances WHERE id = :id")
     suspend fun countById(id: String): Int
 

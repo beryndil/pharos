@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Minimal permission set (security: least privilege). Alarm/boot/notif added in Slice 4-5. -->
+    <!-- Minimal permission set (security: least privilege). -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Alarm engine (Slice 4, spec §3.4, Standards §3). -->
+    <!-- USE_EXACT_ALARM: auto-granted for a dedicated reminder app; primary exact-alarm grant. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- SCHEDULE_EXACT_ALARM: revocable fallback path; gated by canScheduleExactAlarms(). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Full-screen DUE alert that takes over the screen (Android 14 restricts to alarm apps). -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- Runtime notification permission on API 33+ (dose channel). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Re-register alarms after device boot (Standards §2, §10). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".PharosApplication"
@@ -26,5 +38,38 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Full-screen dose-due alert. Not exported: launched only by our own full-screen
+             intent. showWhenLocked/turnScreenOn are set in code; singleTask + excludeFromRecents
+             keep one alert instance and out of the recents list. -->
+        <activity
+            android:name=".alarm.DueAlertActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:showOnLockScreen="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Pharos" />
+
+        <!-- Receives our own fired alarms (dose-due, test, daily rollover). Not exported: only
+             AlarmManager-delivered PendingIntents created by this app target it. -->
+        <receiver
+            android:name=".alarm.AlarmReceiver"
+            android:exported="false" />
+
+        <!-- Rebuilds the pending alarm after protected system broadcasts (Standards §2, §3.4).
+             exported=true is safe: these are protected broadcasts only the OS can send. -->
+        <receiver
+            android:name=".alarm.AlarmReRegistrationReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

@@ -49,6 +49,37 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       Production bundle requires the full trimmed RxNorm dataset via the CDN pipeline
       (Slice 8 / parallel track). Dave task: provision Backblaze B2 + Cloudflare CDN.
 
+### Slice 4 — Alarm engine & reliability (2026-06-12)
+
+- [ ] **On-device alarm reliability matrix (Dave, spec §4.3):** reboot recovery
+      (`BOOT_COMPLETED` re-arm after unlock), Doze/app-standby exact-alarm delivery,
+      manual time/timezone change, DST spring-forward/fall-back, OEM battery-killer
+      survival (Samsung Sleeping Apps / Xiaomi autostart / Huawei PowerGenie — see
+      dontkillmyapp.com, DECISIONS.md D5). Robolectric proves the math + scheduling API;
+      real-device delivery is Dave's pass and cannot run headless.
+- [ ] **Full-screen-intent visuals (Dave):** verify `DueAlertActivity` takes over the
+      screen on a real device (and over the lock screen), and that Android 14
+      `canUseFullScreenIntent()` gating behaves. Confirm the Play Console full-screen-intent
+      justification before submission.
+- [ ] **Dedicated notification small icon:** `FullScreenDoseNotifier` currently reuses
+      `ic_launcher_foreground` as the status-bar small icon. Add a monochrome notification
+      icon (transparent, single-color) in the Slice 6 onboarding/dashboard or Slice 10 pass.
+- [ ] **LOCKED_BOOT_COMPLETED not handled (DECISIONS.md S4-A2):** the regimen DB is
+      credential-encrypted (PHI), unreadable before unlock, so re-registration happens at
+      `BOOT_COMPLETED`. If a future slice makes any non-PHI alarm metadata direct-boot-aware,
+      revisit handling `LOCKED_BOOT_COMPLETED` for earlier re-arm.
+- [ ] **DUE alert actions are Slice 5:** `DueAlertActivity` ships the alert surface + a
+      single "Open Pharos" action. Taken/Snooze/Skip buttons, escalation intensity, sacred-
+      channel enforcement, and the D2/D3 miss-window/snooze rules plug into the
+      `DoseActionHandler` seam in Slice 5.
+- [ ] **Test-reminder UI entry point:** `AlarmCoordinator.scheduleTestReminder()` is wired
+      through the real engine but has no on-screen button yet; the Slice 6 reliability
+      dashboard surfaces the "Send a test reminder" affordance (Law 6).
+- [ ] **WorkManager horizon top-up (robustness):** `onDailyRollover` extends the 90-day
+      dose-instance horizon for active meds. If the device misses the daily rollover for a
+      long stretch (off > horizon), the horizon could lapse. Consider a WorkManager periodic
+      backstop (CDN-update channel only — never the dose reminder itself) in a later slice.
+
 ### Slice 3 — Schedules (2026-06-12)
 
 - [ ] **TimePicker is24Hour** (ScheduleSection.kt `TimePickerDialog`): Hard-coded
