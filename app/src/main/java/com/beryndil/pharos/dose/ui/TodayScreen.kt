@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
+import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,6 +53,7 @@ fun TodayScreen(
     onEvent: (TodayEvent) -> Unit,
     onOpenMedications: () -> Unit,
     onOpenHistory: (String) -> Unit,
+    onOpenReliability: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -62,6 +64,12 @@ fun TodayScreen(
             LargeTopAppBar(
                 title = { Text(stringResource(R.string.screen_today)) },
                 actions = {
+                    IconButton(onClick = onOpenReliability) {
+                        Icon(
+                            imageVector = Icons.Outlined.CheckCircleOutline,
+                            contentDescription = stringResource(R.string.cd_open_reliability),
+                        )
+                    }
                     IconButton(onClick = onOpenMedications) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ListAlt,

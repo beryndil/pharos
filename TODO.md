@@ -143,3 +143,25 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 - [ ] **DoseHistory cause detail**: the history screen renders the destination state + a
       timestamp. The `DoseTransitionCause` (alarm/user/snooze-elapsed/miss-window) is stored
       but not yet surfaced. Add a secondary line in the accessibility/polish pass if useful.
+
+### Slice 6 — Onboarding + reliability dashboard (2026-06-12)
+
+- [ ] **FLAG_SECURE per-screen** (DECISIONS.md S6-A1): Global `FLAG_SECURE` covers onboarding
+      and the reliability dashboard even though they carry no PHI. Refine to per-screen in the
+      Slice 10 security hardening pass using a `DisposableEffect` composable wrapper.
+- [ ] **Reliability dashboard on-resume permission refresh** (DECISIONS.md S6-A2): Permissions
+      are snapshotted once at ViewModel creation. If the user grants a permission while the
+      dashboard is backgrounded, the display won't update until they navigate away and back.
+      Add a `LaunchedEffect(lifecycleState)` refresh trigger in a future polish pass.
+- [ ] **Dedicated notification small icon** (carried from Slice 4): `FullScreenDoseNotifier`
+      reuses `ic_launcher_foreground`. Add a monochrome notification icon in the Slice 10
+      accessibility pass.
+- [ ] **PRN log entry point** (carried from Slice 5): PRN meds have no Today-screen row.
+      Surface a "Log dose" affordance — consider a FAB or a per-med action on the medications
+      list. Render `prn_daily_max_warning` when `PrnLogResult.exceedsMax`.
+- [ ] **Boot-receiver display — trigger name readability**: The dashboard shows the raw
+      Android action string (e.g. `android.intent.action.BOOT_COMPLETED`). A future polish
+      pass could shorten it to a human-readable label.
+- [ ] **Drug DB version / last-updated**: These keys (`drugref.version`, `drugref.updated_at`)
+      are written by the Slice 8 CDN pipeline. Dashboard shows "Bundled (local)" / "Not yet
+      updated from CDN" until Slice 8 lands.

@@ -87,6 +87,16 @@ relevant slice is built.
 - Release signing keystore: generated and stored out-of-tree at first release-build
   need; Play App Signing enrollment is a Dave/console task.
 
+## Slice 6 decisions (Onboarding + reliability dashboard)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| S6-A1 | `FLAG_SECURE` kept global (set in `MainActivity.onCreate`). Onboarding and reliability dashboard screens carry no PHI but are still protected by the flag. | Conservative security stance. The existing A2-A11 TODO note flags this for per-screen refinement in a security-hardening pass. Adding/removing the flag per-navigation-destination requires a `DisposableEffect` in every composable — deferred to that pass. |
+| S6-A2 | Reliability dashboard permission checks snapshotted once at ViewModel construction; not re-checked while the screen is visible. | Compose Navigation recreates the ViewModel each time the user navigates to the dashboard, so permissions are always fresh on arrival. Mid-session permission changes require a navigate-away-and-back to refresh — acceptable for v1. TODO.md logged for a future on-resume refresh. |
+| S6-A3 | `OnboardingViewModel` and `ReliabilityDashboardViewModel` inject platform dependencies (OEM name, SDK version, permission checks) as lambdas/primitive values rather than via `Context`. | Keeps both VMs fully testable on the JVM with `Dispatchers.setMain` only — no Robolectric required. 18 onboarding + 29 dashboard tests pass without emulator. |
+| S6-A4 | `OnboardingRepository` is `open` with `open` suspend methods to allow test-only subclassing without a live database. | Avoids an interface-extraction refactor for a class used only in the onboarding path. The `open` modifier has no runtime cost and keeps the class hierarchy flat. |
+| S6-A5 | Auto-start item in the reliability dashboard always shows RISKY for Xiaomi/Oppo/vivo/Honor — there is no API to check if auto-start is actually enabled. Fix action links to dontkillmyapp.com (D5). For non-OEM-killer devices, shows OK. | There is no programmatic way to verify auto-start state on these OEMs. Showing RISKY with a fix link is more useful than silently showing OK when the alarm may still be killed. |
+
 ## Slice 2 decisions (Medication identity & entry)
 
 | ID | Decision | Rationale |

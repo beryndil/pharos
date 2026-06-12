@@ -1,7 +1,10 @@
 package com.beryndil.pharos.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -18,19 +21,25 @@ import com.beryndil.pharos.medication.AddEditMedicationViewModel
 import com.beryndil.pharos.medication.MedicationListViewModel
 import com.beryndil.pharos.medication.ui.AddEditMedicationScreen
 import com.beryndil.pharos.medication.ui.MedicationListScreen
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.beryndil.pharos.onboarding.OnboardingViewModel
+import com.beryndil.pharos.onboarding.ui.OnboardingScreen
+import com.beryndil.pharos.reliability.ReliabilityDashboardViewModel
+import com.beryndil.pharos.reliability.ui.ReliabilityDashboardScreen
 
 /**
  * The Pharos nav graph.
  *
- * All routes are declared here; ViewModels are created with manual DI factories sourced from
+ * [startDestination] is resolved by [com.beryndil.pharos.MainActivity] via an async read of the
+ * onboarding completion flag so first-time users see [NavRoute.Onboarding] and returning users
+ * go straight to [NavRoute.Today].
+ *
+ * All ViewModels are created with manual DI factories sourced from
  * [PharosApplication.appContainer] (DECISIONS.md A1 — no Hilt/Dagger in v1).
  */
 @Composable
 fun PharosNavGraph(
     navController: NavHostController,
+    startDestination: String = NavRoute.Today.route,
     modifier: Modifier = Modifier,
 ) {
     val app = LocalContext.current.applicationContext as PharosApplication
@@ -40,9 +49,30 @@ fun PharosNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = NavRoute.Today.route,
+        startDestination = startDestination,
         modifier = modifier,
     ) {
+
+        // ── Onboarding (first launch only) ────────────────────────────────
+        composable(NavRoute.Onboarding.route) {
+            val viewModel: OnboardingViewModel = viewModel(
+                factory = OnboardingViewModel.factory(
+                    repository = app.appContainer.onboardingRepository,
+                    alarmCoordinator = app.appContainer.alarmCoordinator,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            OnboardingScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onDone = {
+                    navController.navigate(NavRoute.Today.route) {
+                        popUpTo(NavRoute.Onboarding.route) { inclusive = true }
+                    }
+                },
+            )
+        }
+
         // ── Today (actionable dose surface) ───────────────────────────────
         composable(NavRoute.Today.route) {
             val viewModel: TodayViewModel = viewModel(
@@ -56,6 +86,9 @@ fun PharosNavGraph(
                 onOpenHistory = { medId ->
                     navController.navigate(NavRoute.DoseHistory.buildRoute(medId))
                 },
+                onOpenReliability = {
+                    navController.navigate(NavRoute.ReliabilityDashboard.route)
+                },
             )
         }
 
@@ -66,7 +99,8 @@ fun PharosNavGraph(
                 navArgument(NavRoute.DoseHistory.ARG_MED_ID) { type = NavType.StringType },
             ),
         ) { backStackEntry ->
-            val medId = backStackEntry.arguments?.getString(NavRoute.DoseHistory.ARG_MED_ID).orEmpty()
+            val medId =
+                backStackEntry.arguments?.getString(NavRoute.DoseHistory.ARG_MED_ID).orEmpty()
             val viewModel: DoseHistoryViewModel = viewModel(
                 factory = DoseHistoryViewModel.factory(
                     doseRepository = doseRepository,
@@ -141,11 +175,31 @@ fun PharosNavGraph(
                 onDone = { navController.popBackStack() },
             )
         }
+
+        // ── Reliability dashboard (Law 6 — reliability is visible) ────────
+        composable(NavRoute.ReliabilityDashboard.route) {
+            val viewModel: ReliabilityDashboardViewModel = viewModel(
+                factory = ReliabilityDashboardViewModel.factory(
+                    settingDao = app.appContainer.regimenDatabase.settingDao(),
+                    applicationContext = app.appContainer.regimenDatabase.let {
+                        // Use applicationContext captured via the app reference (no Activity leak).
+                        app.applicationContext
+                    },
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            ReliabilityDashboardScreen(
+                uiState = uiState,
+                onBack = { navController.popBackStack() },
+            )
+        }
     }
 }
 
 /** Sealed route definitions keep all route strings in one place. */
 sealed class NavRoute(val route: String) {
+
+    data object Onboarding : NavRoute("onboarding")
 
     data object Today : NavRoute("today")
 
@@ -165,4 +219,6 @@ sealed class NavRoute(val route: String) {
 
         fun buildRoute(medId: String): String = "medications/$medId/edit"
     }
+
+    data object ReliabilityDashboard : NavRoute("reliability")
 }

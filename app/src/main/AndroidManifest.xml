@@ -15,6 +15,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Re-register alarms after device boot (Standards §2, §10). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Lets the onboarding flow open the per-app battery-optimization settings page
+         (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS). Normal permission — auto-granted. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".PharosApplication"

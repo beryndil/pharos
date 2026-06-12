@@ -210,4 +210,113 @@
     <!-- %1$s = new med name, %2$s = existing med name, %3$s = shared ingredient name -->
     <string name="duplicate_warning_message">Heads up — %1$s and %2$s both contain %3$s. Taking both could mean a higher total dose than you intend. Check with your doctor or pharmacist.</string>
     <string name="cd_duplicate_warning_dialog">Warning: possible duplicate ingredient</string>
+
+    <!-- ── Onboarding (Slice 6, spec §2.14) ─────────────────────────────── -->
+    <!-- Shared -->
+    <!-- %1$d = current step (1-based), %2$d = total steps -->
+    <string name="onboarding_step_progress">Step %1$d of %2$d</string>
+    <string name="onboarding_btn_skip">Skip</string>
+    <string name="onboarding_btn_next">Next</string>
+    <string name="onboarding_btn_done">Done</string>
+
+    <!-- Welcome step -->
+    <string name="onboarding_welcome_headline">Pharos</string>
+    <string name="onboarding_welcome_body">A private medication reminder. Your data stays on your device. No account required.</string>
+    <string name="onboarding_btn_get_started">Get started</string>
+
+    <!-- Notification permission step -->
+    <string name="onboarding_notification_headline">Dose reminders</string>
+    <string name="onboarding_notification_body">Allow notifications so reminders can reach you when a dose is due.</string>
+    <string name="onboarding_btn_allow_notifications">Allow notifications</string>
+
+    <!-- Exact-alarm permission step -->
+    <string name="onboarding_exact_alarm_headline">Exact timing</string>
+    <string name="onboarding_exact_alarm_body">Grant alarm scheduling permission so reminders fire at the exact time, even in battery-saving mode.</string>
+    <string name="onboarding_btn_open_alarm_settings">Open alarm settings</string>
+
+    <!-- Battery optimization step -->
+    <string name="onboarding_battery_headline">Background activity</string>
+    <string name="onboarding_battery_body">Remove battery restrictions so reminders are not delayed when the screen is off.</string>
+    <string name="onboarding_battery_destination">Settings → Apps → Pharos → Battery → Unrestricted</string>
+    <string name="onboarding_btn_open_battery_settings">Open battery settings</string>
+
+    <!-- Auto-start permission step (Xiaomi / Oppo / vivo / Honor only) -->
+    <string name="onboarding_autostart_headline">Auto-start permission</string>
+    <string name="onboarding_autostart_body_xiaomi">On Xiaomi devices, open Security app → Permissions → Auto-start, then enable Pharos.</string>
+    <string name="onboarding_autostart_body_oppo">On OPPO devices, open Phone Manager → Auto-launch, then enable Pharos.</string>
+    <string name="onboarding_autostart_body_vivo">On vivo devices, open iManager → App Manager → Auto-launch, then enable Pharos.</string>
+    <string name="onboarding_autostart_body_honor">On Honor devices, open Phone Manager → App Launch, set Pharos to manual, and enable all options.</string>
+    <string name="onboarding_autostart_body_generic">Your device may restrict apps from running in the background. Check your device’s battery or app-management settings to allow Pharos to run.</string>
+    <string name="onboarding_autostart_dkma_label">dontkillmyapp.com</string>
+    <!-- Not translatable — a URL -->
+    <string name="onboarding_autostart_dkma_url" translatable="false">https://dontkillmyapp.com</string>
+
+    <!-- Test reminder step -->
+    <string name="onboarding_test_headline">Test it now</string>
+    <string name="onboarding_test_body">Send a test reminder to confirm alerts work on this device before you rely on them.</string>
+    <string name="onboarding_btn_send_test">Send test reminder</string>
+    <string name="onboarding_test_sent_confirmation">Test reminder sent. It should arrive within a few seconds.</string>
+
+    <!-- ── Reliability dashboard (Slice 6, spec §2.13) ───────────────────── -->
+    <string name="screen_reliability_dashboard">Reliability</string>
+    <string name="cd_open_reliability">Reliability dashboard</string>
+
+    <!-- Section headers -->
+    <string name="reliability_section_permissions">Permissions</string>
+    <string name="reliability_section_alarm_history">Alarm history</string>
+    <string name="reliability_section_system">System integration</string>
+    <string name="reliability_section_drug_db">Drug database</string>
+
+    <!-- Permission item labels -->
+    <string name="reliability_label_exact_alarm">Exact alarm timing</string>
+    <string name="reliability_label_battery">Battery optimization</string>
+    <string name="reliability_label_autostart">Background activity</string>
+    <string name="reliability_label_notification">Notification permission</string>
+    <string name="reliability_label_fullscreen">Full-screen alerts</string>
+
+    <!-- Status descriptions (icon + text, never color alone — Law 10) -->
+    <string name="reliability_exact_alarm_ok">Reminders fire at the exact scheduled time</string>
+    <string name="reliability_exact_alarm_risky">Exact timing unavailable — reminders may be delayed up to 10 minutes</string>
+    <string name="reliability_battery_ok">Battery restrictions removed — reminders can fire with the screen off</string>
+    <string name="reliability_battery_risky">Battery restrictions active — reminders may be delayed when the screen is off</string>
+    <string name="reliability_autostart_ok">No known OEM restrictions</string>
+    <string name="reliability_autostart_risky">This device may restrict background apps. Check auto-start settings.</string>
+    <string name="reliability_notification_ok">Notifications enabled</string>
+    <string name="reliability_notification_risky">Notifications are off — reminders will not appear on screen</string>
+    <string name="reliability_fullscreen_ok">Full-screen alerts available</string>
+    <string name="reliability_fullscreen_risky">Full-screen alerts are off — reminders appear in the notification tray only</string>
+
+    <!-- Fix buttons -->
+    <string name="reliability_btn_fix">Fix</string>
+    <!-- %1$s = item label, for accessibility -->
+    <string name="cd_reliability_fix">Fix: %1$s</string>
+    <!-- %1$s = item label, %2$s = status description -->
+    <string name="cd_reliability_item_desc">%1$s: %2$s</string>
+    <string name="reliability_dkma_link">dontkillmyapp.com</string>
+
+    <!-- Alarm history rows -->
+    <string name="reliability_last_alarm_label">Last reminder fired</string>
+    <string name="reliability_last_alarm_never">No reminders recorded</string>
+    <string name="reliability_next_alarm_label">Next scheduled reminder</string>
+    <string name="reliability_next_alarm_none">None scheduled</string>
+    <string name="reliability_alarm_mode_label">Delivery mode</string>
+    <string name="reliability_alarm_mode_exact">Exact</string>
+    <string name="reliability_alarm_mode_windowed">Windowed (up to 10 minutes)</string>
+    <string name="reliability_alarm_mode_unknown">Unknown</string>
+
+    <!-- System integration -->
+    <string name="reliability_boot_receiver_label">Boot receiver</string>
+    <string name="reliability_boot_receiver_unknown">Not yet triggered since install</string>
+    <!-- %1$s = trigger name, %2$s = formatted timestamp -->
+    <string name="reliability_boot_receiver_ok">Last triggered by %1$s</string>
+
+    <!-- Drug database -->
+    <string name="reliability_drug_db_version_label">Version</string>
+    <string name="reliability_drug_db_version_bundled">Bundled (local)</string>
+    <string name="reliability_drug_db_updated_label">Last CDN update</string>
+    <string name="reliability_drug_db_updated_never">Not yet updated from CDN</string>
+
+    <!-- Timestamp format used in the dashboard rows -->
+    <!-- %1$s = time, %2$s = date -->
+    <string name="reliability_timestamp">%1$s · %2$s</string>
 </resources>

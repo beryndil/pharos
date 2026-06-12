@@ -20,6 +20,7 @@ import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.RegimenDatabaseFactory
 import com.beryndil.pharos.data.schedule.ScheduleRepository
+import com.beryndil.pharos.onboarding.OnboardingRepository
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
@@ -114,6 +115,16 @@ class AppContainer(private val applicationContext: Context) {
             medicationDao = regimenDatabase.medicationDao(),
             stateMachine = doseStateMachine,
         )
+    }
+
+    // ── Onboarding & reliability dashboard (Slice 6) ──────────────────────────
+
+    /**
+     * Persists the onboarding-complete flag. [com.beryndil.pharos.MainActivity] reads this once
+     * on start to decide whether to show onboarding or the Today screen.
+     */
+    val onboardingRepository: OnboardingRepository by lazy {
+        OnboardingRepository(regimenDatabase.settingDao())
     }
 
     /** Single-fire-and-reschedule coordinator: the brain of the alarm engine. */
