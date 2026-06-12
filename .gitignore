@@ -23,3 +23,6 @@ captures/
 keystore.properties
 *.jks
 *.keystore
+
+# Release APK build output
+dist/
