@@ -52,6 +52,12 @@ class AppContainer(private val applicationContext: Context) {
     private val passphraseProvider: PassphraseProvider = TinkPassphraseProvider(applicationContext)
 
     val regimenDatabase: RegimenDatabase by lazy {
+        // SQLCipher's native lib must be loaded before the encrypted DB opens, or nativeOpen
+        // throws UnsatisfiedLinkError. The net.zetetic:sqlcipher-android artifact has no loadLibs()
+        // helper and does not self-load. Done here (production open path) rather than in
+        // Application.onCreate so Robolectric unit tests — which use plain SQLite (DECISIONS.md A9)
+        // and never reach this lazy block — don't try (and fail) to load a host-JVM native lib.
+        System.loadLibrary("sqlcipher")
         val passphrase = passphraseProvider.getOrCreatePassphrase(applicationContext)
         val factory = SupportOpenHelperFactory(passphrase)
         passphrase.fill(0) // zero immediately; SupportOpenHelperFactory has its own copy

@@ -184,3 +184,10 @@ relevant slice is built.
 | S10-A7 | ScheduleSection daily-window Switch row and PRN daily-max Switch row: added `Modifier.semantics(mergeDescendants = true) {}` to the enclosing Row. | Merging descends combines the label Text and the Switch into a single focusable node so TalkBack announces "Daily window, switch, off" as a unit. Without merging, TalkBack focuses the label and switch separately — the switch reads with no context of what it controls. |
 | S10-A8 | Compose semantics tests use `@Config(application = Application::class)` to avoid `PharosApplication.onCreate()` (which initializes Tink/SQLCipher). | The stateless composables under test do not access `AppContainer`. A plain `Application` instance provides sufficient context for `stringResource` / `DateFormat` calls in the composables. |
 | S10-A9 | On-device TalkBack lived pass (full navigation + announcement flow) deferred to Dave's device pass. | Robolectric tests cover semantic node presence and content descriptions. Real TalkBack interaction quality (announcement order, gesture navigation, focus ring rendering) requires a physical device and a human tester (spec §4.4). Logged in TODO.md. |
+
+## Post-v1.0.0 fixes (2026-06-12, on-device verification)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| PR-1 | `System.loadLibrary("sqlcipher")` placed in `AppContainer.regimenDatabase` lazy block (production DB-open path), NOT `PharosApplication.onCreate`. | sqlcipher-android has no loadLibs() and doesn't self-load → launch crash (caught on emulator, missed by all 247 Robolectric tests which use plain SQLite, A9). Putting it in onCreate broke 135 unit tests (no native lib on host JVM); the lazy block runs only in production where the real DB opens. |
+| PR-2 | Replaced Material baseline **purple** with a fixed, restrained **teal** brand palette (`ui/theme/Color.kt`); no dynamic color. | The stock scheme is the generic-AI look DESIGN.md bans; teal reads clinical/trustworthy and consistent across devices. Accent is a taste call — Dave may redirect. |

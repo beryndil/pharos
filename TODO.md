@@ -289,3 +289,14 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       uses `ic_launcher_foreground` as the notification small icon. Add a dedicated
       monochrome/transparent-background icon (24×24dp, white on transparent). Required by
       Android notification styling and for correct display in the status bar.
+
+### Post-v1.0.0 — on-device launch crash fixed (2026-06-12)
+
+- [x] **SQLCipher native lib not loaded → crash on first launch** (v1.0.1 fix). The
+      `net.zetetic:sqlcipher-android` artifact has no `loadLibs()` helper and does not
+      self-load; the app must call `System.loadLibrary("sqlcipher")` before opening any
+      encrypted DB. Added to `PharosApplication.onCreate`. Robolectric tests use plain
+      SQLite (DECISIONS.md A9) so they could not catch this — it surfaced only by booting
+      the release on an emulator. **Lesson: a launch smoke test on a real device/emulator
+      is mandatory before tagging a release.** The on-device test matrix (§4.3) now must
+      include a cold-launch + encrypted-DB-open check as gate zero.
