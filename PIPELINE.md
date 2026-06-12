@@ -93,7 +93,8 @@ real Backblaze/Cloudflare provisioning is a Dave task (TODO.md).
 
 ## Definition of done (per slice, enforced by synth-gate)
 
-1. Feature matches the spec section and obeys every relevant Standards section.
+1. Feature matches the spec section and obeys every relevant Standards section. UI slices
+   additionally pass the DESIGN.md review check (Apple-grade, no AI-isms in copy/imagery).
 2. `./gradlew --no-daemon :app:lintDebug :app:testDebugUnitTest :app:assembleDebug` green
    (foreground, verified by the orchestrator via the actual command output / git log, not
    a DONE string).
