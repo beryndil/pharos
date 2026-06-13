@@ -30,6 +30,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -69,11 +71,13 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
+import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
 import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
 import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
 import com.beryndil.pharos.medication.AddEditMedEvent
 import com.beryndil.pharos.medication.AddEditMedicationUiState
+import androidx.compose.ui.text.style.TextOverflow
 import com.beryndil.pharos.medication.FormStep
 import com.beryndil.pharos.medication.SaveError
 import com.beryndil.pharos.medication.model.DrugSearchResult
@@ -491,6 +495,15 @@ private fun DetailsStep(
                 label = { Text(stringResource(R.string.label_purpose)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+            )
+
+            SubstituteSection(
+                selectedMedId = uiState.substituteForMedId,
+                selectedMedName = uiState.substituteForMedName,
+                options = uiState.substituteMedOptions,
+                note = uiState.substituteNote,
+                onSubstituteChanged = { onEvent(AddEditMedEvent.SubstituteForChanged(it)) },
+                onNoteChanged = { onEvent(AddEditMedEvent.SubstituteNoteChanged(it)) },
             )
 
             SectionHeader(stringResource(R.string.section_critical_alerts))
@@ -1031,5 +1044,112 @@ private fun PharmacyAutocompleteField(
                 .fillMaxWidth()
                 .semantics { contentDescription = phoneLabel },
         )
+    }
+}
+
+// ── Substitution link section (V1.3-F2) ──────────────────────────────────
+
+/**
+ * "Substitute for" picker + optional note field (V1.3-F2, Law 3 reference framing).
+ *
+ * Accessibility (§8): the picker exposes a [contentDescription] with the current selection;
+ * both fields meet ≥48dp via OutlinedTextField defaults. Labels use full sp text so they
+ * scale without truncation at max font size.
+ *
+ * @param selectedMedId Currently selected substitute-for med ID, or null for "None".
+ * @param selectedMedName Resolved display name for the selected med, or null.
+ * @param options Active medications available as substitution link targets (self excluded).
+ * @param note Current value of the optional substitution note field.
+ * @param onSubstituteChanged Called with the selected med ID (null = clear the link).
+ * @param onNoteChanged Called whenever the note text changes.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SubstituteSection(
+    selectedMedId: String?,
+    selectedMedName: String?,
+    options: List<MedicationEntity>,
+    note: String,
+    onSubstituteChanged: (String?) -> Unit,
+    onNoteChanged: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var pickerExpanded by remember { mutableStateOf(false) }
+    val noneLabel = stringResource(R.string.label_substitute_for_none)
+    val displayLabel = selectedMedName ?: noneLabel
+    val pickerCd = stringResource(R.string.cd_substitute_picker, displayLabel)
+    val noteCd = stringResource(R.string.cd_substitute_note_field)
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ExposedDropdownMenuBox(
+            expanded = pickerExpanded,
+            onExpandedChange = { pickerExpanded = it },
+        ) {
+            OutlinedTextField(
+                value = displayLabel,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.label_substitute_for)) },
+                supportingText = {
+                    Text(
+                        text = stringResource(R.string.substitute_for_helper),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        overflow = TextOverflow.Clip,
+                    )
+                },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = pickerExpanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+                    .semantics { contentDescription = pickerCd },
+            )
+            ExposedDropdownMenu(
+                expanded = pickerExpanded,
+                onDismissRequest = { pickerExpanded = false },
+            ) {
+                // "None" option — clears the link
+                DropdownMenuItem(
+                    text = { Text(noneLabel) },
+                    onClick = {
+                        onSubstituteChanged(null)
+                        pickerExpanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                )
+                options.forEach { med ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = med.name,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
+                            )
+                        },
+                        onClick = {
+                            onSubstituteChanged(med.id)
+                            pickerExpanded = false
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                }
+            }
+        }
+
+        if (selectedMedId != null) {
+            OutlinedTextField(
+                value = note,
+                onValueChange = onNoteChanged,
+                label = { Text(stringResource(R.string.label_substitute_note)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Next,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = noteCd },
+            )
+        }
     }
 }

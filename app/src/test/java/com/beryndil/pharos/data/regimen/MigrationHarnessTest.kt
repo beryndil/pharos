@@ -204,6 +204,55 @@ class MigrationHarnessTest {
     }
 
     /**
+     * v5 → v6 (V1.3-F2 Drug substitution link): [substituteForMedId] and [substituteNote]
+     * nullable TEXT columns are added to [medications]. Existing rows must survive the migration
+     * with both new columns = NULL (no substitution link by default, Standards §5: additive only).
+     */
+    @Test
+    fun migrateV5ToV6_addSubstituteColumns_existingRowsDefaultToNull() {
+        // Seed a v5 database with one medication row (includes all v5 columns).
+        migrationHelper.createDatabase(RegimenDatabaseFactory.DATABASE_NAME, 5).use { v5 ->
+            v5.execSQL(
+                "INSERT INTO medications (id, name, rxcui, ingredientsJson, strength, form, " +
+                    "doseAmount, prescriber, prescriberPhone, pharmacy, pharmacyPhone, purpose, " +
+                    "isFreeText, isCritical, missWindowMinutes, status, startEpochMs, endEpochMs, " +
+                    "createdAtEpochMs, updatedAtEpochMs) VALUES " +
+                    "('m5','Omeprazole',NULL,'[]','20 mg','CAPSULE','1 capsule'," +
+                    "'Dr. Smith',NULL,'City Rx',NULL,NULL,0,0,60,'ACTIVE',0,NULL,0,0)",
+            )
+        }
+
+        val v6 = migrationHelper.runMigrationsAndValidate(
+            RegimenDatabaseFactory.DATABASE_NAME,
+            6,
+            true,
+            RegimenDatabaseFactory.MIGRATION_5_6,
+        )
+        v6.use {
+            // Pre-existing medication row survived.
+            v6.query("SELECT COUNT(*) FROM medications", emptyArray<Any?>()).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            // New substitute columns exist and default to NULL for pre-existing rows.
+            v6.query(
+                "SELECT substituteForMedId, substituteNote FROM medications WHERE id = 'm5'",
+                emptyArray<Any?>(),
+            ).use { c ->
+                assertTrue("Row must still exist after migration", c.moveToFirst())
+                assertTrue(
+                    "substituteForMedId must default to NULL for pre-existing rows",
+                    c.isNull(0),
+                )
+                assertTrue(
+                    "substituteNote must default to NULL for pre-existing rows",
+                    c.isNull(1),
+                )
+            }
+        }
+    }
+
+    /**
      * v4 → v5 (V1.3-F1 Saved contacts): [prescribers] and [pharmacies] tables are created, and
      * [prescriberPhone] / [pharmacyPhone] columns are added to [medications]. Existing rows must
      * survive the migration with both new phone columns = NULL (Standards §5: additive only).

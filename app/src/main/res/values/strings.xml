@@ -308,6 +308,16 @@
     <string name="dnd_rationale_body">To break through Do Not Disturb for critical reminders, grant Pharos Do Not Disturb access. Without it, critical reminders will still appear but may be silenced by DND.</string>
     <string name="dnd_rationale_grant">Grant access</string>
 
+    <!-- ── Substitution link (V1.3-F2) — reference framing only (Law 3) ────── -->
+    <string name="label_substitute_for">Substitute for (optional)</string>
+    <string name="label_substitute_for_none">None</string>
+    <string name="label_substitute_note">Note (optional)</string>
+    <string name="substitute_for_helper">Link this to a medication it replaces — for your reference only.</string>
+    <string name="med_substitute_for">Substitute for: %1$s</string>
+    <string name="med_has_substitute">Has substitute: %1$s</string>
+    <string name="cd_substitute_picker">Substitute for picker. Currently: %1$s. Tap to change.</string>
+    <string name="cd_substitute_note_field">Optional note about the substitution</string>
+
     <!-- ── Reliability dashboard (Slice 6, spec §2.13) ───────────────────── -->
     <string name="screen_reliability_dashboard">Reliability</string>
     <string name="cd_open_reliability">Reliability dashboard</string>

@@ -249,6 +249,84 @@ class MedicationRepositoryTest {
         assertTrue("Empty ingredient list → no warnings", warnings.isEmpty())
     }
 
+    // ── Substitute-link suppression (V1.3-F2) — SAFETY-CRITICAL ─────────────
+
+    /**
+     * When med A is declared as a substitute for med B (A.substituteForMedId == B.id),
+     * no duplicate-ingredient warning fires between them even when they share an ingredient.
+     * All other meds are unaffected.
+     */
+    @Test
+    fun checkDuplicates_substituteLink_suppressesWarningBetweenLinkedPair_forwardDirection() = runTest {
+        // B: the original medication (Acetaminophen ingredient).
+        val medB = sampleMedication(id = "b1", name = "MedB", ingredientsJson = """["161"]""")
+        repo.saveMedication(medB)
+
+        // A is a substitute FOR B — no warning expected even though they share ingredient 161.
+        val warnings = repo.checkDuplicateIngredients(
+            newIngredientRxcuis = listOf("161"),
+            excludeMedId = null,
+            substituteForMedId = medB.id,
+        )
+        assertTrue(
+            "Warning must be suppressed between a new med and the med it substitutes for",
+            warnings.isEmpty(),
+        )
+    }
+
+    /**
+     * Reverse direction: B declares itself a substitute for A (the med being edited).
+     * No duplicate-ingredient warning fires between A and B.
+     */
+    @Test
+    fun checkDuplicates_substituteLink_suppressesWarningBetweenLinkedPair_reverseDirection() = runTest {
+        // A (being edited) — we pass excludeMedId = A.id
+        val medAId = "a1"
+        // B declares itself as a substitute for A: B.substituteForMedId == A.id
+        val medB = sampleMedication(
+            id = "b2",
+            name = "MedB",
+            ingredientsJson = """["161"]""",
+            substituteForMedId = medAId,
+        )
+        repo.saveMedication(medB)
+
+        // Editing A — B.substituteForMedId == A.id triggers suppression.
+        val warnings = repo.checkDuplicateIngredients(
+            newIngredientRxcuis = listOf("161"),
+            excludeMedId = medAId,
+            substituteForMedId = null,
+        )
+        assertTrue(
+            "Warning must be suppressed when the existing med is a substitute for the med being edited",
+            warnings.isEmpty(),
+        )
+    }
+
+    /**
+     * A third unlinked med sharing an ingredient with a substitute pair still fires the warning.
+     * Suppression ONLY applies to the explicitly linked substitute pair; all other pairings
+     * are unaffected — safety detection is never weakened for unlinked medications.
+     */
+    @Test
+    fun checkDuplicates_substituteLink_unlinkedThirdMedStillFiresWarning() = runTest {
+        // B: the med that A will substitute for.
+        val medB = sampleMedication(id = "b3", name = "MedB", ingredientsJson = """["161"]""")
+        repo.saveMedication(medB)
+        // C: an unrelated med also containing Acetaminophen (not linked to A).
+        val medC = sampleMedication(id = "c3", name = "MedC", ingredientsJson = """["161"]""")
+        repo.saveMedication(medC)
+
+        // A is a substitute for B — warning vs B suppressed, but warning vs C must still fire.
+        val warnings = repo.checkDuplicateIngredients(
+            newIngredientRxcuis = listOf("161"),
+            excludeMedId = null,
+            substituteForMedId = medB.id,
+        )
+        assertEquals("Warning must still fire for the unlinked third med", 1, warnings.size)
+        assertEquals("MedC", warnings.first().existingMedName)
+    }
+
     /**
      * Duplicate detection must fire even when the drug-ref DB has no name for the shared
      * ingredient (e.g., an edge-case RxCUI not in the bundled subset). The RxCUI itself is
@@ -365,6 +443,7 @@ class MedicationRepositoryTest {
         rxcui: String? = "209387",
         isFreeText: Boolean = false,
         ingredientsJson: String = """["161"]""",
+        substituteForMedId: String? = null,
     ) = MedicationEntity(
         id = id,
         name = name,
@@ -375,6 +454,7 @@ class MedicationRepositoryTest {
         doseAmount = "1 tablet",
         prescriber = null,
         pharmacy = null,
+        substituteForMedId = substituteForMedId,
         purpose = null,
         isFreeText = isFreeText,
         status = MedicationStatus.ACTIVE.name,

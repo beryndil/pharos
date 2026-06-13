@@ -152,8 +152,16 @@ fun MedicationListScreen(
                     items = uiState.medications,
                     key = { it.id },
                 ) { med ->
+                    // Resolve substitute-for name from the same list (graceful: null if not found).
+                    val substituteForName = med.substituteForMedId
+                        ?.let { subId -> uiState.medications.find { it.id == subId }?.name }
+                    // Back-reference: any active med that declares this one as its substitute.
+                    val hasSubstituteName = uiState.medications
+                        .find { it.substituteForMedId == med.id }?.name
                     MedicationListItem(
                         medication = med,
+                        substituteForMedName = substituteForName,
+                        hasSubstituteName = hasSubstituteName,
                         onClick = { onMedicationClicked(med.id) },
                         onRefillClicked = { onRefillClicked(med.id) },
                         onDrugReferenceClicked = { onDrugReferenceClicked(med.id) },
@@ -171,6 +179,10 @@ fun MedicationListScreen(
 @Composable
 private fun MedicationListItem(
     medication: MedicationEntity,
+    /** Name of the med this medication substitutes for, or null if no link (V1.3-F2). */
+    substituteForMedName: String?,
+    /** Name of a med that has declared this one as its substitute — for back-reference (V1.3-F2). */
+    hasSubstituteName: String?,
     onClick: () -> Unit,
     onRefillClicked: () -> Unit,
     onDrugReferenceClicked: () -> Unit,
@@ -192,11 +204,27 @@ private fun MedicationListItem(
             )
         },
         supportingContent = {
-            Text(
-                text = stringResource(R.string.med_strength_form, medication.strength, formLabel),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column {
+                Text(
+                    text = stringResource(R.string.med_strength_form, medication.strength, formLabel),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (substituteForMedName != null) {
+                    Text(
+                        text = stringResource(R.string.med_substitute_for, substituteForMedName),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (hasSubstituteName != null) {
+                    Text(
+                        text = stringResource(R.string.med_has_substitute, hasSubstituteName),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         },
         trailingContent = {
             Box {

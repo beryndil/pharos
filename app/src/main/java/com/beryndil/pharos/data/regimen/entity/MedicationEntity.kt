@@ -61,6 +61,24 @@ data class MedicationEntity(
      */
     val pharmacyPhone: String? = null,
 
+    /**
+     * ID of another [MedicationEntity] that this medication substitutes for (V1.3-F2).
+     * Reference framing only — the app records the link; it never instructs the user to
+     * "take B instead of A" (Law 3). Null = no substitution link.
+     *
+     * Intentionally NOT a Room foreign key: the referenced med may be ended or deleted while
+     * the link note is still valuable to the user. Application code must handle null-lookup
+     * gracefully (show nothing, never crash).
+     */
+    val substituteForMedId: String? = null,
+
+    /**
+     * Optional free-text note the user attached to the substitution link, e.g.
+     * "switched from brand to generic — doctor's recommendation 2024-01-15".
+     * Pure reference; never advice (Law 3). Null when no note is set.
+     */
+    val substituteNote: String? = null,
+
     /** Optional purpose note in the user's own words. */
     val purpose: String?,
 
