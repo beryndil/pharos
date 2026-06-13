@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +36,8 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.heightIn
@@ -190,29 +193,34 @@ private fun DoseCard(
     val skipCd  = stringResource(R.string.cd_dose_skip_action,  dose.medName)
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-        Text(
-            text = dose.medName,
-            style = MaterialTheme.typography.titleLarge,
+        // Info header — merged into one TalkBack node; double-tap opens dose history.
+        // §8: mergeDescendants = true collapses med name + dose summary + state label
+        // into a single focus node so TalkBack reads a coherent sentence rather than
+        // three separate fragments.
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
+                .semantics(mergeDescendants = true) {}
                 .clickable(
                     onClickLabel = stringResource(R.string.cd_dose_history_action, dose.medName),
                     onClick = onHistory,
                 ),
-        )
-        Text(
-            text = stringResource(R.string.today_dose_summary, dose.strength, timeText),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp),
-        )
-        Text(
-            text = stringResource(stateLabelRes(dose.state)),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp),
-        )
+        ) {
+            Text(
+                text = dose.medName,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = stringResource(R.string.today_dose_summary, dose.strength, timeText),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+            // §8: icon + text for every dose state — never color-only (Law 10).
+            DoseStateLabel(state = dose.state)
+        }
 
         if (actionable) {
             Button(
@@ -262,47 +270,54 @@ private fun PrnMedCard(
     val logDoseCd = stringResource(R.string.cd_prn_log_dose, prn.medName)
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-        Text(
-            text = prn.medName,
-            style = MaterialTheme.typography.titleLarge,
+        // Info header — merged into one TalkBack node (§8: mergeDescendants = true so
+        // TalkBack reads med name + PRN label + strength as one coherent sentence).
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
+                .semantics(mergeDescendants = true) {}
                 .clickable(
                     onClickLabel = stringResource(R.string.cd_dose_history_action, prn.medName),
                     onClick = onHistory,
                 ),
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(top = 2.dp),
         ) {
-            Icon(
-                imageVector = Icons.Outlined.MedicalServices,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             Text(
-                text = stringResource(R.string.schedule_type_prn),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = prn.medName,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.fillMaxWidth(),
             )
-        }
-        Text(
-            text = prn.strength,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp),
-        )
-        if (prn.dosesToday > 0) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(top = 2.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.MedicalServices,
+                    contentDescription = null, // decorative — text below carries the meaning
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(R.string.schedule_type_prn),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
-                text = stringResource(R.string.today_prn_doses_today, prn.dosesToday),
-                style = MaterialTheme.typography.bodySmall,
+                text = prn.strength,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
             )
+            if (prn.dosesToday > 0) {
+                Text(
+                    text = stringResource(R.string.today_prn_doses_today, prn.dosesToday),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
         }
         Button(
             onClick = onLogDose,
@@ -347,4 +362,44 @@ internal fun stateLabelRes(state: DoseState): Int = when (state) {
     DoseState.TAKEN -> R.string.dose_state_taken
     DoseState.SKIPPED -> R.string.dose_state_skipped
     DoseState.MISSED -> R.string.dose_state_missed
+}
+
+/**
+ * Icon + text label for a dose state (§8 / Law 10: icon + text, never color-only).
+ *
+ * The icon is decorative ([contentDescription] = null) because the text carries the semantic
+ * meaning. [DoseState.MISSED] uses the warning icon + error tint to reinforce the urgency
+ * visually (color as ADDITIONAL signal, not the sole signal — always paired with text).
+ */
+@Composable
+internal fun DoseStateLabel(
+    state: DoseState,
+    modifier: Modifier = Modifier,
+) {
+    val icon: ImageVector = when (state) {
+        DoseState.DUE, DoseState.SNOOZED, DoseState.SCHEDULED -> Icons.Outlined.Schedule
+        DoseState.TAKEN, DoseState.SKIPPED -> Icons.Outlined.CheckCircleOutline
+        DoseState.MISSED -> Icons.Outlined.WarningAmber
+    }
+    val tint: Color = when (state) {
+        DoseState.MISSED -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.padding(top = 2.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null, // decorative — text label carries the semantic meaning
+            modifier = Modifier.size(14.dp),
+            tint = tint,
+        )
+        Text(
+            text = stringResource(stateLabelRes(state)),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }

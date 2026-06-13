@@ -564,6 +564,7 @@
     <string name="action_legal">Legal</string>
     <string name="action_saved_contacts">Saved contacts</string>
     <string name="cd_open_legal">Legal</string>
+    <string name="cd_open_menu">More options</string>
 
     <!-- Medical disclaimer — spec §4.2 verbatim intent + Law 3 framing. -->
     <string name="legal_section_medical_disclaimer">Medical disclaimer</string>

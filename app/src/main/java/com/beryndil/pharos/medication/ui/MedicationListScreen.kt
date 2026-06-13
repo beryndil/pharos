@@ -88,7 +88,7 @@ fun MedicationListScreen(
                         IconButton(onClick = { globalMenuExpanded = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = stringResource(R.string.cd_open_legal),
+                                contentDescription = stringResource(R.string.cd_open_menu),
                             )
                         }
                         DropdownMenu(

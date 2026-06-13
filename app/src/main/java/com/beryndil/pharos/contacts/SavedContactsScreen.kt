@@ -58,7 +58,7 @@ fun SavedContactsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.btn_back),
+                            contentDescription = stringResource(R.string.cd_back_button),
                         )
                     }
                 },

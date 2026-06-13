@@ -500,11 +500,13 @@ private fun TimesRow(
                 onClick = { editingIndex = index },
                 label = { Text(formatted) },
                 trailingIcon = {
+                    // §8: touch target ≥48dp — do NOT apply Modifier.size to IconButton;
+                    // Material3 LocalMinimumInteractiveComponentSize enforces 48dp by default.
+                    // Only the inner Icon is constrained to the chip's visual icon size.
                     IconButton(
                         onClick = {
                             onTimesChanged(times.toMutableList().also { it.removeAt(index) })
                         },
-                        modifier = Modifier.size(AssistChipDefaults.IconSize),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,

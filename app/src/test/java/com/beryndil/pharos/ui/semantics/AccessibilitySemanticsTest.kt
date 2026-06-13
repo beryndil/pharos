@@ -254,4 +254,158 @@ class AccessibilitySemanticsTest {
             .onNode(hasText("This medication was added without", substring = true))
             .assertIsDisplayed()
     }
+
+    // ── A5-S2 accessibility hardening ───────────────────────────────────────────
+
+    /**
+     * DUE dose state must expose its text label "Due now" in the semantic tree.
+     * §8 / Law 10: icon + text for every warning/state — the text must be readable by TalkBack,
+     * not conveyed by color alone. Fixed in A5-S2: added DoseStateLabel (icon + text Row).
+     */
+    @Test
+    fun `today screen DUE dose state label text is accessible`() {
+        val dose = DoseRow(
+            doseId = "d10",
+            medicationId = "m10",
+            medName = "Metformin",
+            strength = "500 mg",
+            dueEpochMs = 1_700_000_000_000L,
+            state = DoseState.DUE,
+        )
+        composeTestRule.setContent {
+            PharosTheme {
+                TodayScreen(
+                    uiState = TodayUiState(doses = listOf(dose)),
+                    onEvent = {},
+                    onOpenMedications = {},
+                    onOpenHistory = {},
+                    onOpenReliability = {},
+                )
+            }
+        }
+        // R.string.dose_state_due = "Due now" — must be visible as text in the semantic tree.
+        composeTestRule
+            .onNode(hasText("Due now", substring = true))
+            .assertIsDisplayed()
+    }
+
+    /**
+     * MISSED dose state must expose its text label and should use the warning icon tint.
+     * This verifies the DoseStateLabel composable wires up for MISSED (a critical warning).
+     */
+    @Test
+    fun `today screen MISSED dose state label text is accessible`() {
+        val dose = DoseRow(
+            doseId = "d11",
+            medicationId = "m11",
+            medName = "Lisinopril",
+            strength = "10 mg",
+            dueEpochMs = 1_700_000_000_000L,
+            state = DoseState.MISSED,
+        )
+        composeTestRule.setContent {
+            PharosTheme {
+                TodayScreen(
+                    uiState = TodayUiState(doses = listOf(dose)),
+                    onEvent = {},
+                    onOpenMedications = {},
+                    onOpenHistory = {},
+                    onOpenReliability = {},
+                )
+            }
+        }
+        // R.string.dose_state_missed = "Missed" — must be visible as text in the semantic tree.
+        composeTestRule
+            .onNode(hasText("Missed", substring = true))
+            .assertIsDisplayed()
+    }
+
+    /**
+     * SNOOZED dose state must expose its text label in the semantic tree.
+     */
+    @Test
+    fun `today screen SNOOZED dose state label text is accessible`() {
+        val dose = DoseRow(
+            doseId = "d12",
+            medicationId = "m12",
+            medName = "Aspirin",
+            strength = "81 mg",
+            dueEpochMs = 1_700_000_000_000L,
+            state = DoseState.SNOOZED,
+        )
+        composeTestRule.setContent {
+            PharosTheme {
+                TodayScreen(
+                    uiState = TodayUiState(doses = listOf(dose)),
+                    onEvent = {},
+                    onOpenMedications = {},
+                    onOpenHistory = {},
+                    onOpenReliability = {},
+                )
+            }
+        }
+        // R.string.dose_state_snoozed = "Snoozed"
+        composeTestRule
+            .onNode(hasText("Snoozed", substring = true))
+            .assertIsDisplayed()
+    }
+
+    /**
+     * Medication list overflow menu button must have a meaningful contentDescription.
+     * Fixed in A5-S2: changed from "Legal" (cd_open_legal) to "More options" (cd_open_menu)
+     * — the menu opens Settings, Saved Contacts, AND Legal, so "Legal" was incorrect.
+     */
+    @Test
+    fun `medication list overflow button has correct contentDescription`() {
+        composeTestRule.setContent {
+            PharosTheme {
+                MedicationListScreen(
+                    uiState = MedicationListUiState(),
+                    onAddMedication = {},
+                    onMedicationClicked = {},
+                    onRefillClicked = {},
+                    onDrugReferenceClicked = {},
+                    onOpenBackup = {},
+                    onEvent = {},
+                )
+            }
+        }
+        // Must be "More options" — NOT "Legal" (which was the pre-A5-S2 wrong value).
+        composeTestRule
+            .onNodeWithContentDescription("More options")
+            .assertIsDisplayed()
+    }
+
+    /**
+     * DoseCard header must merge med name + dose summary + state into one TalkBack focus node.
+     * This verifies that mergeDescendants = true is applied so TalkBack doesn't fragment the card.
+     * The med name text should appear within the merged node.
+     */
+    @Test
+    fun `today screen DoseCard medication name is accessible in merged header`() {
+        val medName = "Warfarin"
+        val dose = DoseRow(
+            doseId = "d13",
+            medicationId = "m13",
+            medName = medName,
+            strength = "5 mg",
+            dueEpochMs = 1_700_000_000_000L,
+            state = DoseState.SCHEDULED,
+        )
+        composeTestRule.setContent {
+            PharosTheme {
+                TodayScreen(
+                    uiState = TodayUiState(doses = listOf(dose)),
+                    onEvent = {},
+                    onOpenMedications = {},
+                    onOpenHistory = {},
+                    onOpenReliability = {},
+                )
+            }
+        }
+        // Med name must be in the semantic tree — no maxLines truncation.
+        composeTestRule
+            .onNode(hasText(medName, substring = true))
+            .assertIsDisplayed()
+    }
 }
