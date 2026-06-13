@@ -158,6 +158,7 @@
     <!-- Buttons -->
     <string name="btn_continue">Continue</string>
     <string name="btn_save">Save</string>
+    <string name="btn_add">Add</string>
     <string name="btn_cancel">Cancel</string>
     <string name="btn_delete">Delete</string>
     <string name="btn_save_anyway">Save anyway</string>
@@ -668,8 +669,12 @@
     <string name="saved_contacts_title">Saved contacts</string>
     <string name="saved_contacts_section_prescribers">Prescribers</string>
     <string name="saved_contacts_section_pharmacies">Pharmacies</string>
-    <string name="saved_contacts_empty_prescribers">No saved prescribers yet. They are remembered automatically when you save a medication.</string>
-    <string name="saved_contacts_empty_pharmacies">No saved pharmacies yet. They are remembered automatically when you save a medication.</string>
+    <string name="saved_contacts_empty_prescribers">No saved prescribers yet. Tap + to add one, or they are remembered automatically when you save a medication.</string>
+    <string name="saved_contacts_empty_pharmacies">No saved pharmacies yet. Tap + to add one, or they are remembered automatically when you save a medication.</string>
+    <string name="saved_contacts_add_prescriber">Add prescriber</string>
+    <string name="saved_contacts_add_pharmacy">Add pharmacy</string>
+    <string name="saved_contacts_add_prescriber_cd">Add new prescriber</string>
+    <string name="saved_contacts_add_pharmacy_cd">Add new pharmacy</string>
     <string name="saved_contacts_edit_prescriber">Edit prescriber</string>
     <string name="saved_contacts_edit_pharmacy">Edit pharmacy</string>
     <string name="saved_contacts_edit_cd">Edit %1$s</string>

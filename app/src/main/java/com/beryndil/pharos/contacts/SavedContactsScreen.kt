@@ -8,11 +8,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -25,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -73,7 +80,11 @@ fun SavedContactsScreen(
         ) {
             // ── Prescribers ───────────────────────────────────────────────
             item {
-                SectionHeader(stringResource(R.string.saved_contacts_section_prescribers))
+                SectionHeader(
+                    title = stringResource(R.string.saved_contacts_section_prescribers),
+                    onAdd = { onEvent(ContactsEvent.AddPrescriberRequested) },
+                    addCd = stringResource(R.string.saved_contacts_add_prescriber_cd),
+                )
             }
             if (uiState.prescribers.isEmpty()) {
                 item {
@@ -94,7 +105,11 @@ fun SavedContactsScreen(
 
             // ── Pharmacies ────────────────────────────────────────────────
             item {
-                SectionHeader(stringResource(R.string.saved_contacts_section_pharmacies))
+                SectionHeader(
+                    title = stringResource(R.string.saved_contacts_section_pharmacies),
+                    onAdd = { onEvent(ContactsEvent.AddPharmacyRequested) },
+                    addCd = stringResource(R.string.saved_contacts_add_pharmacy_cd),
+                )
             }
             if (uiState.pharmacies.isEmpty()) {
                 item {
@@ -115,22 +130,44 @@ fun SavedContactsScreen(
 
     // ── Dialogs ───────────────────────────────────────────────────────────
     when (val dialog = uiState.dialog) {
-        is ContactEditDialog.EditPrescriber -> EditContactDialog(
+        is ContactEditDialog.AddPrescriber -> ContactDialog(
+            title = stringResource(R.string.saved_contacts_add_prescriber),
+            name = dialog.currentName,
+            phone = dialog.currentPhone,
+            confirmLabel = stringResource(R.string.btn_add),
+            onNameChange = { onEvent(ContactsEvent.EditNameChanged(it)) },
+            onPhoneChange = { onEvent(ContactsEvent.EditPhoneChanged(it)) },
+            onConfirm = { onEvent(ContactsEvent.SaveConfirmed) },
+            onDismiss = { onEvent(ContactsEvent.DialogDismissed) },
+        )
+        is ContactEditDialog.AddPharmacy -> ContactDialog(
+            title = stringResource(R.string.saved_contacts_add_pharmacy),
+            name = dialog.currentName,
+            phone = dialog.currentPhone,
+            confirmLabel = stringResource(R.string.btn_add),
+            onNameChange = { onEvent(ContactsEvent.EditNameChanged(it)) },
+            onPhoneChange = { onEvent(ContactsEvent.EditPhoneChanged(it)) },
+            onConfirm = { onEvent(ContactsEvent.SaveConfirmed) },
+            onDismiss = { onEvent(ContactsEvent.DialogDismissed) },
+        )
+        is ContactEditDialog.EditPrescriber -> ContactDialog(
             title = stringResource(R.string.saved_contacts_edit_prescriber),
             name = dialog.currentName,
             phone = dialog.currentPhone,
+            confirmLabel = stringResource(R.string.btn_save),
             onNameChange = { onEvent(ContactsEvent.EditNameChanged(it)) },
             onPhoneChange = { onEvent(ContactsEvent.EditPhoneChanged(it)) },
-            onConfirm = { onEvent(ContactsEvent.SaveEditConfirmed) },
+            onConfirm = { onEvent(ContactsEvent.SaveConfirmed) },
             onDismiss = { onEvent(ContactsEvent.DialogDismissed) },
         )
-        is ContactEditDialog.EditPharmacy -> EditContactDialog(
+        is ContactEditDialog.EditPharmacy -> ContactDialog(
             title = stringResource(R.string.saved_contacts_edit_pharmacy),
             name = dialog.currentName,
             phone = dialog.currentPhone,
+            confirmLabel = stringResource(R.string.btn_save),
             onNameChange = { onEvent(ContactsEvent.EditNameChanged(it)) },
             onPhoneChange = { onEvent(ContactsEvent.EditPhoneChanged(it)) },
-            onConfirm = { onEvent(ContactsEvent.SaveEditConfirmed) },
+            onConfirm = { onEvent(ContactsEvent.SaveConfirmed) },
             onDismiss = { onEvent(ContactsEvent.DialogDismissed) },
         )
         is ContactEditDialog.ConfirmDelete -> DeleteConfirmDialog(
@@ -142,13 +179,34 @@ fun SavedContactsScreen(
 }
 
 @Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+private fun SectionHeader(title: String, onAdd: () -> Unit, addCd: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 8.dp),
+        )
+        IconButton(
+            onClick = onAdd,
+            modifier = Modifier
+                .heightIn(min = 48.dp)
+                .semantics { contentDescription = addCd },
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
 }
 
 @Composable
@@ -197,10 +255,11 @@ private fun ContactRow(
 }
 
 @Composable
-private fun EditContactDialog(
+private fun ContactDialog(
     title: String,
     name: String,
     phone: String,
+    confirmLabel: String,
     onNameChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
     onConfirm: () -> Unit,
@@ -229,7 +288,9 @@ private fun EditContactDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text(stringResource(R.string.btn_save)) }
+            Button(onClick = onConfirm, enabled = name.isNotBlank()) {
+                Text(confirmLabel)
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }

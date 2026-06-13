@@ -18,21 +18,33 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Edit / delete state for a contact that the user has tapped.
+ * Edit / delete / add state for a contact dialog.
  */
 @Immutable
 sealed interface ContactEditDialog {
     /** No dialog open. */
     data object None : ContactEditDialog
 
-    /** Editing a prescriber. [current] holds the live text in the dialog. */
+    /** Adding a new prescriber. */
+    data class AddPrescriber(
+        val currentName: String = "",
+        val currentPhone: String = "",
+    ) : ContactEditDialog
+
+    /** Adding a new pharmacy. */
+    data class AddPharmacy(
+        val currentName: String = "",
+        val currentPhone: String = "",
+    ) : ContactEditDialog
+
+    /** Editing an existing prescriber. */
     data class EditPrescriber(
         val prescriber: PrescriberEntity,
         val currentName: String,
         val currentPhone: String,
     ) : ContactEditDialog
 
-    /** Editing a pharmacy. */
+    /** Editing an existing pharmacy. */
     data class EditPharmacy(
         val pharmacy: PharmacyEntity,
         val currentName: String,
@@ -51,11 +63,14 @@ data class SavedContactsUiState(
 )
 
 sealed interface ContactsEvent {
+    data object AddPrescriberRequested : ContactsEvent
+    data object AddPharmacyRequested : ContactsEvent
     data class EditPrescriberRequested(val prescriber: PrescriberEntity) : ContactsEvent
     data class EditPharmacyRequested(val pharmacy: PharmacyEntity) : ContactsEvent
     data class EditNameChanged(val value: String) : ContactsEvent
     data class EditPhoneChanged(val value: String) : ContactsEvent
-    data object SaveEditConfirmed : ContactsEvent
+    /** Confirms both add-new and save-edit dialogs. */
+    data object SaveConfirmed : ContactsEvent
     data class DeleteRequested(val id: String, val isPharmacy: Boolean) : ContactsEvent
     data object DeleteConfirmed : ContactsEvent
     data object DialogDismissed : ContactsEvent
@@ -88,6 +103,10 @@ class SavedContactsViewModel(
 
     fun onEvent(event: ContactsEvent) {
         when (event) {
+            is ContactsEvent.AddPrescriberRequested ->
+                _uiState.update { it.copy(dialog = ContactEditDialog.AddPrescriber()) }
+            is ContactsEvent.AddPharmacyRequested ->
+                _uiState.update { it.copy(dialog = ContactEditDialog.AddPharmacy()) }
             is ContactsEvent.EditPrescriberRequested ->
                 _uiState.update {
                     it.copy(
@@ -112,8 +131,10 @@ class SavedContactsViewModel(
                 _uiState.update { state ->
                     state.copy(
                         dialog = when (val d = state.dialog) {
+                            is ContactEditDialog.AddPrescriber  -> d.copy(currentName = event.value)
+                            is ContactEditDialog.AddPharmacy    -> d.copy(currentName = event.value)
                             is ContactEditDialog.EditPrescriber -> d.copy(currentName = event.value)
-                            is ContactEditDialog.EditPharmacy -> d.copy(currentName = event.value)
+                            is ContactEditDialog.EditPharmacy   -> d.copy(currentName = event.value)
                             else -> d
                         },
                     )
@@ -122,13 +143,15 @@ class SavedContactsViewModel(
                 _uiState.update { state ->
                     state.copy(
                         dialog = when (val d = state.dialog) {
+                            is ContactEditDialog.AddPrescriber  -> d.copy(currentPhone = event.value)
+                            is ContactEditDialog.AddPharmacy    -> d.copy(currentPhone = event.value)
                             is ContactEditDialog.EditPrescriber -> d.copy(currentPhone = event.value)
-                            is ContactEditDialog.EditPharmacy -> d.copy(currentPhone = event.value)
+                            is ContactEditDialog.EditPharmacy   -> d.copy(currentPhone = event.value)
                             else -> d
                         },
                     )
                 }
-            is ContactsEvent.SaveEditConfirmed -> onSaveEdit()
+            is ContactsEvent.SaveConfirmed -> onSaveConfirmed()
             is ContactsEvent.DeleteRequested ->
                 _uiState.update {
                     it.copy(dialog = ContactEditDialog.ConfirmDelete(event.id, event.isPharmacy))
@@ -139,22 +162,34 @@ class SavedContactsViewModel(
         }
     }
 
-    private fun onSaveEdit() {
+    private fun onSaveConfirmed() {
         val dialog = _uiState.value.dialog
         viewModelScope.launch {
             withContext(ioDispatcher) {
                 when (dialog) {
+                    is ContactEditDialog.AddPrescriber -> {
+                        val name = dialog.currentName.trim()
+                        if (name.isNotEmpty()) {
+                            repository.rememberPrescriber(name, dialog.currentPhone.trim().ifEmpty { null })
+                        }
+                    }
+                    is ContactEditDialog.AddPharmacy -> {
+                        val name = dialog.currentName.trim()
+                        if (name.isNotEmpty()) {
+                            repository.rememberPharmacy(name, dialog.currentPhone.trim().ifEmpty { null })
+                        }
+                    }
                     is ContactEditDialog.EditPrescriber ->
                         repository.updatePrescriber(
                             dialog.prescriber.copy(
-                                name = dialog.currentName.trim().ifEmpty { dialog.prescriber.name },
+                                name  = dialog.currentName.trim().ifEmpty { dialog.prescriber.name },
                                 phone = dialog.currentPhone.trim().ifEmpty { null },
                             ),
                         )
                     is ContactEditDialog.EditPharmacy ->
                         repository.updatePharmacy(
                             dialog.pharmacy.copy(
-                                name = dialog.currentName.trim().ifEmpty { dialog.pharmacy.name },
+                                name  = dialog.currentName.trim().ifEmpty { dialog.pharmacy.name },
                                 phone = dialog.currentPhone.trim().ifEmpty { null },
                             ),
                         )
