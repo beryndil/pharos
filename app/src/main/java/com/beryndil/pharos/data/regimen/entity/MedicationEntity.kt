@@ -88,6 +88,9 @@ data class MedicationEntity(
     /** Optional purpose note in the user's own words. */
     val purpose: String?,
 
+    /** Free-text reminder note in the user's own words, e.g., "take with food". */
+    val notes: String? = null,
+
     /**
      * True if this medication was entered as free-text without RxNorm resolution.
      * Free-text meds get reminders and refill tracking but no duplicate/interaction/label
@@ -128,5 +131,5 @@ enum class MedicationStatus { ACTIVE, PAUSED, ENDED }
 
 /** Physical form factor of a medication dose. Must include "other" per spec §2.3. */
 enum class MedicationForm {
-    TABLET, CAPSULE, LIQUID, INJECTION, INHALER, PATCH, DROPS, CREAM, OTHER
+    TABLET, CAPLET, CAPSULE, LIQUID, INJECTION, INHALER, PATCH, DROPS, CREAM, OTHER
 }

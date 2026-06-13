@@ -24,7 +24,7 @@ object RegimenDatabaseFactory {
      * AND by the newer-schema guard to detect on-disk databases from future app versions.
      * Keep in sync with [RegimenDatabase]'s `@Database` annotation.
      */
-    const val CURRENT_VERSION = 7
+    const val CURRENT_VERSION = 8
 
     /**
      * v1 → v2 (Slice 5): adds the append-only [dose_transitions] history table. Additive only —
@@ -143,6 +143,16 @@ object RegimenDatabaseFactory {
     }
 
     /**
+     * v7 → v8: adds [notes] nullable TEXT column to [medications]. Additive only —
+     * no existing column is touched. Defaults to NULL so pre-existing medications have no note.
+     */
+    val MIGRATION_7_8: Migration = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `medications` ADD COLUMN `notes` TEXT")
+        }
+    }
+
+    /**
      * Builds [RegimenDatabase] with a newer-schema version guard.
      *
      * @param openHelperFactory SQLCipher [net.zetetic.database.sqlcipher.SupportFactory] in
@@ -164,7 +174,7 @@ object RegimenDatabaseFactory {
         enforceSchemaVersion(context, passphrase)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
             .build()
     }
 

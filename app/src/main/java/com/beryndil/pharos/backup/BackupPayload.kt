@@ -53,6 +53,8 @@ data class MedicationBackup(
      */
     val pharmacyPhone: String? = null,
     val purpose: String?,
+    /** Free-text reminder note (v1.4+). Default null for backups from older app versions. */
+    val notes: String? = null,
     val isFreeText: Boolean,
     val status: String,
     val startEpochMs: Long,

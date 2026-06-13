@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.beryndil.pharos.contacts.ContactRepository
 import com.beryndil.pharos.data.drugref.DrugLabelRepository
+import com.beryndil.pharos.medication.BarcodeNdcService
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
@@ -90,6 +91,12 @@ data class AddEditMedicationUiState(
     val pharmacy: String = "",
     val pharmacyPhone: String = "",
     val purpose: String = "",
+    val notes: String = "",
+
+    // ── Barcode scanner ───────────────────────────────────────────────────
+    val showBarcodeScanner: Boolean = false,
+    /** True while a background NDC lookup is running after a barcode scan. */
+    val isBarcodeScanning: Boolean = false,
 
     /** Autocomplete suggestions for the prescriber name field, drawn from the saved store. */
     val prescriberSuggestions: List<PrescriberEntity> = emptyList(),
@@ -177,6 +184,11 @@ sealed interface AddEditMedEvent {
     /** User picked an autocomplete suggestion — fills both name and phone. */
     data class PharmacySuggestionPicked(val pharmacy: PharmacyEntity) : AddEditMedEvent
     data class PurposeChanged(val value: String) : AddEditMedEvent
+    data class NotesChanged(val value: String) : AddEditMedEvent
+    data object BarcodeScanRequested : AddEditMedEvent
+    data object BarcodeScanDismissed : AddEditMedEvent
+    /** Raw barcode value from the scanner — triggers an openFDA NDC lookup to pre-fill fields. */
+    data class BarcodeDetected(val rawValue: String) : AddEditMedEvent
     data class ScheduleInputChanged(val input: ScheduleInput) : AddEditMedEvent
     data class IsCriticalToggled(val value: Boolean) : AddEditMedEvent
     data class MissWindowMinutesChanged(val value: String) : AddEditMedEvent
@@ -315,6 +327,13 @@ class AddEditMedicationViewModel(
                 }
             is AddEditMedEvent.PurposeChanged ->
                 _uiState.update { it.copy(purpose = event.value) }
+            is AddEditMedEvent.NotesChanged ->
+                _uiState.update { it.copy(notes = event.value) }
+            is AddEditMedEvent.BarcodeScanRequested ->
+                _uiState.update { it.copy(showBarcodeScanner = true) }
+            is AddEditMedEvent.BarcodeScanDismissed ->
+                _uiState.update { it.copy(showBarcodeScanner = false) }
+            is AddEditMedEvent.BarcodeDetected -> onBarcodeDetected(event.rawValue)
             is AddEditMedEvent.ScheduleInputChanged ->
                 _uiState.update { it.copy(scheduleInput = event.input, scheduleValidationError = false) }
             is AddEditMedEvent.IsCriticalToggled -> onIsCriticalToggled(event.value)
@@ -410,6 +429,7 @@ class AddEditMedicationViewModel(
                     pharmacy = med.pharmacy ?: "",
                     pharmacyPhone = med.pharmacyPhone ?: "",
                     purpose = med.purpose ?: "",
+                    notes = med.notes ?: "",
                     substituteForMedId = med.substituteForMedId,
                     substituteForMedName = substituteName,
                     substituteNote = med.substituteNote ?: "",
@@ -567,6 +587,48 @@ class AddEditMedicationViewModel(
         }
     }
 
+    /**
+     * Handles a raw barcode value from the scanner.
+     *
+     * Launches an openFDA NDC lookup in the background. On success the form jumps directly to
+     * DETAILS with name, strength, and form pre-filled (as a free-text entry — no RxNorm
+     * confirmation step needed). On failure the name query is pre-populated with the raw value
+     * so the normal search flow continues.
+     */
+    private fun onBarcodeDetected(rawValue: String) {
+        _uiState.update { it.copy(showBarcodeScanner = false, isBarcodeScanning = true) }
+        viewModelScope.launch {
+            val result = withContext(ioDispatcher) { BarcodeNdcService.lookup(rawValue) }
+            _uiState.update { state ->
+                if (result != null) {
+                    state.copy(
+                        isBarcodeScanning = false,
+                        step = FormStep.DETAILS,
+                        isFreeText = true,
+                        displayName = result.name,
+                        strength = result.strength ?: state.strength,
+                        selectedForm = result.form ?: state.selectedForm,
+                        doseAmount = if (result.form != null && state.doseAmount.isBlank()) {
+                            autoFormatDoseAmount("1", result.form)
+                        } else {
+                            state.doseAmount
+                        },
+                    )
+                } else {
+                    // No NDC match — pre-fill the search field with whatever was scanned.
+                    state.copy(
+                        isBarcodeScanning = false,
+                        nameQuery = rawValue,
+                        isSearching = rawValue.length >= 2,
+                    )
+                }
+            }
+            if (result == null && rawValue.length >= 2) {
+                _searchTrigger.emit(rawValue)
+            }
+        }
+    }
+
     private fun onSaveRequested() {
         val state = _uiState.value
         var hasError = false
@@ -642,6 +704,7 @@ class AddEditMedicationViewModel(
             substituteForMedId = state.substituteForMedId,
             substituteNote = state.substituteNote.trim().ifEmpty { null },
             purpose = state.purpose.trim().ifEmpty { null },
+            notes = state.notes.trim().ifEmpty { null },
             isFreeText = state.isFreeText,
             isCritical = state.isCritical,
             missWindowMinutes = missWindowMinutes,
@@ -720,15 +783,20 @@ class AddEditMedicationViewModel(
          * appropriate singular or plural unit. Otherwise returns [input] unchanged.
          */
         fun autoFormatDoseAmount(input: String, form: MedicationForm?): String {
-            if (form !in setOf(MedicationForm.TABLET, MedicationForm.CAPSULE, MedicationForm.PATCH)) {
-                return input
-            }
+            if (form !in setOf(
+                    MedicationForm.TABLET,
+                    MedicationForm.CAPLET,
+                    MedicationForm.CAPSULE,
+                    MedicationForm.PATCH,
+                )
+            ) return input
             if (!input.matches(Regex("""^\d*\.?\d+$"""))) return input
             val number = input.toDoubleOrNull() ?: return input
             val unit = when (form) {
-                MedicationForm.TABLET -> if (number == 1.0) "tablet" else "tablets"
+                MedicationForm.TABLET  -> if (number == 1.0) "tablet"  else "tablets"
+                MedicationForm.CAPLET  -> if (number == 1.0) "caplet"  else "caplets"
                 MedicationForm.CAPSULE -> if (number == 1.0) "capsule" else "capsules"
-                MedicationForm.PATCH -> if (number == 1.0) "patch" else "patches"
+                MedicationForm.PATCH   -> if (number == 1.0) "patch"   else "patches"
                 else -> return input
             }
             return "$input $unit"

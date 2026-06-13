@@ -32,6 +32,10 @@
          marks their first medication as critical; never requested for non-critical-only installs.
          Justification text in docs/play-listing.md. -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <!-- Barcode scanning for pill bottle entry (requested at runtime when user taps Scan). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Camera is optional — the app functions fully without it. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".PharosApplication"

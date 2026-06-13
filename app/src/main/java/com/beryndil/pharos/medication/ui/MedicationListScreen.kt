@@ -356,6 +356,7 @@ private fun String.toFormLabel(): String {
     val form = runCatching { MedicationForm.valueOf(this) }.getOrNull()
     return when (form) {
         MedicationForm.TABLET -> stringResource(R.string.form_tablet)
+        MedicationForm.CAPLET -> stringResource(R.string.form_caplet)
         MedicationForm.CAPSULE -> stringResource(R.string.form_capsule)
         MedicationForm.LIQUID -> stringResource(R.string.form_liquid)
         MedicationForm.INJECTION -> stringResource(R.string.form_injection)
