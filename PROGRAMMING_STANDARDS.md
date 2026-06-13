@@ -12,6 +12,17 @@ or deadline.
 
 ---
 
+## 0a. MANDATORY pre-release on-device smoke (no exceptions, not deferrable)
+
+Before tagging ANY release, install the **release APK** on an emulator/device and confirm,
+via `adb`/logcat, all of: (1) cold launch with 0 `FATAL EXCEPTION`; (2) the SQLCipher regimen
+DB opens (no wipe) — complete onboarding, **force-stop, relaunch, and confirm state persisted**;
+(3) open Add-Medication and confirm a common drug (e.g. "aspirin") lists. The unit suite uses
+plain SQLite (A9) and does not construct every screen, so it is BLIND to encrypted-DB runtime
+behavior, native-load failures, and screen-init crashes. Two production-grade bugs (the
+SQLCipher `loadLibs` launch crash; the regimen-DB wipe-on-every-launch) shipped green-on-gate
+and were caught only here. A green gate is necessary, not sufficient. This smoke gates the tag.
+
 ## 0. The verification loop (run before any DONE)
 
 From repo root, with `source ./env.sh` first:
