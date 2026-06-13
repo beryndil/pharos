@@ -310,3 +310,9 @@ relevant slice is built.
 | S6-B3 | `countNonEndedMedications` uses `MedicationDao.countNonEnded()` (`WHERE status != 'ENDED'`), matching the `observeActive()` convention. | COUNT(*) is a single-row DB read — no extra object allocation. ACTIVE+PAUSED meds both represent "user has added medications"; routing to Today is correct for paused-only users who still have a medication list to see. |
 | S6-B4 | Post-onboarding `onDone` in `PharosNavGraph` already navigates to `MedicationList` with `popUpTo(Onboarding, inclusive=true)`. No change needed here; the routing is already correct. | Verified at read time; confirmed in nav graph. |
 | S6-B5 | Two new test classes: `OnboardingRepositoryTest` (real class + fake DAO, 4 tests) and `StartDestinationResolverTest` (pure lambda stubs, 5 tests). Both are pure JVM. | Covers the three routing states and the mark/isComplete contract on the real repository class (not just the fake). |
+
+## Drug DB — comprehensive RxNav rebuild (2026-06-12, replaces curated subset)
+
+| ID | Decision | Why |
+|----|----------|-----|
+| DRUGDB-FULL-1 | Replaced the ~347-drug curated bundle with the FULL RxNorm ingredient+brand universe via the open RxNav API (no UMLS key): 27,222 searchable names (14,641 IN + 3,637 PIN + 3,835 MIN + 5,109 BN) and 36,187 ingredient edges. `tools/build_bundled_db.py` rewritten to: pull all concepts, write a valid ingredient-complete DB (IN self-mapped) first, then enrich PIN/MIN/BN→base-IN edges incrementally (24 workers, commit-per-batch) so any interruption leaves a strictly-better DB. | The curated list silently omitted ubiquitous drugs (aspirin, loratadine/Claritin, cetirizine/Zyrtec, diphenhydramine/Benadryl, Sudafed, Mucinex, Tums, melatonin, B12…). A medication app cannot ship a curated allow-list. RxNorm full prescribable content (the SCD/SBD product catalog) needs a free UMLS key (Dave-gated) and ships later via CDN; this RxNav build covers every generic + brand offline now. |
