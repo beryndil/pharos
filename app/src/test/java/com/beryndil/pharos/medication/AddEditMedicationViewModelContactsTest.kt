@@ -16,6 +16,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -155,6 +156,52 @@ class AddEditMedicationViewModelContactsTest {
         val pharmacies = contactRepo.observePharmacies().first()
         assertTrue("No prescribers should be stored when field is empty", prescribers.isEmpty())
         assertTrue("No pharmacies should be stored when field is empty", pharmacies.isEmpty())
+    }
+
+    // ── Init-order regression ─────────────────────────────────────────────
+
+    /**
+     * Regression: [AddEditMedicationViewModel] construction with a [ContactRepository] that
+     * emits a non-empty prescriber list must NOT throw [NullPointerException].
+     *
+     * Pre-fix: `_allPrescribers`, `_allPharmacies`, and `_allActiveMeds` were declared AFTER
+     * the `init {}` block. With [UnconfinedTestDispatcher] (which replicates the eager
+     * [Dispatchers.Main.immediate] semantics used on Android), the `collect` lambda in
+     * `startSuggestionCollection()` ran before those properties were initialised, causing
+     * `MutableStateFlow.setValue()` to NPE on a null reference.
+     *
+     * Fix: moved all three backing-flow declarations to BEFORE `init {}`.
+     */
+    @Test
+    fun construction_withNonEmptyContactRepository_unconfinedDispatcher_doesNotNpe() {
+        val unconfinedDispatcher = UnconfinedTestDispatcher()
+        Dispatchers.setMain(unconfinedDispatcher)
+        try {
+            // Pre-seed the contact store so observePrescribers() emits a non-empty list.
+            runBlocking {
+                contactRepo.rememberPrescriber("Dr. House", "555-1234")
+                contactRepo.rememberPharmacy("City Pharmacy", "555-9999")
+            }
+            // Must not throw NullPointerException during construction.
+            val vm = AddEditMedicationViewModel(
+                repository = repo,
+                scheduleRepository = scheduleRepo,
+                contactRepository = contactRepo,
+                savedStateHandle = SavedStateHandle(),
+                ioDispatcher = unconfinedDispatcher,
+            )
+            // Suggestions are empty until a query is typed (blank query → empty filter result).
+            assertTrue(
+                "Prescriber suggestions must be empty before any query",
+                vm.uiState.value.prescriberSuggestions.isEmpty(),
+            )
+            assertTrue(
+                "Pharmacy suggestions must be empty before any query",
+                vm.uiState.value.pharmacySuggestions.isEmpty(),
+            )
+        } finally {
+            Dispatchers.resetMain()
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

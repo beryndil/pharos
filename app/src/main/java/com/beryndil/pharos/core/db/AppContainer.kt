@@ -64,8 +64,12 @@ class AppContainer(private val applicationContext: Context) {
         System.loadLibrary("sqlcipher")
         val passphrase = passphraseProvider.getOrCreatePassphrase(applicationContext)
         val factory = SupportOpenHelperFactory(passphrase)
-        passphrase.fill(0) // zero immediately; SupportOpenHelperFactory has its own copy
-        RegimenDatabaseFactory.build(applicationContext, factory)
+        // Pass the passphrase to build() so enforceSchemaVersion() can open the encrypted file
+        // via the SQLCipher API. Zero AFTER build() returns; SupportOpenHelperFactory already
+        // holds its own copy so the factory is unaffected by zeroing here.
+        val db = RegimenDatabaseFactory.build(applicationContext, factory, passphrase)
+        passphrase.fill(0)
+        db
     }
 
     val drugRefDatabase: DrugRefDatabase by lazy {

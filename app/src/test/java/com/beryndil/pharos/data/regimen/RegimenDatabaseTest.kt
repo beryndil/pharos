@@ -179,9 +179,22 @@ class RegimenDatabaseTest {
     }
 
     // ── newer-schema guard ────────────────────────────────────────────────
+    //
+    // Note on testability: the production path (passphrase != null) uses the SQLCipher API
+    // which requires the native .so — not available in Robolectric. Full newer-schema
+    // verification (throws for v999, doesn't throw for CURRENT_VERSION) is an emulator/device
+    // test. The Robolectric tests below cover the null-passphrase (skip) contract only.
 
-    @Test(expected = NewerSchemaException::class)
-    fun newerSchemaGuard_throwsForNewerVersion() {
+    /**
+     * With [passphrase] = null, [RegimenDatabaseFactory.enforceSchemaVersion] must skip the
+     * version check entirely — even when a plain-SQLite file with version 999 is on disk.
+     *
+     * Pre-fix: the function always opened the file with the plain Android API. On a SQLCipher-
+     * encrypted file that returned SQLITE_NOTADB → [DefaultDatabaseErrorHandler.onCorruption]
+     * deleted the file. Post-fix: null passphrase → early return, plain API never called.
+     */
+    @Test
+    fun newerSchemaGuard_nullPassphrase_skipsCheck_noExceptionForNewerVersion() {
         val context = ApplicationProvider.getApplicationContext<Context>()
 
         val tmpPath = context.getDatabasePath("pharos_regimen_test_newer.db")
@@ -192,15 +205,20 @@ class RegimenDatabaseTest {
             val expected = context.getDatabasePath(RegimenDatabaseFactory.DATABASE_NAME)
             expected.parentFile?.mkdirs()
             tmpPath.copyTo(expected, overwrite = true)
-            RegimenDatabaseFactory.enforceSchemaVersion(context)
+            // Must NOT throw: null passphrase skips the check.
+            RegimenDatabaseFactory.enforceSchemaVersion(context, null)
         } finally {
             context.getDatabasePath(RegimenDatabaseFactory.DATABASE_NAME).delete()
             tmpPath.delete()
         }
     }
 
+    /**
+     * With [passphrase] = null, the check is skipped and no exception is thrown regardless of
+     * the on-disk version — including when the version matches [RegimenDatabaseFactory.CURRENT_VERSION].
+     */
     @Test
-    fun newerSchemaGuard_noThrowWhenVersionMatches() {
+    fun newerSchemaGuard_nullPassphrase_skipsCheck_noExceptionForCurrentVersion() {
         val context = ApplicationProvider.getApplicationContext<Context>()
 
         val tmpPath = context.getDatabasePath("pharos_regimen_test_v1.db")
@@ -212,7 +230,8 @@ class RegimenDatabaseTest {
             val expected = context.getDatabasePath(RegimenDatabaseFactory.DATABASE_NAME)
             expected.parentFile?.mkdirs()
             tmpPath.copyTo(expected, overwrite = true)
-            RegimenDatabaseFactory.enforceSchemaVersion(context)
+            // Must NOT throw: null passphrase skips the check.
+            RegimenDatabaseFactory.enforceSchemaVersion(context, null)
         } finally {
             context.getDatabasePath(RegimenDatabaseFactory.DATABASE_NAME).delete()
             tmpPath.delete()

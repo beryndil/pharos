@@ -1,12 +1,13 @@
 package com.beryndil.pharos.data.regimen
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
+import net.zetetic.database.sqlcipher.SQLiteDatabase as CipherSQLiteDatabase
+import net.zetetic.database.sqlcipher.SQLiteDatabaseHook
 
 /**
  * Factory and newer-schema guard for [RegimenDatabase].
@@ -134,14 +135,21 @@ object RegimenDatabaseFactory {
      *
      * @param openHelperFactory SQLCipher [net.zetetic.database.sqlcipher.SupportFactory] in
      *   production; null in Robolectric tests (falls back to standard SQLite).
+     * @param passphrase Raw passphrase bytes for the SQLCipher DB. When non-null,
+     *   [enforceSchemaVersion] opens the file via the SQLCipher API to read the version.
+     *   When null (Robolectric tests, no encryption), the version check is skipped entirely
+     *   so the plain [android.database.sqlite.SQLiteDatabase] API is never called on an
+     *   encrypted file — which would trigger [android.database.DefaultDatabaseErrorHandler]
+     *   and delete the file.
      * @throws NewerSchemaException if the on-disk database schema is newer than
      *   [CURRENT_VERSION] — caller should preserve the file and prompt for an app update.
      */
     fun build(
         context: Context,
         openHelperFactory: SupportSQLiteOpenHelper.Factory? = null,
+        passphrase: ByteArray? = null,
     ): RegimenDatabase {
-        enforceSchemaVersion(context)
+        enforceSchemaVersion(context, passphrase)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
             .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
@@ -149,24 +157,50 @@ object RegimenDatabaseFactory {
     }
 
     /**
-     * Reads the SQLite version from the on-disk file (bypassing Room) and throws
-     * [NewerSchemaException] if it exceeds [CURRENT_VERSION]. Safe to call before
-     * Room opens the file.
+     * Reads the schema version from the on-disk file via the SQLCipher API and throws
+     * [NewerSchemaException] if it exceeds [CURRENT_VERSION].
+     *
+     * **Why SQLCipher only, never the plain API:**
+     * The regimen DB is SQLCipher-encrypted. Opening it with the plain
+     * [android.database.sqlite.SQLiteDatabase] API returns SQLITE_NOTADB, which causes
+     * [android.database.DefaultDatabaseErrorHandler.onCorruption] to DELETE the file before
+     * re-throwing — wiping the user's entire dose history on every launch (device-confirmed bug).
+     *
+     * When [passphrase] is null (Robolectric tests — plain SQLite, no native SQLCipher lib),
+     * the check is skipped entirely. In-memory test DBs never exist on disk so the early
+     * [!dbFile.exists()] guard handles them; file-backed test DBs should not be encrypted.
+     *
+     * @param passphrase SQLCipher passphrase; null → skip (Robolectric / no-encryption path).
+     * @throws NewerSchemaException if the stored version exceeds [CURRENT_VERSION].
      */
     @Throws(NewerSchemaException::class)
-    fun enforceSchemaVersion(context: Context) {
+    fun enforceSchemaVersion(context: Context, passphrase: ByteArray? = null) {
         val dbFile = context.getDatabasePath(DATABASE_NAME)
         if (!dbFile.exists()) return
 
+        // When no passphrase is supplied (tests), skip — never fall back to the plain API.
+        // The plain API cannot open an encrypted file; falling back would invoke
+        // DefaultDatabaseErrorHandler.onCorruption() and delete the file.
+        if (passphrase == null) return
+
         val storedVersion = try {
-            SQLiteDatabase.openDatabase(
+            // openDatabase(path, byte[], CursorFactory, flags, SQLiteDatabaseHook)
+            // The SQLiteDatabaseHook is nullable — pass null (no pre/post-key hook needed).
+            CipherSQLiteDatabase.openDatabase(
                 dbFile.path,
+                passphrase,
                 null,
-                SQLiteDatabase.OPEN_READONLY,
-            ).use { it.version }
+                CipherSQLiteDatabase.OPEN_READONLY,
+                null as SQLiteDatabaseHook?,
+            ).use { db ->
+                db.rawQuery("PRAGMA user_version", null).use { c ->
+                    if (c.moveToFirst()) c.getInt(0) else 0
+                }
+            }
         } catch (e: Exception) {
-            // Unreadable file — let Room handle it.
-            Log.w(TAG, "Cannot read DB version from $DATABASE_NAME; skipping guard.", e)
+            // Unexpected open failure — log and let Room handle it.
+            // Do NOT delete the file: it may hold the user's only copy of their dose history.
+            Log.w(TAG, "Cannot read DB version from $DATABASE_NAME via SQLCipher; skipping guard.", e)
             return
         }
 

@@ -225,6 +225,21 @@ class AddEditMedicationViewModel(
 
     private val _searchTrigger = MutableSharedFlow<String>(replay = 1)
 
+    // ── Internal contact caches for autocomplete ─────────────────────────
+    // Declared BEFORE init {} so that startSuggestionCollection() and
+    // startSubstituteOptionsCollection() (called from init) can safely write to these flows.
+    // Kotlin initialises properties in declaration order; placing these after init {} left the
+    // backing fields null when the launched-coroutine lambdas ran (NPE on _allPrescribers.value = all).
+    private val _allPrescribers = MutableStateFlow<List<PrescriberEntity>>(emptyList())
+    private val _allPharmacies = MutableStateFlow<List<PharmacyEntity>>(emptyList())
+
+    /**
+     * Cache of all active medications for the substitute-for picker. Kept in sync with
+     * [MedicationRepository.observeActiveMedications] so the picker reflects live DB state.
+     * Also declared before init {} for the same init-order reason as [_allPrescribers].
+     */
+    private val _allActiveMeds = MutableStateFlow<List<MedicationEntity>>(emptyList())
+
     init {
         val editMedId: String? = savedStateHandle["medId"]
         if (editMedId != null) {
@@ -392,19 +407,6 @@ class AddEditMedicationViewModel(
             }
         }
     }
-
-    // ── Internal contact caches for autocomplete ─────────────────────────
-    // Kept as MutableStateFlow so filterContacts() can read them synchronously from any
-    // event handler without launching a new coroutine. The flows are populated once on init
-    // and kept fresh via the ongoing collect loop.
-    private val _allPrescribers = MutableStateFlow<List<PrescriberEntity>>(emptyList())
-    private val _allPharmacies = MutableStateFlow<List<PharmacyEntity>>(emptyList())
-
-    /**
-     * Cache of all active medications for the substitute-for picker. Kept in sync with
-     * [MedicationRepository.observeActiveMedications] so the picker reflects live DB state.
-     */
-    private val _allActiveMeds = MutableStateFlow<List<MedicationEntity>>(emptyList())
 
     /**
      * Collects prescriber/pharmacy lists from the contact store. [_allPrescribers] and
