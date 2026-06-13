@@ -21,6 +21,7 @@ import com.beryndil.pharos.data.drugref.ManifestVerifier
 import com.beryndil.pharos.data.drugref.OpenFdaDrugLabelService
 import com.beryndil.pharos.contacts.ContactRepository
 import com.beryndil.pharos.data.medication.MedicationRepository
+import com.beryndil.pharos.medication.export.MedListPdfExporter
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.RegimenDatabaseFactory
 import com.beryndil.pharos.data.schedule.ScheduleRepository
@@ -220,6 +221,14 @@ class AppContainer(private val applicationContext: Context) {
     // ── Backup / restore / export (Slice 9, spec §2.12) ──────────────────────
 
     /**
+     * Shared PDF renderer for both the Backup export screen (SAF URI) and the Today-screen
+     * "Email to doctor" action (cache file). Single instance; no shared mutable state.
+     */
+    val medListPdfExporter: MedListPdfExporter by lazy {
+        MedListPdfExporter(db = regimenDatabase)
+    }
+
+    /**
      * Orchestrates encrypted backup creation, restore, and plaintext export.
      * Law 7: backup/restore are free forever; Law 4: only writes to user-chosen SAF URIs.
      *
@@ -233,6 +242,7 @@ class AppContainer(private val applicationContext: Context) {
         BackupRepository(
             db = regimenDatabase,
             context = applicationContext,
+            pdfExporter = medListPdfExporter,
             onRestoreComplete = {
                 alarmCoordinator.onReRegistration("restore")
                 LowSupplyCheckWorker.scheduleAfterRestore(applicationContext)

@@ -401,3 +401,14 @@ Full plan: ~/.claude/plans/pharos-v1.3-features.md. Recommended defaults in effe
 | A5S2-C6 | **System 2× font + in-app Largest — MedList**: same font setting. Confirm medication name and strength text in `MedicationListItem` wraps naturally (no truncation). Confirm FAB "+" accessible. | Physical device, same font setting. |
 | A5S2-C7 | **High-contrast pass**: enable high-contrast text (Accessibility > High contrast text). Open Today, Medication list, Add/Edit, Settings. Confirm all text remains readable; confirm dose state icon tints (error red for MISSED) remain distinguishable. | Physical device with high-contrast text enabled. |
 | A5S2-C8 | **SavedContactsScreen back button**: open Saved Contacts (via Medication list → More options → Saved contacts). With TalkBack enabled, focus the back arrow. Confirm TalkBack announces "Go back" (not "Back"). | Physical device with TalkBack enabled. |
+
+## §C — V1.3-F3+F4 device-only verification (code ships now; lived verification is device-gated)
+
+| ID | Task | Blocked on |
+|----|------|-----------|
+| F3F4-C1 | **Email meds-list PDF — end-to-end share-sheet**: on a real device with an email app installed, tap "Email meds list" on Today, confirm the confirm dialog, select the email app in the chooser, verify the attachment is a readable PDF with all medications, correct date header, and disclaimer. | Physical device with email app (Gmail, Outlook, etc.) |
+| F3F4-C2 | **PdfDocument unit tests**: `MedListPdfExporterTest` and the PDF-generation tests in `EmailConfirmDialogTest` are annotated @Ignore because `PdfDocument.startPage()` requires native Android rendering unavailable in the JVM unit-test environment. Move these to `androidTest` and run on an emulator (API 26+) to verify: empty regimen → non-empty `%PDF` bytes; single med → non-empty; paused/ended meds → included. | Emulator or physical device. |
+| F3F4-C3 | **TalkBack — Today quick-actions row**: enable TalkBack, open Today (with and without scheduled doses). Verify "Email meds list" announces "Email your medication list to your doctor". Verify "Test reminder" announces "Send a test reminder now". Verify both buttons have ≥48dp touch targets. | Physical device with TalkBack. |
+| F3F4-C4 | **Next-up summary TalkBack**: with ≥2 SCHEDULED doses visible, verify each next-up row announces as a single node "MedName due at HH:MM". Verify the clock icon is silent. | Physical device with TalkBack. |
+| F3F4-C5 | **System 2× font — Today enriched layout**: set device font + in-app size to max. Verify quick-actions button labels ("Email meds list", "Test reminder") do not truncate (maxLines=2 handles wrapping). Verify next-up rows do not clip med names. | Physical device, max font settings. |
+| F3F4-C6 | **Empty Today CTA**: with no medications, verify the "Add medication" button is announced as "Add your first medication" by TalkBack and navigates to the Medication list. | Physical device with TalkBack. |

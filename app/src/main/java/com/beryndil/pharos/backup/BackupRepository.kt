@@ -1,25 +1,18 @@
 package com.beryndil.pharos.backup
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Typeface
-import android.graphics.pdf.PdfDocument
 import android.net.Uri
-import android.text.StaticLayout
-import android.text.TextPaint
 import androidx.room.withTransaction
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.entity.DoseInstanceEntity
 import com.beryndil.pharos.data.regimen.entity.DoseTransitionEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
-import com.beryndil.pharos.data.regimen.entity.MedicationStatus
 import com.beryndil.pharos.data.regimen.entity.RefillRecordEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleEntity
 import com.beryndil.pharos.data.regimen.entity.SchedulePhaseEntity
-import com.beryndil.pharos.data.regimen.entity.ScheduleType
 import com.beryndil.pharos.data.regimen.entity.SettingEntity
+import com.beryndil.pharos.data.regimen.entity.ScheduleType
+import com.beryndil.pharos.medication.export.MedListPdfExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -29,7 +22,6 @@ import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * Orchestrates encrypted backup creation, restore, and plaintext export (spec §2.12).
@@ -48,6 +40,11 @@ import java.time.format.FormatStyle
 class BackupRepository(
     private val db: RegimenDatabase,
     private val context: Context,
+    /**
+     * Shared PDF renderer — also used by the Today-screen "Email to doctor" action.
+     * Injected so both callers share the same instance from AppContainer.
+     */
+    val pdfExporter: MedListPdfExporter = MedListPdfExporter(db),
     /**
      * Called after a restore completes successfully, while still on the IO dispatcher.
      * Use this to re-arm exact alarms and re-enqueue WorkManager jobs keyed to the restored
@@ -179,153 +176,17 @@ class BackupRepository(
      * Export a human-readable PDF medication list to [outputUri].
      *
      * The PDF is NOT encrypted — it is the "printable / exportable list" (spec §2.12).
-     * The distinction between the encrypted backup and the plaintext export is shown in the UI.
+     * Rendering is delegated to [MedListPdfExporter] which is also shared with the
+     * Today-screen "Email to doctor" action.
      */
     suspend fun exportPdf(
         outputUri: Uri,
         exportedAtEpochMs: Long = Instant.now().toEpochMilli(),
     ): ExportResult = withContext(Dispatchers.IO) {
         try {
-            val medications = db.medicationDao().getAll()
-            val schedules = db.scheduleDao().getAll()
-            val refills = db.refillRecordDao().getAll()
-
-            val scheduleMap = schedules.groupBy { it.medicationId }
-            val latestRefill = refills.groupBy { it.medicationId }
-                .mapValues { (_, records) -> records.maxByOrNull { it.createdAtEpochMs } }
-
-            val pdfDoc = PdfDocument()
-            val pageWidth = 595   // A4 points
-            val pageHeight = 842  // A4 points
-            val margin = 40f
-            val lineHeight = 18f
-
-            var pageNum = 1
-            var page = pdfDoc.startPage(
-                PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create(),
-            )
-            var canvas: Canvas = page.canvas
-            var y = margin + 20f
-
-            val titlePaint = Paint().apply {
-                textSize = 18f
-                typeface = Typeface.DEFAULT_BOLD
-                color = Color.BLACK
-            }
-            val subtitlePaint = Paint().apply {
-                textSize = 11f
-                color = Color.DKGRAY
-            }
-            val medNamePaint = Paint().apply {
-                textSize = 13f
-                typeface = Typeface.DEFAULT_BOLD
-                color = Color.BLACK
-            }
-            val detailPaint = Paint().apply {
-                textSize = 11f
-                color = Color.DKGRAY
-            }
-            val disclaimerPaint = Paint().apply {
-                textSize = 9f
-                color = Color.GRAY
-            }
-
-            // Page break helper — finishes current page, starts a new one
-            fun newPageIfNeeded(requiredY: Float): Float {
-                return if (requiredY > pageHeight - margin - 30f) {
-                    pdfDoc.finishPage(page)
-                    pageNum++
-                    page = pdfDoc.startPage(
-                        PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create(),
-                    )
-                    canvas = page.canvas
-                    margin + 20f
-                } else {
-                    requiredY
-                }
-            }
-
-            // Word-wrap helper (A3-7): renders multi-line text using StaticLayout so long strings
-            // wrap within the page margins rather than clipping silently at the page edge.
-            // Returns y advanced past the last rendered line.
-            val maxTextWidth = (pageWidth - margin * 2).toInt()
-            fun drawWrapped(text: String, startY: Float, paint: Paint): Float {
-                val tp = TextPaint(paint)
-                val layout = StaticLayout.Builder
-                    .obtain(text, 0, text.length, tp, maxTextWidth)
-                    .build()
-                var y = newPageIfNeeded(startY + layout.height)
-                canvas.save()
-                canvas.translate(margin, y)
-                layout.draw(canvas)
-                canvas.restore()
-                return y + layout.height
-            }
-
-            // Header
-            canvas.drawText("Pharos — Medication List", margin, y, titlePaint)
-            y += lineHeight + 4f
-            val dateStr = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
-                .withZone(ZoneId.systemDefault())
-                .format(Instant.ofEpochMilli(exportedAtEpochMs))
-            canvas.drawText("Exported $dateStr", margin, y, subtitlePaint)
-            y += lineHeight + 4f
-            // Disclaimer wraps if the locale produces a long string (A3-7).
-            y = drawWrapped(
-                "This list is for reference only. Check with your doctor or pharmacist before making any changes.",
-                y, disclaimerPaint,
-            )
-            y += 12f
-
-            for (med in medications) {
-                y = newPageIfNeeded(y + lineHeight * 3)
-                canvas.drawText(med.name, margin, y, medNamePaint)
-                y += lineHeight
-                canvas.drawText("${med.strength} · ${med.form}", margin, y, detailPaint)
-                y += lineHeight
-
-                val activeSchedules = scheduleMap[med.id]?.filter { it.isActive } ?: emptyList()
-                if (activeSchedules.isNotEmpty()) {
-                    val schedDesc = activeSchedules.joinToString("; ") { it.toDisplayString() }
-                    // Schedule descriptions for complex meds can be long — wrap (A3-7).
-                    y = drawWrapped("Schedule: $schedDesc", y, detailPaint)
-                }
-
-                if (!med.prescriber.isNullOrBlank()) {
-                    y = drawWrapped("Prescriber: ${med.prescriber}", y, detailPaint)
-                }
-                if (!med.pharmacy.isNullOrBlank()) {
-                    y = drawWrapped("Pharmacy: ${med.pharmacy}", y, detailPaint)
-                }
-
-                latestRefill[med.id]?.let { refill ->
-                    canvas.drawText(
-                        "Supply: ${refill.quantityOnHand} ${refill.quantityUnit}",
-                        margin, y, detailPaint,
-                    )
-                    y += lineHeight
-                }
-
-                val statusLabel = when (med.status) {
-                    MedicationStatus.PAUSED.name -> " (paused)"
-                    MedicationStatus.ENDED.name -> " (ended)"
-                    else -> ""
-                }
-                if (statusLabel.isNotEmpty()) {
-                    canvas.drawText("Status$statusLabel", margin, y, detailPaint)
-                    y += lineHeight
-                }
-
-                y += 8f // spacing between medications
-            }
-
-            pdfDoc.finishPage(page)
-
             context.contentResolver.openOutputStream(outputUri)?.use { stream ->
-                pdfDoc.writeTo(stream)
+                pdfExporter.writeTo(stream, exportedAtEpochMs)
             } ?: return@withContext ExportResult.Error("Could not open output file.")
-
-            pdfDoc.close()
             ExportResult.Success
         } catch (e: Exception) {
             ExportResult.Error("PDF export failed: ${e.message}")

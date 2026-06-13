@@ -1,20 +1,25 @@
 package com.beryndil.pharos.dose.ui
 
+import android.content.Intent
 import android.text.format.DateFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ListAlt
+import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CheckCircleOutline
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
@@ -22,6 +27,7 @@ import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,6 +53,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.beryndil.pharos.R
 import com.beryndil.pharos.data.dose.DoseRow
 import com.beryndil.pharos.data.dose.PrnMedRow
@@ -53,10 +61,18 @@ import com.beryndil.pharos.data.regimen.entity.DoseState
 import java.util.Date
 
 /**
- * Today's doses: the actionable surface. DUE and SNOOZED doses carry the three dose actions
- * (Take / Snooze / Skip); SCHEDULED doses appear as upcoming with no action; PRN (as-needed)
- * medications show a "Log dose" affordance at all times (spec §2.7). Calm, content-first
- * (DESIGN.md): the medication name and time are the data; one primary action (Take) per row.
+ * Today's doses: the actionable home surface (F3 — Enriched Today).
+ *
+ * Layout:
+ *  1. "Next up" summary (top N upcoming SCHEDULED doses across all meds).
+ *  2. Quick-actions row (Email meds list / Test reminder / Reliability / Settings).
+ *  3. DUE and SNOOZED dose action cards (Take / Snooze / Skip).
+ *  4. SCHEDULED dose rows (no action — they appear in the "next up" summary too).
+ *  5. PRN "As needed" section.
+ *
+ * Law 1: all quick-actions are in-app UI, never notification channels.
+ * Law 4: "Email meds list" shows a confirm dialog before any data leaves the device.
+ * §8 (TalkBack): all buttons have content descriptions; minimum 48dp tap targets.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +87,28 @@ fun TodayScreen(
 ) {
     com.beryndil.pharos.core.ui.SecureWindow()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val context = LocalContext.current
+
+    // When the ViewModel has a ready PDF file, build the share intent and launch the chooser.
+    // The FileProvider URI grants read access to the receiving email app.
+    LaunchedEffect(uiState.pendingEmailFile) {
+        val file = uiState.pendingEmailFile ?: return@LaunchedEffect
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file,
+        )
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.email_med_list_subject))
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(
+            Intent.createChooser(shareIntent, context.getString(R.string.email_med_list_chooser_title)),
+        )
+        onEvent(TodayEvent.EmailMedListIntentConsumed)
+    }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -102,10 +140,13 @@ fun TodayScreen(
         },
     ) { innerPadding ->
         val hasDoses = uiState.doses.isNotEmpty()
-        val hasPrn = uiState.prnMeds.isNotEmpty()
+        val hasPrn   = uiState.prnMeds.isNotEmpty()
 
         if (!hasDoses && !hasPrn) {
-            EmptyToday(modifier = Modifier.padding(innerPadding))
+            EmptyToday(
+                onOpenMedications = onOpenMedications,
+                modifier = Modifier.padding(innerPadding),
+            )
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -117,18 +158,39 @@ fun TodayScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // ── Scheduled / DUE / SNOOZED dose rows ──────────────────────────────
+                // ── Next-up summary (F3) ──────────────────────────────────────
+                if (uiState.nextUp.isNotEmpty()) {
+                    item {
+                        NextUpSection(nextUp = uiState.nextUp)
+                    }
+                }
+
+                // ── Quick-actions row (F3) ────────────────────────────────────
+                item {
+                    QuickActionsRow(
+                        onEmailMedList  = { onEvent(TodayEvent.EmailMedListRequest) },
+                        onTestReminder  = onOpenReliability,
+                        onReliability   = onOpenReliability,
+                        onSettings      = onOpenSettings,
+                    )
+                }
+
+                if (hasDoses) {
+                    item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+                }
+
+                // ── Scheduled / DUE / SNOOZED dose rows ──────────────────────
                 items(uiState.doses, key = { it.doseId }) { dose ->
                     DoseCard(
                         dose = dose,
-                        onTake = { onEvent(TodayEvent.Take(dose.doseId)) },
-                        onSnooze = { onEvent(TodayEvent.Snooze(dose.doseId)) },
-                        onSkip = { onEvent(TodayEvent.Skip(dose.doseId)) },
+                        onTake    = { onEvent(TodayEvent.Take(dose.doseId)) },
+                        onSnooze  = { onEvent(TodayEvent.Snooze(dose.doseId)) },
+                        onSkip    = { onEvent(TodayEvent.Skip(dose.doseId)) },
                         onHistory = { onOpenHistory(dose.medicationId) },
                     )
                 }
 
-                // ── PRN (as-needed) section ───────────────────────────────────────────
+                // ── PRN (as-needed) section ───────────────────────────────────
                 if (hasPrn) {
                     if (hasDoses) {
                         item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
@@ -143,7 +205,7 @@ fun TodayScreen(
                     }
                     items(uiState.prnMeds, key = { "prn_${it.medicationId}" }) { prn ->
                         PrnMedCard(
-                            prn = prn,
+                            prn       = prn,
                             onLogDose = { onEvent(TodayEvent.LogPrn(prn.medicationId, prn.scheduleId)) },
                             onHistory = { onOpenHistory(prn.medicationId) },
                         )
@@ -172,6 +234,178 @@ fun TodayScreen(
                     Text(stringResource(R.string.btn_ok))
                 }
             },
+        )
+    }
+
+    // ── F4: Law-4 confirm dialog before sharing the medication PDF ────────────────────────────
+    // Shown before any health data leaves the device (Law 4 — user-initiated export only).
+    if (uiState.showEmailConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { onEvent(TodayEvent.EmailMedListDismiss) },
+            title   = { Text(stringResource(R.string.email_med_list_confirm_title)) },
+            text    = { Text(stringResource(R.string.email_med_list_confirm_body)) },
+            confirmButton = {
+                Button(onClick = { onEvent(TodayEvent.EmailMedListConfirm) }) {
+                    Text(stringResource(R.string.btn_send))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onEvent(TodayEvent.EmailMedListDismiss) }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            },
+        )
+    }
+
+    // ── F4: error dialog on PDF generation failure ────────────────────────────────────────────
+    if (uiState.emailError != null) {
+        AlertDialog(
+            onDismissRequest = { onEvent(TodayEvent.EmailMedListErrorDismissed) },
+            title   = { Text(stringResource(R.string.email_med_list_error_title)) },
+            text    = { Text(uiState.emailError) },
+            confirmButton = {
+                TextButton(onClick = { onEvent(TodayEvent.EmailMedListErrorDismissed) }) {
+                    Text(stringResource(R.string.btn_ok))
+                }
+            },
+        )
+    }
+}
+
+/**
+ * "Next up" summary section (F3).
+ *
+ * Shows the next [MAX_NEXT_UP] upcoming SCHEDULED doses in a compact list at the top of Today
+ * so the user can see what's coming without scrolling. DUE/SNOOZED are already above the fold
+ * in the action cards.
+ */
+@Composable
+private fun NextUpSection(nextUp: List<NextUpItem>) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+    ) {
+        Text(
+            text  = stringResource(R.string.today_section_next_up),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+        nextUp.forEach { item ->
+            val timeText = DateFormat.getTimeFormat(context).format(Date(item.dueEpochMs))
+            val itemCd   = stringResource(R.string.cd_next_up_item, item.medName, timeText)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .semantics(mergeDescendants = true) { contentDescription = itemCd }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule,
+                    contentDescription = null, // decorative — row CD above carries the meaning
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text  = item.medName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text  = "${item.strength} · $timeText",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Quick-actions row (F3 — in-app UI only; Law 1: never notification-channel actions).
+ *
+ * §8 launch-blocker: every button has a contentDescription, minimum 48dp tap target.
+ */
+@Composable
+private fun QuickActionsRow(
+    onEmailMedList: () -> Unit,
+    onTestReminder: () -> Unit,
+    onReliability: () -> Unit,
+    onSettings: () -> Unit,
+) {
+    // Label for the whole row (screen-reader context)
+    val rowCd = stringResource(R.string.today_quick_actions_label)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = rowCd }
+            .padding(vertical = 4.dp),
+    ) {
+        Text(
+            text  = stringResource(R.string.today_quick_actions_label),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // "Email meds list" — primary CTA; law-4 confirm dialog shown by ViewModel
+            QuickActionButton(
+                icon  = Icons.Outlined.Email,
+                label = stringResource(R.string.today_action_email_med_list),
+                cd    = stringResource(R.string.cd_email_med_list),
+                onClick = onEmailMedList,
+                modifier = Modifier.weight(1f),
+            )
+            // "Test reminder" — navigates to Reliability dashboard (existing test path)
+            QuickActionButton(
+                icon  = Icons.Outlined.CheckCircleOutline,
+                label = stringResource(R.string.today_action_test_reminder),
+                cd    = stringResource(R.string.cd_test_reminder),
+                onClick = onTestReminder,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/**
+ * A single icon+text button in the quick-actions row.
+ * §8: [cd] is the TalkBack label; height >= 48dp is enforced by [heightIn].
+ */
+@Composable
+private fun QuickActionButton(
+    icon: ImageVector,
+    label: String,
+    cd: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .semantics { contentDescription = cd },
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null, // cd on the button carries the meaning
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.size(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 2,
         )
     }
 }
@@ -331,8 +565,17 @@ private fun PrnMedCard(
     }
 }
 
+/**
+ * Empty-Today state (no doses today + no PRN meds).
+ *
+ * Calm, content-first per DESIGN.md. Provides a clear path to add a medication
+ * so the user is never left without a next step (F3 spec requirement).
+ */
 @Composable
-private fun EmptyToday(modifier: Modifier = Modifier) {
+private fun EmptyToday(
+    onOpenMedications: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -351,6 +594,23 @@ private fun EmptyToday(modifier: Modifier = Modifier) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 12.dp),
             )
+            Spacer(Modifier.height(16.dp))
+            // Clear path to add a medication (F3 spec: calm state + add-med CTA).
+            val addMedCd = stringResource(R.string.cd_today_add_medication)
+            FilledTonalButton(
+                onClick = onOpenMedications,
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .semantics { contentDescription = addMedCd },
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AddCircleOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(R.string.today_empty_add_action))
+            }
         }
     }
 }

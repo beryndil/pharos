@@ -568,6 +568,40 @@
     <!-- Loading indicator for drug reference screen. -->
     <string name="cd_loading_drug_reference">Loading drug reference</string>
 
+    <!-- ── F3: Enriched Today — next-up summary + quick actions ────────────── -->
+    <!-- Section header for the upcoming-doses summary at the top of Today. -->
+    <string name="today_section_next_up">Next up</string>
+    <!-- Section header for the quick-actions row. -->
+    <string name="today_quick_actions_label">Quick actions</string>
+    <!-- Button: open the email-to-doctor flow (F4). In-app UI; Law 1 — never a notification. -->
+    <string name="today_action_email_med_list">Email meds list</string>
+    <!-- Accessibility label for the "Email meds list" button. -->
+    <string name="cd_email_med_list">Email your medication list to your doctor</string>
+    <!-- Button: navigate to the Reliability dashboard to run a test reminder. -->
+    <string name="today_action_test_reminder">Test reminder</string>
+    <!-- Accessibility label for the "Test reminder" button. -->
+    <string name="cd_test_reminder">Send a test reminder now</string>
+    <!-- Empty-Today CTA button label: navigate to Medications list to add a medication. -->
+    <string name="today_empty_add_action">Add medication</string>
+    <!-- Accessibility label for the empty-Today "Add medication" button. -->
+    <string name="cd_today_add_medication">Add your first medication</string>
+    <!-- Accessibility: %1$s = med name, %2$s = formatted time string. -->
+    <string name="cd_next_up_item">%1$s due at %2$s</string>
+
+    <!-- ── F4: Email meds-list PDF to doctor ────────────────────────────────── -->
+    <!-- Confirm dialog title (Law 4 guard — shown before any data leaves the device). -->
+    <string name="email_med_list_confirm_title">Share medication list</string>
+    <!-- One-line confirm body (Law 4). -->
+    <string name="email_med_list_confirm_body">This PDF contains your medication and health information. Send it?</string>
+    <!-- Intent EXTRA_SUBJECT for the email. -->
+    <string name="email_med_list_subject">My medication list</string>
+    <!-- Title for the system share-sheet chooser. -->
+    <string name="email_med_list_chooser_title">Send medication list</string>
+    <!-- Error dialog title shown when PDF generation fails. -->
+    <string name="email_med_list_error_title">Could not generate PDF</string>
+    <!-- Button label: send / confirm the share action. -->
+    <string name="btn_send">Send</string>
+
     <!-- ── Legal screen (Slice 11, spec §4.2) ────────────────────────────── -->
     <!-- Screen title and navigation entry -->
     <string name="screen_legal">Legal</string>

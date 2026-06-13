@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider paths for F4 — "Email medication list to doctor".
+
+    Only the app's own cache/exports/ subdirectory is shared. The PDF is written there
+    temporarily for the user-initiated email action; no other paths are exposed.
+
+    Law 4: the PDF leaves the device only via a user-initiated ACTION_SEND chooser
+    after an explicit confirm dialog. This FileProvider entry is the minimum necessary
+    to grant the chosen email app read access to the cache file.
+-->
+<paths>
+    <cache-path name="exports" path="exports/" />
+</paths>

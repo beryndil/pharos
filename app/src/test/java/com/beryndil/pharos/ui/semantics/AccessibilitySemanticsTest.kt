@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import com.beryndil.pharos.alarm.AlarmMode
 import com.beryndil.pharos.data.dose.DoseRow
 import com.beryndil.pharos.data.regimen.entity.DoseState
@@ -136,8 +137,11 @@ class AccessibilitySemanticsTest {
                 )
             }
         }
+        // The quick-actions row above the dose list may push the button out of the initial
+        // viewport; scroll to it before asserting display (F3 adds QuickActionsRow to Today).
         composeTestRule
             .onNode(hasContentDescription("Snooze $medName"))
+            .performScrollTo()
             .assertIsDisplayed()
     }
 
@@ -165,6 +169,7 @@ class AccessibilitySemanticsTest {
         }
         composeTestRule
             .onNode(hasContentDescription("Skip $medName"))
+            .performScrollTo()
             .assertIsDisplayed()
     }
 

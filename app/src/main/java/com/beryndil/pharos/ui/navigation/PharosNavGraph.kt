@@ -98,10 +98,14 @@ fun PharosNavGraph(
             )
         }
 
-        // ── Today (actionable dose surface) ───────────────────────────────
+        // ── Today (enriched home surface — F3 + F4) ───────────────────────
         composable(NavRoute.Today.route) {
             val viewModel: TodayViewModel = viewModel(
-                factory = TodayViewModel.factory(doseRepository = doseRepository),
+                factory = TodayViewModel.factory(
+                    doseRepository = doseRepository,
+                    pdfExporter    = app.appContainer.medListPdfExporter,
+                    cacheDir       = app.cacheDir,
+                ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             TodayScreen(
