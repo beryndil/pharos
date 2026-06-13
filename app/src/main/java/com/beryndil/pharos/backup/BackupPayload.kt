@@ -42,7 +42,16 @@ data class MedicationBackup(
     val form: String,
     val doseAmount: String,
     val prescriber: String?,
+    /**
+     * Prescriber phone added in V1.3-F1 (schema v1 — default null for backups
+     * produced before this field existed so older backups remain restorable).
+     */
+    val prescriberPhone: String? = null,
     val pharmacy: String?,
+    /**
+     * Pharmacy phone added in V1.3-F1 (same back-compat default as [prescriberPhone]).
+     */
+    val pharmacyPhone: String? = null,
     val purpose: String?,
     val isFreeText: Boolean,
     val status: String,

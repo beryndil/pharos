@@ -369,3 +369,13 @@ Full plan: ~/.claude/plans/pharos-v1.3-features.md. Recommended defaults in effe
   doctor" → ACTION_SEND application/pdf to the email app, prefilled to saved prescriber; one-line
   "contains your health info" confirm before composing (Law 4, user-initiated export, NOT v2 caregiver).
 - Release: after F1–F4 + full gate → v1.3.0, tag, build signed APK HERE, upload to GitHub Release.
+
+## §C — Device-only / deferred items (V1.3-F1, 2026-06-12)
+
+| ID | Item | Reason deferred |
+|----|------|-----------------|
+| F1-C1 | `ContactAutocompleteField` device test: verify dropdown appears/dismisses on device (Compose UI test requires instrumented test). | Instrumented test only; Robolectric cannot drive Compose dropdown state. |
+| F1-C2 | `SavedContactsScreen` end-to-end navigation test on device. | Requires NavController integration; deferred to post-release instrumented test run. |
+| F1-C3 | Migrate `MedicationBackup` to include `isCritical` and `missWindowMinutes` fields (pre-existing gap — A1 and G1 added these to the entity but not the backup DTO). Restore currently resets both to defaults (false/60). | Pre-existing gap; V1.3-F1 scope is contacts. Low safety risk (non-critical and 60-min window are safe defaults). |
+| F1-C4 | Add `prescriberPhone`/`pharmacyPhone` to the regimen PDF (backup PDF exported in Slice 9). | F4 scope (email meds-list to doctor) — deferred to V1.3-F4 executor. |
+

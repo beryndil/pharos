@@ -23,7 +23,7 @@ object RegimenDatabaseFactory {
      * AND by the newer-schema guard to detect on-disk databases from future app versions.
      * Keep in sync with [RegimenDatabase]'s `@Database` annotation.
      */
-    const val CURRENT_VERSION = 4
+    const val CURRENT_VERSION = 5
 
     /**
      * v1 → v2 (Slice 5): adds the append-only [dose_transitions] history table. Additive only —
@@ -88,6 +88,35 @@ object RegimenDatabaseFactory {
     }
 
     /**
+     * v4 \u2192 v5 (V1.3-F1 Saved contacts): creates [prescribers] and [pharmacies] tables and
+     * adds [prescriberPhone] / [pharmacyPhone] columns to [medications]. Additive only — no
+     * existing data is touched. Phone columns default to NULL (contacts that had no phone keep no
+     * phone). Standards \u00a75: never destructive; data is preserved.
+     */
+    val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `prescribers` (" +
+                    "`id` TEXT NOT NULL, " +
+                    "`name` TEXT NOT NULL, " +
+                    "`phone` TEXT, " +
+                    "`createdAtEpochMs` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`id`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `pharmacies` (" +
+                    "`id` TEXT NOT NULL, " +
+                    "`name` TEXT NOT NULL, " +
+                    "`phone` TEXT, " +
+                    "`createdAtEpochMs` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`id`))",
+            )
+            db.execSQL("ALTER TABLE `medications` ADD COLUMN `prescriberPhone` TEXT")
+            db.execSQL("ALTER TABLE `medications` ADD COLUMN `pharmacyPhone` TEXT")
+        }
+    }
+
+    /**
      * Builds [RegimenDatabase] with a newer-schema version guard.
      *
      * @param openHelperFactory SQLCipher [net.zetetic.database.sqlcipher.SupportFactory] in
@@ -102,7 +131,7 @@ object RegimenDatabaseFactory {
         enforceSchemaVersion(context)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
     }
 

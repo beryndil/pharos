@@ -202,4 +202,62 @@ class MigrationHarnessTest {
             }
         }
     }
+
+    /**
+     * v4 → v5 (V1.3-F1 Saved contacts): [prescribers] and [pharmacies] tables are created, and
+     * [prescriberPhone] / [pharmacyPhone] columns are added to [medications]. Existing rows must
+     * survive the migration with both new phone columns = NULL (Standards §5: additive only).
+     */
+    @Test
+    fun migrateV4ToV5_addContactTablesAndPhoneColumns_existingRowsDefaultToNull() {
+        // Seed a v4 database with one medication row (includes missWindowMinutes from v3→v4).
+        migrationHelper.createDatabase(RegimenDatabaseFactory.DATABASE_NAME, 4).use { v4 ->
+            v4.execSQL(
+                "INSERT INTO medications (id, name, rxcui, ingredientsJson, strength, form, " +
+                    "doseAmount, prescriber, pharmacy, purpose, isFreeText, isCritical, " +
+                    "missWindowMinutes, status, startEpochMs, endEpochMs, createdAtEpochMs, " +
+                    "updatedAtEpochMs) VALUES " +
+                    "('m4','Metformin',NULL,'[]','500 mg','TABLET','1 tablet'," +
+                    "'Dr. Jones','City Pharmacy',NULL,0,0,60,'ACTIVE',0,NULL,0,0)",
+            )
+        }
+
+        val v5 = migrationHelper.runMigrationsAndValidate(
+            RegimenDatabaseFactory.DATABASE_NAME,
+            5,
+            true,
+            RegimenDatabaseFactory.MIGRATION_4_5,
+        )
+        v5.use {
+            // Pre-existing medication row survived.
+            v5.query("SELECT COUNT(*) FROM medications", emptyArray<Any?>()).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1, c.getInt(0))
+            }
+            // New phone columns exist and default to NULL for pre-existing rows.
+            v5.query(
+                "SELECT prescriberPhone, pharmacyPhone FROM medications WHERE id = 'm4'",
+                emptyArray<Any?>(),
+            ).use { c ->
+                assertTrue("Row must still exist after migration", c.moveToFirst())
+                assertTrue(
+                    "prescriberPhone must default to NULL for pre-existing rows",
+                    c.isNull(0),
+                )
+                assertTrue(
+                    "pharmacyPhone must default to NULL for pre-existing rows",
+                    c.isNull(1),
+                )
+            }
+            // New tables exist and are queryable.
+            v5.query("SELECT COUNT(*) FROM prescribers", emptyArray<Any?>()).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(0, c.getInt(0))
+            }
+            v5.query("SELECT COUNT(*) FROM pharmacies", emptyArray<Any?>()).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(0, c.getInt(0))
+            }
+        }
+    }
 }

@@ -19,6 +19,7 @@ import com.beryndil.pharos.data.drugref.DrugRefDatabase
 import com.beryndil.pharos.data.drugref.DrugRefDatabaseFactory
 import com.beryndil.pharos.data.drugref.ManifestVerifier
 import com.beryndil.pharos.data.drugref.OpenFdaDrugLabelService
+import com.beryndil.pharos.contacts.ContactRepository
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.RegimenDatabaseFactory
@@ -84,6 +85,17 @@ class AppContainer(private val applicationContext: Context) {
             scheduleDao = regimenDatabase.scheduleDao(),
             schedulePhaseDao = regimenDatabase.schedulePhaseDao(),
             doseInstanceDao = regimenDatabase.doseInstanceDao(),
+        )
+    }
+
+    /**
+     * Repository for saved prescriber and pharmacy contacts (V1.3-F1).
+     * All data is local (Law 4 — no off-device transmission).
+     */
+    val contactRepository: ContactRepository by lazy {
+        ContactRepository(
+            prescriberDao = regimenDatabase.prescriberDao(),
+            pharmacyDao = regimenDatabase.pharmacyDao(),
         )
     }
 

@@ -30,6 +30,9 @@ import com.beryndil.pharos.refill.ui.RefillDetailScreen
 import com.beryndil.pharos.reference.DrugReferenceViewModel
 import com.beryndil.pharos.reference.ui.DrugReferenceScreen
 import com.beryndil.pharos.backup.BackupViewModel
+import com.beryndil.pharos.contacts.ContactsEvent
+import com.beryndil.pharos.contacts.SavedContactsScreen
+import com.beryndil.pharos.contacts.SavedContactsViewModel
 import com.beryndil.pharos.backup.ui.BackupScreen
 import com.beryndil.pharos.legal.ui.LegalScreen
 import com.beryndil.pharos.reliability.ReliabilityDashboardViewModel
@@ -59,6 +62,7 @@ fun PharosNavGraph(
     val refillRepository = app.appContainer.refillRepository
     val drugLabelRepository = app.appContainer.drugLabelRepository
     val backupRepository = app.appContainer.backupRepository
+    val contactRepository = app.appContainer.contactRepository
 
     NavHost(
         navController = navController,
@@ -154,6 +158,9 @@ fun PharosNavGraph(
                 onDrugReferenceClicked = { medId ->
                     navController.navigate(NavRoute.DrugReference.buildRoute(medId))
                 },
+                onOpenSavedContacts = {
+                    navController.navigate(NavRoute.SavedContacts.route)
+                },
                 onOpenBackup = {
                     navController.navigate(NavRoute.BackupRestore.route)
                 },
@@ -168,6 +175,7 @@ fun PharosNavGraph(
                 factory = AddEditMedicationViewModel.factory(
                     repository = medicationRepository,
                     scheduleRepository = scheduleRepository,
+                    contactRepository = contactRepository,
                     drugLabelRepository = drugLabelRepository,
                     isDndAccessGranted = { nm.isNotificationPolicyAccessGranted },
                 ),
@@ -195,6 +203,7 @@ fun PharosNavGraph(
                 factory = AddEditMedicationViewModel.factory(
                     repository = medicationRepository,
                     scheduleRepository = scheduleRepository,
+                    contactRepository = contactRepository,
                     drugLabelRepository = drugLabelRepository,
                     isDndAccessGranted = { nm.isNotificationPolicyAccessGranted },
                 ),
@@ -258,6 +267,19 @@ fun PharosNavGraph(
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             BackupScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Saved Contacts manage screen (V1.3-F1) ─────────────────────────
+        composable(NavRoute.SavedContacts.route) {
+            val viewModel: SavedContactsViewModel = viewModel(
+                factory = SavedContactsViewModel.factory(repository = contactRepository),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            SavedContactsScreen(
                 uiState = uiState,
                 onEvent = viewModel::onEvent,
                 onBack = { navController.popBackStack() },
@@ -331,4 +353,6 @@ sealed class NavRoute(val route: String) {
     data object BackupRestore : NavRoute("backup")
 
     data object Legal : NavRoute("legal")
+
+    data object SavedContacts : NavRoute("settings/saved-contacts")
 }

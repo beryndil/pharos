@@ -8,11 +8,14 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.beryndil.pharos.contacts.ContactRepository
 import com.beryndil.pharos.data.drugref.DrugLabelRepository
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
 import com.beryndil.pharos.data.regimen.entity.MedicationStatus
+import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
+import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleType
 import com.beryndil.pharos.data.schedule.ScheduleRepository
 import com.beryndil.pharos.medication.model.DrugSearchResult
@@ -82,8 +85,16 @@ data class AddEditMedicationUiState(
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
     val prescriber: String = "",
+    val prescriberPhone: String = "",
     val pharmacy: String = "",
+    val pharmacyPhone: String = "",
     val purpose: String = "",
+
+    /** Autocomplete suggestions for the prescriber name field, drawn from the saved store. */
+    val prescriberSuggestions: List<PrescriberEntity> = emptyList(),
+
+    /** Autocomplete suggestions for the pharmacy name field, drawn from the saved store. */
+    val pharmacySuggestions: List<PharmacyEntity> = emptyList(),
 
     /** Preserved from the existing entity so edit mode doesn't clobber createdAt. */
     val originalCreatedAtMs: Long? = null,
@@ -143,7 +154,13 @@ sealed interface AddEditMedEvent {
     data class StartDateSelected(val date: LocalDate) : AddEditMedEvent
     data class EndDateSelected(val date: LocalDate?) : AddEditMedEvent
     data class PrescriberChanged(val value: String) : AddEditMedEvent
+    data class PrescriberPhoneChanged(val value: String) : AddEditMedEvent
+    /** User picked an autocomplete suggestion — fills both name and phone. */
+    data class PrescriberSuggestionPicked(val prescriber: PrescriberEntity) : AddEditMedEvent
     data class PharmacyChanged(val value: String) : AddEditMedEvent
+    data class PharmacyPhoneChanged(val value: String) : AddEditMedEvent
+    /** User picked an autocomplete suggestion — fills both name and phone. */
+    data class PharmacySuggestionPicked(val pharmacy: PharmacyEntity) : AddEditMedEvent
     data class PurposeChanged(val value: String) : AddEditMedEvent
     data class ScheduleInputChanged(val input: ScheduleInput) : AddEditMedEvent
     data class IsCriticalToggled(val value: Boolean) : AddEditMedEvent
@@ -159,6 +176,7 @@ sealed interface AddEditMedEvent {
 class AddEditMedicationViewModel(
     private val repository: MedicationRepository,
     private val scheduleRepository: ScheduleRepository,
+    private val contactRepository: ContactRepository? = null,
     savedStateHandle: SavedStateHandle,
     /**
      * IO dispatcher injected for testability — production code always passes [Dispatchers.IO];
@@ -197,6 +215,7 @@ class AddEditMedicationViewModel(
             loadExistingMedication(editMedId)
         }
         startSearchDebounce()
+        startSuggestionCollection()
     }
 
     fun onEvent(event: AddEditMedEvent) {
@@ -217,9 +236,37 @@ class AddEditMedicationViewModel(
             is AddEditMedEvent.EndDateSelected ->
                 _uiState.update { it.copy(endDate = event.date) }
             is AddEditMedEvent.PrescriberChanged ->
-                _uiState.update { it.copy(prescriber = event.value) }
+                _uiState.update { state ->
+                    state.copy(
+                        prescriber = event.value,
+                        prescriberSuggestions = filterContacts(_allPrescribers.value, event.value),
+                    )
+                }
+            is AddEditMedEvent.PrescriberPhoneChanged ->
+                _uiState.update { it.copy(prescriberPhone = event.value) }
+            is AddEditMedEvent.PrescriberSuggestionPicked ->
+                _uiState.update {
+                    it.copy(
+                        prescriber = event.prescriber.name,
+                        prescriberPhone = event.prescriber.phone ?: it.prescriberPhone,
+                    )
+                }
             is AddEditMedEvent.PharmacyChanged ->
-                _uiState.update { it.copy(pharmacy = event.value) }
+                _uiState.update { state ->
+                    state.copy(
+                        pharmacy = event.value,
+                        pharmacySuggestions = filterContacts(_allPharmacies.value, event.value),
+                    )
+                }
+            is AddEditMedEvent.PharmacyPhoneChanged ->
+                _uiState.update { it.copy(pharmacyPhone = event.value) }
+            is AddEditMedEvent.PharmacySuggestionPicked ->
+                _uiState.update {
+                    it.copy(
+                        pharmacy = event.pharmacy.name,
+                        pharmacyPhone = event.pharmacy.phone ?: it.pharmacyPhone,
+                    )
+                }
             is AddEditMedEvent.PurposeChanged ->
                 _uiState.update { it.copy(purpose = event.value) }
             is AddEditMedEvent.ScheduleInputChanged ->
@@ -303,7 +350,9 @@ class AddEditMedicationViewModel(
                         Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
                     },
                     prescriber = med.prescriber ?: "",
+                    prescriberPhone = med.prescriberPhone ?: "",
                     pharmacy = med.pharmacy ?: "",
+                    pharmacyPhone = med.pharmacyPhone ?: "",
                     purpose = med.purpose ?: "",
                     isCritical = med.isCritical,
                     missWindowMinutesText = med.missWindowMinutes.toString(),
@@ -313,6 +362,47 @@ class AddEditMedicationViewModel(
             }
         }
     }
+
+    // ── Internal contact caches for autocomplete ─────────────────────────
+    // Kept as MutableStateFlow so filterContacts() can read them synchronously from any
+    // event handler without launching a new coroutine. The flows are populated once on init
+    // and kept fresh via the ongoing collect loop.
+    private val _allPrescribers = MutableStateFlow<List<PrescriberEntity>>(emptyList())
+    private val _allPharmacies = MutableStateFlow<List<PharmacyEntity>>(emptyList())
+
+    /**
+     * Collects prescriber/pharmacy lists from the contact store. [_allPrescribers] and
+     * [_allPharmacies] are then filtered synchronously on each name-field change event.
+     */
+    private fun startSuggestionCollection() {
+        if (contactRepository == null) return
+        viewModelScope.launch {
+            contactRepository.observePrescribers().collect { all ->
+                _allPrescribers.value = all
+                // Re-filter on DB change so stale suggestions don't linger.
+                _uiState.update { state ->
+                    state.copy(prescriberSuggestions = filterContacts(all, state.prescriber))
+                }
+            }
+        }
+        viewModelScope.launch {
+            contactRepository.observePharmacies().collect { all ->
+                _allPharmacies.value = all
+                _uiState.update { state ->
+                    state.copy(pharmacySuggestions = filterContacts(all, state.pharmacy))
+                }
+            }
+        }
+    }
+
+    private fun filterContacts(all: List<PrescriberEntity>, query: String): List<PrescriberEntity> =
+        if (query.isBlank()) emptyList()
+        else all.filter { it.name.contains(query, ignoreCase = true) && !it.name.equals(query, ignoreCase = true) }
+
+    @JvmName("filterPharmacyContacts")
+    private fun filterContacts(all: List<PharmacyEntity>, query: String): List<PharmacyEntity> =
+        if (query.isBlank()) emptyList()
+        else all.filter { it.name.contains(query, ignoreCase = true) && !it.name.equals(query, ignoreCase = true) }
 
     private fun startSearchDebounce() {
         viewModelScope.launch {
@@ -448,7 +538,9 @@ class AddEditMedicationViewModel(
             form = requireNotNull(state.selectedForm) { "selectedForm must not be null at save" }.name,
             doseAmount = state.doseAmount.trim(),
             prescriber = state.prescriber.trim().ifEmpty { null },
+            prescriberPhone = state.prescriberPhone.trim().ifEmpty { null },
             pharmacy = state.pharmacy.trim().ifEmpty { null },
+            pharmacyPhone = state.pharmacyPhone.trim().ifEmpty { null },
             purpose = state.purpose.trim().ifEmpty { null },
             isFreeText = state.isFreeText,
             isCritical = state.isCritical,
@@ -479,6 +571,20 @@ class AddEditMedicationViewModel(
                 }
             }.onSuccess {
                 _uiState.update { it.copy(isSaving = false, savedSuccessfully = true) }
+                // Auto-remember prescriber and pharmacy in the saved contacts store
+                // (V1.3-F1). Fire-and-forget — a contact store failure never blocks save.
+                val savedPrescriber = entity.prescriber
+                val savedPharmacy = entity.pharmacy
+                if (contactRepository != null && (savedPrescriber != null || savedPharmacy != null)) {
+                    viewModelScope.launch(ioDispatcher) {
+                        if (savedPrescriber != null) {
+                            contactRepository.rememberPrescriber(savedPrescriber, entity.prescriberPhone)
+                        }
+                        if (savedPharmacy != null) {
+                            contactRepository.rememberPharmacy(savedPharmacy, entity.pharmacyPhone)
+                        }
+                    }
+                }
                 // Fire-and-forget: pre-populate the label cache so the reference screen loads fast
                 // (spec §2.10 "fetched per-drug on add"). Silently skipped for free-text meds
                 // (no rxcui) and when drugLabelRepository is not injected (tests).
@@ -512,6 +618,7 @@ class AddEditMedicationViewModel(
         fun factory(
             repository: MedicationRepository,
             scheduleRepository: ScheduleRepository,
+            contactRepository: ContactRepository? = null,
             drugLabelRepository: DrugLabelRepository? = null,
             isDndAccessGranted: () -> Boolean = { true },
         ): ViewModelProvider.Factory =
@@ -520,6 +627,7 @@ class AddEditMedicationViewModel(
                     AddEditMedicationViewModel(
                         repository = repository,
                         scheduleRepository = scheduleRepository,
+                        contactRepository = contactRepository,
                         savedStateHandle = createSavedStateHandle(),
                         drugLabelRepository = drugLabelRepository,
                         isDndAccessGranted = isDndAccessGranted,

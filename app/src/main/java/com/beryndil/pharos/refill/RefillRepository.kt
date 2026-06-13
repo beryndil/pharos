@@ -58,7 +58,8 @@ class RefillRepository(
         return latestRecordFlow.map { latestRecord ->
             val med = medicationDao.getById(medicationId)
             val medName = med?.name.orEmpty()
-            val pharmacyFromMed = med?.pharmacy
+            // pharmacyPhone: prefer latest refill record phone, then medication's dedicated phone column
+            val pharmacyFromMed = med?.pharmacyPhone
 
             val activeSchedules = scheduleDao.getActiveByMedicationOnce(medicationId)
             val dosesPerDay = computeDosesPerDay(activeSchedules)
@@ -282,7 +283,7 @@ class RefillRepository(
                 noSupplyOnRecord = false,
                 supplyIsZero = latest.quantityOnHand == 0,
                 refillByEpochMs = latest.refillByEpochMs,
-                pharmacyPhone = latest.pharmacyPhone ?: med.pharmacy,
+                pharmacyPhone = latest.pharmacyPhone ?: med.pharmacyPhone,
                 isPrn = false,
                 isLowSupply = true,
             )

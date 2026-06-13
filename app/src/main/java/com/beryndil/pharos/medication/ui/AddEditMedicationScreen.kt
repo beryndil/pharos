@@ -37,6 +37,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -68,6 +70,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
+import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
+import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
 import com.beryndil.pharos.medication.AddEditMedEvent
 import com.beryndil.pharos.medication.AddEditMedicationUiState
 import com.beryndil.pharos.medication.FormStep
@@ -457,19 +461,27 @@ private fun DetailsStep(
                 onClear = { onEvent(AddEditMedEvent.EndDateSelected(null)) },
             )
 
-            OutlinedTextField(
+            ContactAutocompleteField(
                 value = uiState.prescriber,
                 onValueChange = { onEvent(AddEditMedEvent.PrescriberChanged(it)) },
-                label = { Text(stringResource(R.string.label_prescriber)) },
-                singleLine = true,
+                label = stringResource(R.string.label_prescriber),
+                suggestions = uiState.prescriberSuggestions,
+                onSuggestionPicked = { onEvent(AddEditMedEvent.PrescriberSuggestionPicked(it)) },
+                phoneValue = uiState.prescriberPhone,
+                onPhoneChange = { onEvent(AddEditMedEvent.PrescriberPhoneChanged(it)) },
+                phoneLabel = stringResource(R.string.label_prescriber_phone),
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            OutlinedTextField(
+            PharmacyAutocompleteField(
                 value = uiState.pharmacy,
                 onValueChange = { onEvent(AddEditMedEvent.PharmacyChanged(it)) },
-                label = { Text(stringResource(R.string.label_pharmacy)) },
-                singleLine = true,
+                label = stringResource(R.string.label_pharmacy),
+                suggestions = uiState.pharmacySuggestions,
+                onSuggestionPicked = { onEvent(AddEditMedEvent.PharmacySuggestionPicked(it)) },
+                phoneValue = uiState.pharmacyPhone,
+                onPhoneChange = { onEvent(AddEditMedEvent.PharmacyPhoneChanged(it)) },
+                phoneLabel = stringResource(R.string.label_pharmacy_phone),
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -887,5 +899,137 @@ private fun LocalDatePickerDialog(
         },
     ) {
         DatePicker(state = state)
+    }
+}
+
+
+/**
+ * Name field with dropdown autocomplete from the saved contacts store, plus a companion
+ * phone field. Used for both prescriber and pharmacy fields in Add/Edit medication.
+ *
+ * @param suggestions Filtered suggestions from the saved store for the current name query.
+ * @param onSuggestionPicked Called with the PrescriberEntity when a suggestion is tapped.
+ */
+@Composable
+private fun ContactAutocompleteField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    suggestions: List<PrescriberEntity>,
+    onSuggestionPicked: (PrescriberEntity) -> Unit,
+    phoneValue: String,
+    onPhoneChange: (String) -> Unit,
+    phoneLabel: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        var dropExpanded by remember { mutableStateOf(false) }
+        LaunchedEffect(suggestions) { dropExpanded = suggestions.isNotEmpty() }
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = { onValueChange(it); if (it.isBlank()) dropExpanded = false },
+            label = { Text(label) },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = label },
+        )
+        DropdownMenu(
+            expanded = dropExpanded && suggestions.isNotEmpty(),
+            onDismissRequest = { dropExpanded = false },
+        ) {
+            suggestions.forEach { suggestion ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
+                            if (!suggestion.phone.isNullOrBlank()) {
+                                Text(
+                                    suggestion.phone,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    },
+                    onClick = { onSuggestionPicked(suggestion); dropExpanded = false },
+                )
+            }
+        }
+        OutlinedTextField(
+            value = phoneValue,
+            onValueChange = onPhoneChange,
+            label = { Text(phoneLabel) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = phoneLabel },
+        )
+    }
+}
+
+/**
+ * Pharmacy-specific autocomplete field — same layout as the prescriber overload but for
+ * [PharmacyEntity] suggestions. Named distinctly to avoid JVM signature erasure clash.
+ */
+@Composable
+private fun PharmacyAutocompleteField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    suggestions: List<PharmacyEntity>,
+    onSuggestionPicked: (PharmacyEntity) -> Unit,
+    phoneValue: String,
+    onPhoneChange: (String) -> Unit,
+    phoneLabel: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        var dropExpanded by remember { mutableStateOf(false) }
+        LaunchedEffect(suggestions) { dropExpanded = suggestions.isNotEmpty() }
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = { onValueChange(it); if (it.isBlank()) dropExpanded = false },
+            label = { Text(label) },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = label },
+        )
+        DropdownMenu(
+            expanded = dropExpanded && suggestions.isNotEmpty(),
+            onDismissRequest = { dropExpanded = false },
+        ) {
+            suggestions.forEach { suggestion ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
+                            if (!suggestion.phone.isNullOrBlank()) {
+                                Text(
+                                    suggestion.phone,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    },
+                    onClick = { onSuggestionPicked(suggestion); dropExpanded = false },
+                )
+            }
+        }
+        OutlinedTextField(
+            value = phoneValue,
+            onValueChange = onPhoneChange,
+            label = { Text(phoneLabel) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = phoneLabel },
+        )
     }
 }

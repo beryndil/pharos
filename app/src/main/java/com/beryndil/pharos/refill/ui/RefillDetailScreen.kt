@@ -18,6 +18,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.WarningAmber
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -49,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.pluralStringResource
@@ -317,11 +321,19 @@ private fun SupplyStatusCard(
                     value = refillByText,
                 )
 
-                // Pharmacy phone
+                // Pharmacy phone — tappable ACTION_DIAL affordance (V1.3-F1)
                 if (!summary.pharmacyPhone.isNullOrBlank()) {
+                    val context = LocalContext.current
+                    val phone = summary.pharmacyPhone
+                    val dialCd = stringResource(R.string.refill_pharmacy_dial_cd, phone)
                     LabelValueRow(
                         label = stringResource(R.string.refill_pharmacy_label),
-                        value = summary.pharmacyPhone,
+                        value = phone,
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                            context.startActivity(intent)
+                        },
+                        clickCd = dialCd,
                     )
                 }
 
@@ -358,9 +370,29 @@ private fun SupplyStatusCard(
 }
 
 @Composable
-private fun LabelValueRow(label: String, value: String) {
+private fun LabelValueRow(
+    label: String,
+    value: String,
+    onClick: (() -> Unit)? = null,
+    clickCd: String? = null,
+) {
+    val rowModifier = if (onClick != null) {
+        Modifier
+            .fillMaxWidth()
+            .then(
+                if (clickCd != null) {
+                    Modifier.semantics(mergeDescendants = true) { contentDescription = clickCd }
+                } else {
+                    Modifier
+                }
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp)
+    } else {
+        Modifier.fillMaxWidth()
+    }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = rowModifier,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
@@ -371,6 +403,7 @@ private fun LabelValueRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
+            color = if (onClick != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
         )
     }
 }

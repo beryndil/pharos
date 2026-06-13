@@ -477,7 +477,8 @@ class BackupRepository(
     private fun MedicationEntity.toBackup() = MedicationBackup(
         id = id, name = name, rxcui = rxcui, ingredientsJson = ingredientsJson,
         strength = strength, form = form, doseAmount = doseAmount, prescriber = prescriber,
-        pharmacy = pharmacy, purpose = purpose, isFreeText = isFreeText, status = status,
+        prescriberPhone = prescriberPhone, pharmacy = pharmacy, pharmacyPhone = pharmacyPhone,
+        purpose = purpose, isFreeText = isFreeText, status = status,
         startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs, updatedAtEpochMs = updatedAtEpochMs,
     )
@@ -485,7 +486,8 @@ class BackupRepository(
     private fun MedicationBackup.toEntity() = MedicationEntity(
         id = id, name = name, rxcui = rxcui, ingredientsJson = ingredientsJson,
         strength = strength, form = form, doseAmount = doseAmount, prescriber = prescriber,
-        pharmacy = pharmacy, purpose = purpose, isFreeText = isFreeText, status = status,
+        prescriberPhone = prescriberPhone, pharmacy = pharmacy, pharmacyPhone = pharmacyPhone,
+        purpose = purpose, isFreeText = isFreeText, status = status,
         startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs, updatedAtEpochMs = updatedAtEpochMs,
     )

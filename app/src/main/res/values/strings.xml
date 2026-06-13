@@ -53,7 +53,9 @@
     <string name="label_start_date">Start date</string>
     <string name="label_end_date">End date (optional)</string>
     <string name="label_prescriber">Prescriber (optional)</string>
+    <string name="label_prescriber_phone">Prescriber phone (optional)</string>
     <string name="label_pharmacy">Pharmacy (optional)</string>
+    <string name="label_pharmacy_phone">Pharmacy phone (optional)</string>
     <string name="label_purpose">Purpose (optional)</string>
 
     <string name="section_required">Required</string>
@@ -157,6 +159,7 @@
     <string name="btn_continue">Continue</string>
     <string name="btn_save">Save</string>
     <string name="btn_cancel">Cancel</string>
+    <string name="btn_delete">Delete</string>
     <string name="btn_save_anyway">Save anyway</string>
     <string name="btn_back">Back</string>
     <string name="btn_clear_date">Clear</string>
@@ -559,6 +562,7 @@
     <!-- Screen title and navigation entry -->
     <string name="screen_legal">Legal</string>
     <string name="action_legal">Legal</string>
+    <string name="action_saved_contacts">Saved contacts</string>
     <string name="cd_open_legal">Legal</string>
 
     <!-- Medical disclaimer — spec §4.2 verbatim intent + Law 3 framing. -->
@@ -587,4 +591,21 @@
     <string name="legal_terms_liability">To the extent permitted by applicable law, Beryndil is not liable for any direct, indirect, incidental, or consequential damages arising from your use of this app, including missed doses, incorrect dose records, or device failures.</string>
     <string name="legal_terms_agreement">By using Pharos, you agree to these terms.</string>
     <string name="legal_terms_version_note">Applies to Pharos version 1.0.0.</string>
+
+    <!-- Saved contacts screen (V1.3-F1) -->
+    <string name="saved_contacts_title">Saved contacts</string>
+    <string name="saved_contacts_section_prescribers">Prescribers</string>
+    <string name="saved_contacts_section_pharmacies">Pharmacies</string>
+    <string name="saved_contacts_empty_prescribers">No saved prescribers yet. They are remembered automatically when you save a medication.</string>
+    <string name="saved_contacts_empty_pharmacies">No saved pharmacies yet. They are remembered automatically when you save a medication.</string>
+    <string name="saved_contacts_edit_prescriber">Edit prescriber</string>
+    <string name="saved_contacts_edit_pharmacy">Edit pharmacy</string>
+    <string name="saved_contacts_edit_cd">Edit %1$s</string>
+    <string name="saved_contacts_delete_cd">Delete %1$s</string>
+    <string name="saved_contacts_delete_title">Delete contact?</string>
+    <string name="saved_contacts_delete_body">This removes the saved contact. Medications that listed this contact keep their stored information.</string>
+    <string name="saved_contacts_field_name">Name</string>
+    <string name="saved_contacts_field_phone">Phone (optional)</string>
+    <string name="refill_pharmacy_dial_cd">Call pharmacy: %1$s</string>
+
 </resources>

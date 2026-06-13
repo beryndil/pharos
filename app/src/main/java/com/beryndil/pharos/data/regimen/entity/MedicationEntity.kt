@@ -42,8 +42,24 @@ data class MedicationEntity(
     /** Optional prescriber name (no PHI rules — user's own words). */
     val prescriber: String?,
 
-    /** Optional pharmacy name or phone hint. */
+    /**
+     * Optional prescriber phone number (V1.3-F1). Stored alongside [prescriber] for display
+     * and ACTION_DIAL affordances. Kept separate so name and phone can be updated independently.
+     */
+    val prescriberPhone: String? = null,
+
+    /**
+     * Pharmacy name. The original field held "name or phone hint"; going forward this stores the
+     * pharmacy NAME only — the dedicated [pharmacyPhone] column carries the phone number. Existing
+     * data is back-compat (migration v4\u2192v5 adds the phone columns with DEFAULT NULL).
+     */
     val pharmacy: String?,
+
+    /**
+     * Optional pharmacy phone number (V1.3-F1). Stored separately from [pharmacy] (the name)
+     * so the refill-detail call affordance and autocomplete fill-on-pick can surface it cleanly.
+     */
+    val pharmacyPhone: String? = null,
 
     /** Optional purpose note in the user's own words. */
     val purpose: String?,
