@@ -16,7 +16,30 @@ Android app (Kotlin / Jetpack Compose). Pre-implementation — the only current 
 
 ## Build commands
 
-*(No project exists yet — populate this section when the Gradle project is initialized.)*
+```bash
+# Compile check only
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk GRADLE_USER_HOME=/tmp/gradle_home \
+  ./gradlew :app:compileDebugKotlin
+
+# Full release build (requires keystore.properties)
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk GRADLE_USER_HOME=/tmp/gradle_home \
+  ./gradlew :app:assembleRelease
+# Output: app/build/outputs/apk/release/app-release.apk
+```
+
+## Ship sequence (after every code change)
+
+After committing and pushing code, always complete the full ship sequence:
+
+1. Bump `versionCode` (+1) and `versionName` (patch bump) in `app/build.gradle.kts`.
+2. `assembleRelease` — builds signed APK via keystore.properties.
+3. Copy APK to `dist/Pharos-v<version>.apk`.
+4. Commit the version bump (`chore: bump to <version>`), push.
+5. Tag `v<version>`, push the tag.
+6. `gh release create v<version> --title "Pharos v<version>" --notes "..."` with the APK attached.
+
+The `dist/` folder is gitignored — APKs live only in GitHub Releases as assets.
+Release notes: `"Signed release APK for sideloading. Download on the device, enable install-from-unknown-sources for your browser, and open the APK. Works on Android 8.0+ (Pixel, Samsung)."`
 
 ## The Ten Laws (Part I — outrank everything)
 
