@@ -183,6 +183,7 @@ private class NoOpMedicationDao : MedicationDao {
     override suspend fun getActiveOnce(): List<MedicationEntity> = emptyList()
     override suspend fun getAll(): List<MedicationEntity> = emptyList()
     override suspend fun getCriticalActive(): List<MedicationEntity> = emptyList()
+    override suspend fun countNonEnded(): Int = 0
 }
 
 private class NoOpDrugSearchDao : DrugSearchDao {

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.beryndil.pharos.ui.navigation.NavRoute
 import com.beryndil.pharos.ui.navigation.PharosNavGraph
+import com.beryndil.pharos.ui.navigation.resolveStartDestination
 import com.beryndil.pharos.ui.theme.PharosTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,11 +37,14 @@ class MainActivity : ComponentActivity() {
                 // round-trip — typically sub-millisecond on a warm database).
                 val startDestination by produceState<String?>(initialValue = null) {
                     value = withContext(Dispatchers.IO) {
-                        if (app.appContainer.onboardingRepository.isComplete()) {
-                            NavRoute.Today.route
-                        } else {
-                            NavRoute.Onboarding.route
-                        }
+                        resolveStartDestination(
+                            isOnboardingComplete = {
+                                app.appContainer.onboardingRepository.isComplete()
+                            },
+                            countNonEndedMedications = {
+                                app.appContainer.regimenDatabase.medicationDao().countNonEnded()
+                            },
+                        )
                     }
                 }
 

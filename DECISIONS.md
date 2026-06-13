@@ -300,3 +300,13 @@ relevant slice is built.
 | F1-8 | `MedicationBackup`/`BackupRepository` serialization updated to include `prescriberPhone` and `pharmacyPhone` with `= null` defaults in the DTO. Older backups (pre-v5 JSON) remain restorable — the default null is correct for data that never existed. | Law 7: backup/restore path must not lose data. Forward/backward compat preserved. |
 | F1-9 | Two `ContactAutocompleteField` Composable overloads (prescriber and pharmacy) produce a JVM platform declaration clash because Kotlin generics are erased at runtime. The pharmacy overload is renamed `PharmacyAutocompleteField`. `@JvmName` cannot be applied to Composable functions. | Kotlin/JVM erasure constraint; distinct names are the idiomatic resolution. |
 
+
+## Slice 6 — Onboarding once + empty-med routing (hardening pass, 2026-06-12)
+
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| S6-B1 | All onboarding exit paths already gate through `OnboardingEvent.CompleteOnboarding` → `markComplete()`. No other exit path reaches the app without setting the flag. Hardening is a verification, not a code change. | `TestReminderStep.onDone` is the sole leave-onboarding trigger; `LaunchedEffect(isComplete)` fires `onDone()` only after `completeOnboarding()` persists via the repo. Back-between-steps uses `PreviousStep` which never leaves onboarding. |
+| S6-B2 | `resolveStartDestination()` extracted to `StartDestinationResolver.kt` as a top-level suspend function (not inline in `MainActivity`). Receives two lambdas: `isOnboardingComplete` and `countNonEndedMedications`. | Testable on pure JVM without Android context. Three-way routing (Onboarding / MedicationList / Today) can be asserted with simple lambda stubs. |
+| S6-B3 | `countNonEndedMedications` uses `MedicationDao.countNonEnded()` (`WHERE status != 'ENDED'`), matching the `observeActive()` convention. | COUNT(*) is a single-row DB read — no extra object allocation. ACTIVE+PAUSED meds both represent "user has added medications"; routing to Today is correct for paused-only users who still have a medication list to see. |
+| S6-B4 | Post-onboarding `onDone` in `PharosNavGraph` already navigates to `MedicationList` with `popUpTo(Onboarding, inclusive=true)`. No change needed here; the routing is already correct. | Verified at read time; confirmed in nav graph. |
+| S6-B5 | Two new test classes: `OnboardingRepositoryTest` (real class + fake DAO, 4 tests) and `StartDestinationResolverTest` (pure lambda stubs, 5 tests). Both are pure JVM. | Covers the three routing states and the mark/isComplete contract on the real repository class (not just the fake). |

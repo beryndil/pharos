@@ -161,4 +161,5 @@ private class FakeMedicationDao(private val meds: List<MedicationEntity>) : Medi
     override suspend fun getAll(): List<MedicationEntity> = meds
     override suspend fun getCriticalActive(): List<MedicationEntity> =
         meds.filter { it.isCritical && it.status != "ENDED" }
+    override suspend fun countNonEnded(): Int = meds.count { it.status != "ENDED" }
 }

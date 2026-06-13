@@ -46,6 +46,14 @@ interface MedicationDao {
     @Query("SELECT * FROM medications WHERE status = 'ACTIVE' AND isCritical = 1 ORDER BY name ASC")
     suspend fun getCriticalActive(): List<MedicationEntity>
 
+    /**
+     * Returns the count of medications that have not been ended (status ACTIVE or PAUSED).
+     * Used by [com.beryndil.pharos.ui.navigation.resolveStartDestination] to determine whether
+     * to route a returning user to Today or to the medication-list empty state.
+     */
+    @Query("SELECT COUNT(*) FROM medications WHERE status != 'ENDED'")
+    suspend fun countNonEnded(): Int
+
     // NOTE: No DELETE method. Medications are never physically removed (spec §3.3).
     // To end a medication, update its status to ENDED via [update].
 }

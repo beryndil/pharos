@@ -414,4 +414,5 @@ private class FakeMedicationDaoEmpty : MedicationDao {
     override suspend fun getActiveOnce(): List<MedicationEntity> = emptyList()
     override suspend fun getAll(): List<MedicationEntity> = emptyList()
     override suspend fun getCriticalActive(): List<MedicationEntity> = emptyList()
+    override suspend fun countNonEnded(): Int = 0
 }
