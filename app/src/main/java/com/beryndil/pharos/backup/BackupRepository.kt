@@ -13,6 +13,7 @@ import com.beryndil.pharos.data.regimen.entity.SchedulePhaseEntity
 import com.beryndil.pharos.data.regimen.entity.SettingEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleType
 import com.beryndil.pharos.medication.export.MedListPdfExporter
+import com.beryndil.pharos.medication.export.PdfExportOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -181,11 +182,12 @@ class BackupRepository(
      */
     suspend fun exportPdf(
         outputUri: Uri,
+        options: PdfExportOptions = PdfExportOptions(),
         exportedAtEpochMs: Long = Instant.now().toEpochMilli(),
     ): ExportResult = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openOutputStream(outputUri)?.use { stream ->
-                pdfExporter.writeTo(stream, exportedAtEpochMs)
+                pdfExporter.writeTo(stream, exportedAtEpochMs, options)
             } ?: return@withContext ExportResult.Error("Could not open output file.")
             ExportResult.Success
         } catch (e: Exception) {

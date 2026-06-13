@@ -2,6 +2,7 @@ package com.beryndil.pharos.backup
 
 import android.net.Uri
 import androidx.compose.runtime.Immutable
+import com.beryndil.pharos.medication.export.PdfExportOptions
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -52,8 +53,8 @@ sealed interface BackupEvent {
     /** User typed a passphrase and confirmed — restore from [uri]. */
     data class Restore(val passphrase: CharArray, val uri: Uri) : BackupEvent
 
-    /** Export a PDF medication list to [uri]. */
-    data class ExportPdf(val uri: Uri) : BackupEvent
+    /** Export a PDF medication list to [uri] with [options] controlling which fields appear. */
+    data class ExportPdf(val uri: Uri, val options: PdfExportOptions = PdfExportOptions()) : BackupEvent
 
     /** Export a CSV medication list to [uri]. */
     data class ExportCsv(val uri: Uri) : BackupEvent
@@ -101,7 +102,7 @@ class BackupViewModel(
         when (event) {
             is BackupEvent.CreateBackup -> createBackup(event.passphrase, event.uri)
             is BackupEvent.Restore -> restore(event.passphrase, event.uri)
-            is BackupEvent.ExportPdf -> exportPdf(event.uri)
+            is BackupEvent.ExportPdf -> exportPdf(event.uri, event.options)
             is BackupEvent.ExportCsv -> exportCsv(event.uri)
             is BackupEvent.DismissResult -> _uiState.update { it.copy(operation = BackupOperation.Idle) }
             is BackupEvent.RestoreFromAutoBackup -> restoreFromAutoBackup()
@@ -140,10 +141,10 @@ class BackupViewModel(
         }
     }
 
-    private fun exportPdf(uri: Uri) {
+    private fun exportPdf(uri: Uri, options: PdfExportOptions) {
         viewModelScope.launch {
             _uiState.update { it.copy(operation = BackupOperation.InProgress) }
-            val result = repository.exportPdf(uri)
+            val result = repository.exportPdf(uri, options)
             _uiState.update {
                 it.copy(
                     operation = when (result) {

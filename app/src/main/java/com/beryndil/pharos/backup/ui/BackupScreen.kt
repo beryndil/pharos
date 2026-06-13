@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -58,10 +59,17 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.RadioButton
 import com.beryndil.pharos.R
 import com.beryndil.pharos.backup.BackupEvent
 import com.beryndil.pharos.backup.BackupOperation
 import com.beryndil.pharos.backup.BackupUiState
+import com.beryndil.pharos.medication.export.PdfExportOptions
+import com.beryndil.pharos.medication.export.PdfStatusFilter
 
 /**
  * Backup & Restore screen (spec §2.12, Law 7 — free recovery path, always available).
@@ -107,10 +115,16 @@ fun BackupScreen(
         if (uri != null && pass != null) onEvent(BackupEvent.Restore(pass, uri))
     }
 
+    // PDF options state — held in the composable, not the ViewModel (same pattern as passphrases).
+    var showPdfOptionsDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingPdfOptions by remember { mutableStateOf<PdfExportOptions?>(null) }
+
     val exportPdfLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/pdf"),
     ) { uri: Uri? ->
-        if (uri != null) onEvent(BackupEvent.ExportPdf(uri))
+        val opts = pendingPdfOptions
+        pendingPdfOptions = null
+        if (uri != null && opts != null) onEvent(BackupEvent.ExportPdf(uri, opts))
     }
 
     val exportCsvLauncher = rememberLauncherForActivityResult(
@@ -226,13 +240,159 @@ fun BackupScreen(
                 )
 
                 ExportListSection(
-                    onExportPdf = { exportPdfLauncher.launch("pharos_medications.pdf") },
+                    onExportPdf = { showPdfOptionsDialog = true },
                     onExportCsv = { exportCsvLauncher.launch("pharos_medications.csv") },
                 )
 
                 Spacer(Modifier.height(32.dp))
             }
         }
+    }
+
+    if (showPdfOptionsDialog) {
+        PdfOptionsDialog(
+            onConfirm = { opts ->
+                pendingPdfOptions = opts
+                showPdfOptionsDialog = false
+                exportPdfLauncher.launch("pharos_medications.pdf")
+            },
+            onDismiss = { showPdfOptionsDialog = false },
+        )
+    }
+}
+
+/**
+ * Dialog shown before the SAF file picker to let the user choose what appears in the PDF.
+ *
+ * Sections:
+ *  1. Field toggles — checkboxes for each optional field.
+ *  2. Medication filter — radio group for which lifecycle statuses to include.
+ *
+ * §8: all interactive elements ≥48dp via Checkbox/RadioButton defaults; labels use
+ * semantics(mergeDescendants = true) so TalkBack reads "Schedule, checkbox, checked."
+ * Law 3: no advice language anywhere in the dialog.
+ */
+@Composable
+private fun PdfOptionsDialog(
+    onConfirm: (PdfExportOptions) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var doseAmount  by rememberSaveable { mutableStateOf(true) }
+    var schedule    by rememberSaveable { mutableStateOf(true) }
+    var prescriber  by rememberSaveable { mutableStateOf(true) }
+    var pharmacy    by rememberSaveable { mutableStateOf(true) }
+    var purpose     by rememberSaveable { mutableStateOf(true) }
+    var supply      by rememberSaveable { mutableStateOf(true) }
+    var statusFilter by rememberSaveable { mutableStateOf(PdfStatusFilter.ACTIVE_AND_PAUSED) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(stringResource(R.string.pdf_options_title))
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.pdf_options_fields_heading),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                OptionCheckRow(stringResource(R.string.pdf_option_dose_amount), doseAmount) { doseAmount = it }
+                OptionCheckRow(stringResource(R.string.pdf_option_schedule),    schedule)   { schedule = it }
+                OptionCheckRow(stringResource(R.string.pdf_option_prescriber),  prescriber) { prescriber = it }
+                OptionCheckRow(stringResource(R.string.pdf_option_pharmacy),    pharmacy)   { pharmacy = it }
+                OptionCheckRow(stringResource(R.string.pdf_option_purpose),     purpose)    { purpose = it }
+                OptionCheckRow(stringResource(R.string.pdf_option_supply),      supply)     { supply = it }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                Text(
+                    text = stringResource(R.string.pdf_options_filter_heading),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                OptionRadioRow(
+                    label = stringResource(R.string.pdf_filter_active_only),
+                    selected = statusFilter == PdfStatusFilter.ACTIVE_ONLY,
+                    onSelect = { statusFilter = PdfStatusFilter.ACTIVE_ONLY },
+                )
+                OptionRadioRow(
+                    label = stringResource(R.string.pdf_filter_active_paused),
+                    selected = statusFilter == PdfStatusFilter.ACTIVE_AND_PAUSED,
+                    onSelect = { statusFilter = PdfStatusFilter.ACTIVE_AND_PAUSED },
+                )
+                OptionRadioRow(
+                    label = stringResource(R.string.pdf_filter_all),
+                    selected = statusFilter == PdfStatusFilter.ALL,
+                    onSelect = { statusFilter = PdfStatusFilter.ALL },
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                onConfirm(
+                    PdfExportOptions(
+                        includeDoseAmount = doseAmount,
+                        includeSchedule   = schedule,
+                        includePrescriber = prescriber,
+                        includePharmacy   = pharmacy,
+                        includePurpose    = purpose,
+                        includeSupply     = supply,
+                        statusFilter      = statusFilter,
+                    ),
+                )
+            }) {
+                Text(stringResource(R.string.pdf_options_export))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.btn_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun OptionCheckRow(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
+            .clickable { onToggle(!checked) }
+            .padding(vertical = 2.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onToggle)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun OptionRadioRow(label: String, selected: Boolean, onSelect: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
+            .clickable(onClick = onSelect)
+            .padding(vertical = 2.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

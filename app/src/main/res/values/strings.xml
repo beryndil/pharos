@@ -537,6 +537,21 @@
     <string name="backup_passphrase_label">Passphrase</string>
     <string name="backup_passphrase_field_cd">Passphrase field</string>
 
+    <!-- PDF export options dialog -->
+    <string name="pdf_options_title">PDF options</string>
+    <string name="pdf_options_fields_heading">Include fields</string>
+    <string name="pdf_option_dose_amount">Dose amount (e.g. 1 tablet)</string>
+    <string name="pdf_option_schedule">Schedule</string>
+    <string name="pdf_option_prescriber">Prescriber</string>
+    <string name="pdf_option_pharmacy">Pharmacy</string>
+    <string name="pdf_option_purpose">Purpose / condition</string>
+    <string name="pdf_option_supply">Current supply</string>
+    <string name="pdf_options_filter_heading">Which medications</string>
+    <string name="pdf_filter_active_only">Active only</string>
+    <string name="pdf_filter_active_paused">Active and paused</string>
+    <string name="pdf_filter_all">All (including ended)</string>
+    <string name="pdf_options_export">Choose file…</string>
+
     <!-- Export section (plaintext, not encrypted) -->
     <string name="backup_section_export">Exportable list</string>
     <string name="backup_export_description">A human-readable medication list. Not encrypted — anyone can open it. Use this to share your medication list with a doctor or pharmacist, or to keep a printed copy.</string>
