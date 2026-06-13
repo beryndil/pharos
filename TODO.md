@@ -412,3 +412,11 @@ Full plan: ~/.claude/plans/pharos-v1.3-features.md. Recommended defaults in effe
 | F3F4-C4 | **Next-up summary TalkBack**: with ≥2 SCHEDULED doses visible, verify each next-up row announces as a single node "MedName due at HH:MM". Verify the clock icon is silent. | Physical device with TalkBack. |
 | F3F4-C5 | **System 2× font — Today enriched layout**: set device font + in-app size to max. Verify quick-actions button labels ("Email meds list", "Test reminder") do not truncate (maxLines=2 handles wrapping). Verify next-up rows do not clip med names. | Physical device, max font settings. |
 | F3F4-C6 | **Empty Today CTA**: with no medications, verify the "Add medication" button is announced as "Add your first medication" by TalkBack and navigates to the Medication list. | Physical device with TalkBack. |
+
+## Follow-up (non-blocking) — regimen DB version-guard (v1.3.1)
+- enforceSchemaVersion's SQLCipher read fails with "file is not a database" because it opens with
+  default cipher settings, not the SupportFactory's config (page size/KDF). It's caught and the
+  guard safely SKIPS (no wipe — the critical bug is fixed), but it logs an ERROR-level line every
+  launch and the forward-compat newer-schema guard is currently inert. Fix: either match the cipher
+  PRAGMAs via a SQLiteDatabaseHook so the read succeeds, or drop the on-disk version read entirely
+  (rely on Room's open) to remove the noise. Cosmetic/edge-case only; not user-visible.
