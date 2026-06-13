@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.beryndil.pharos.data.drugref.DrugRefDatabase
-import com.beryndil.pharos.data.drugref.entity.IngredientEntity
-import com.beryndil.pharos.data.drugref.entity.ProductEntity
+import com.beryndil.pharos.data.drugref.entity.DrugSearchEntity
+import com.beryndil.pharos.data.drugref.entity.IngredientMapEntity
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
@@ -24,11 +24,10 @@ import org.robolectric.RobolectricTestRunner
 import java.util.UUID
 
 /**
- * Unit tests for [MedicationRepository] (Slice 2):
- *  - Duplicate-ingredient detection (positive + negative, multi-ingredient combo)
+ * Unit tests for [MedicationRepository] (Slice 2, updated for v2 DrugRef schema):
+ *  - Duplicate-ingredient detection (positive + negative, multi-ingredient combo) — SAFETY-CRITICAL
  *  - RxNorm local resolution (searchDrugs returns expected matches)
  *  - Free-text fallback (persists an unresolved med flagged correctly)
- *  - Required-field validation for strength / form
  *  - Repository round-trips a med through the DB
  *  - getIngredientNames resolves correctly
  */
@@ -50,8 +49,8 @@ class MedicationRepositoryTest {
             .build()
         repo = MedicationRepository(
             medicationDao = regimenDb.medicationDao(),
-            productDao = drugRefDb.productDao(),
-            ingredientDao = drugRefDb.ingredientDao(),
+            drugSearchDao = drugRefDb.drugSearchDao(),
+            ingredientMapDao = drugRefDb.ingredientMapDao(),
         )
 
         // Seed fixture data used across tests.
@@ -68,8 +67,6 @@ class MedicationRepositoryTest {
 
     @Test
     fun searchDrugs_returnsEmptyWhenDrugRefDbUnavailable() = runTest {
-        // Simulate the read-only reference DB being unreadable: queries throw. The repository must
-        // degrade to "no matches" (free-text fallback, spec §2.11), never propagate the crash.
         drugRefDb.close()
         val results = repo.searchDrugs("acetaminophen")
         assertTrue("searchDrugs must degrade to empty, not throw", results.isEmpty())
@@ -85,7 +82,7 @@ class MedicationRepositoryTest {
     // ── RxNorm local resolution ───────────────────────────────────────────
 
     @Test
-    fun searchDrugs_returnsMatchForKnownProductName() = runTest {
+    fun searchDrugs_returnsMatchForKnownDrugName() = runTest {
         val results = repo.searchDrugs("Metoprolol")
         assertTrue("Expected matches for 'Metoprolol'", results.isNotEmpty())
         assertTrue(results.any { it.name.contains("Metoprolol", ignoreCase = true) })
@@ -124,6 +121,15 @@ class MedicationRepositoryTest {
         assertTrue("Expected ComboTest match", results.isNotEmpty())
         val combo = results.first()
         assertEquals("Combo product must have 2 ingredients", 2, combo.ingredientNames.size)
+    }
+
+    @Test
+    fun searchDrugs_resultCarriesTty() = runTest {
+        val results = repo.searchDrugs("Metoprolol")
+        assertTrue("Expected Metoprolol results", results.isNotEmpty())
+        results.forEach { result ->
+            assertTrue("tty must be non-blank", result.tty.isNotBlank())
+        }
     }
 
     // ── Free-text fallback ────────────────────────────────────────────────
@@ -168,7 +174,7 @@ class MedicationRepositoryTest {
         assertEquals("Strength must be updated", "50 mg", retrieved?.strength)
     }
 
-    // ── Duplicate-ingredient detection ────────────────────────────────────
+    // ── Duplicate-ingredient detection ── SAFETY-CRITICAL ────────────────
 
     @Test
     fun checkDuplicates_noExistingMeds_returnsEmpty() = runTest {
@@ -182,7 +188,7 @@ class MedicationRepositoryTest {
         val existing = sampleMedication(ingredientsJson = """["161"]""")
         repo.saveMedication(existing)
 
-        // Adding another med with the same ingredient.
+        // Adding another med with the same ingredient — must fire the warning.
         val warnings = repo.checkDuplicateIngredients(newIngredientRxcuis = listOf("161"))
         assertEquals("Must detect one duplicate", 1, warnings.size)
         assertEquals(existing.name, warnings.first().existingMedName)
@@ -241,6 +247,28 @@ class MedicationRepositoryTest {
         // Free-text med has no ingredients.
         val warnings = repo.checkDuplicateIngredients(newIngredientRxcuis = emptyList())
         assertTrue("Empty ingredient list → no warnings", warnings.isEmpty())
+    }
+
+    /**
+     * Duplicate detection must fire even when the drug-ref DB has no name for the shared
+     * ingredient (e.g., an edge-case RxCUI not in the bundled subset). The RxCUI itself is
+     * shown in the warning instead of a resolved name — the warning is NEVER suppressed.
+     */
+    @Test
+    fun checkDuplicates_unknownIngredientRxcui_stillFiresWarningWithRxcuiAsName() = runTest {
+        val obscureRxcui = "UNKNOWN_99999"
+        val existing = sampleMedication(ingredientsJson = """["$obscureRxcui"]""")
+        repo.saveMedication(existing)
+
+        val warnings = repo.checkDuplicateIngredients(
+            newIngredientRxcuis = listOf(obscureRxcui),
+        )
+        assertEquals("Warning must fire even for unknown RxCUI", 1, warnings.size)
+        assertEquals(
+            "Warning ingredient name must be the RxCUI when no name is available",
+            obscureRxcui,
+            warnings.first().ingredientName,
+        )
     }
 
     // ── Ingredient name resolution ────────────────────────────────────────
@@ -305,38 +333,30 @@ class MedicationRepositoryTest {
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
-    /** Seed ingredient and product records used by the tests. */
+    /**
+     * Seeds [drugRefDb] with drug_search and ingredient_map rows matching the v2 schema.
+     * Mirrors the data for known test drugs so search and name-resolution assertions work.
+     */
     private suspend fun seedDrugRefFixture() {
-        val ingredients = listOf(
-            IngredientEntity(rxcui = "161", name = "Acetaminophen", tty = "IN"),
-            IngredientEntity(rxcui = "41493", name = "Metoprolol Succinate", tty = "IN"),
-            IngredientEntity(rxcui = "5640", name = "Ibuprofen", tty = "IN"),
+        val drugs = listOf(
+            DrugSearchEntity(rxcui = "161", name = "Acetaminophen", nameLower = "acetaminophen", tty = "IN"),
+            DrugSearchEntity(rxcui = "41493", name = "Metoprolol Succinate", nameLower = "metoprolol succinate", tty = "PIN"),
+            DrugSearchEntity(rxcui = "5640", name = "Ibuprofen", nameLower = "ibuprofen", tty = "IN"),
+            DrugSearchEntity(rxcui = "209387", name = "Tylenol 500 MG Oral Tablet", nameLower = "tylenol 500 mg oral tablet", tty = "BN"),
+            DrugSearchEntity(rxcui = "866427", name = "Metoprolol Succinate 25 MG Oral Tablet", nameLower = "metoprolol succinate 25 mg oral tablet", tty = "SCD"),
+            DrugSearchEntity(rxcui = "999001", name = "ComboTest 200 MG Oral Tablet", nameLower = "combotest 200 mg oral tablet", tty = "SCD"),
         )
-        val products = listOf(
-            ProductEntity(
-                rxcui = "209387",
-                name = "Tylenol 500 MG Oral Tablet",
-                ingredientsJson = """["161"]""",
-                form = "Oral Tablet",
-                strength = "500 mg",
-            ),
-            ProductEntity(
-                rxcui = "866427",
-                name = "Metoprolol Succinate 25 MG Oral Tablet",
-                ingredientsJson = """["41493"]""",
-                form = "Oral Tablet",
-                strength = "25 mg",
-            ),
-            ProductEntity(
-                rxcui = "999001",
-                name = "ComboTest 200 MG Oral Tablet",
-                ingredientsJson = """["161","5640"]""",
-                form = "Oral Tablet",
-                strength = "200 mg",
-            ),
+        val edges = listOf(
+            // Tylenol → Acetaminophen
+            IngredientMapEntity(drugRxcui = "209387", ingredientRxcui = "161", ingredientName = "Acetaminophen"),
+            // Metoprolol Succinate tablet → Metoprolol Succinate ingredient
+            IngredientMapEntity(drugRxcui = "866427", ingredientRxcui = "41493", ingredientName = "Metoprolol Succinate"),
+            // ComboTest → Acetaminophen + Ibuprofen
+            IngredientMapEntity(drugRxcui = "999001", ingredientRxcui = "161", ingredientName = "Acetaminophen"),
+            IngredientMapEntity(drugRxcui = "999001", ingredientRxcui = "5640", ingredientName = "Ibuprofen"),
         )
-        drugRefDb.ingredientDao().insertAll(ingredients)
-        drugRefDb.productDao().insertAll(products)
+        drugRefDb.drugSearchDao().insertAll(drugs)
+        drugRefDb.ingredientMapDao().insertAll(edges)
     }
 
     private fun sampleMedication(

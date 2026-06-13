@@ -1,10 +1,10 @@
 package com.beryndil.pharos.medication
 
 import androidx.lifecycle.SavedStateHandle
-import com.beryndil.pharos.data.drugref.dao.IngredientDao
-import com.beryndil.pharos.data.drugref.dao.ProductDao
-import com.beryndil.pharos.data.drugref.entity.IngredientEntity
-import com.beryndil.pharos.data.drugref.entity.ProductEntity
+import com.beryndil.pharos.data.drugref.dao.DrugSearchDao
+import com.beryndil.pharos.data.drugref.dao.IngredientMapDao
+import com.beryndil.pharos.data.drugref.entity.DrugSearchEntity
+import com.beryndil.pharos.data.drugref.entity.IngredientMapEntity
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
@@ -72,8 +72,8 @@ class LazyDndPermissionTest {
     ): AddEditMedicationViewModel {
         val repo = MedicationRepository(
             medicationDao = NoOpMedicationDao(),
-            productDao = NoOpProductDao(),
-            ingredientDao = NoOpIngredientDao(),
+            drugSearchDao = NoOpDrugSearchDao(),
+            ingredientMapDao = NoOpIngredientMapDao(),
         )
         val scheduleRepo = ScheduleRepository(
             scheduleDao = NoOpScheduleDao(),
@@ -88,7 +88,6 @@ class LazyDndPermissionTest {
             savedStateHandle = savedState,
             ioDispatcher = testDispatcher,
             isDndAccessGranted = { isDndAccessGranted },
-            // Key injection: override the DB call with a pure lambda.
             fetchCriticalMeds = { existingCriticalMeds },
         )
     }
@@ -131,8 +130,6 @@ class LazyDndPermissionTest {
 
     @Test
     fun editingExistingCriticalMed_selfExcluded_showsRationale() = runTest {
-        // The med being edited ("m1") is in the existing list, but should be excluded from
-        // "others" count — so it's treated as the first critical med → rationale shows.
         val selfMed = baseMed("m1", isCritical = true)
         val vm = makeVm(
             isDndAccessGranted = false,
@@ -188,21 +185,19 @@ private class NoOpMedicationDao : MedicationDao {
     override suspend fun getCriticalActive(): List<MedicationEntity> = emptyList()
 }
 
-private class NoOpProductDao : ProductDao {
-    override suspend fun insertAll(products: List<ProductEntity>) = Unit
-    override suspend fun getByRxcui(rxcui: String): ProductEntity? = null
-    override suspend fun searchByName(query: String): List<ProductEntity> = emptyList()
+private class NoOpDrugSearchDao : DrugSearchDao {
+    override suspend fun insertAll(drugs: List<DrugSearchEntity>) = Unit
+    override suspend fun searchByName(q: String): List<DrugSearchEntity> = emptyList()
+    override suspend fun getByRxcui(rxcui: String): DrugSearchEntity? = null
     override suspend fun count(): Int = 0
-    override suspend fun getAll(): List<ProductEntity> = emptyList()
 }
 
-private class NoOpIngredientDao : IngredientDao {
-    override suspend fun insertAll(ingredients: List<IngredientEntity>) = Unit
-    override suspend fun getByRxcui(rxcui: String): IngredientEntity? = null
-    override suspend fun getByRxcuiList(rxcuis: List<String>): List<IngredientEntity> = emptyList()
-    override suspend fun searchByName(query: String): List<IngredientEntity> = emptyList()
+private class NoOpIngredientMapDao : IngredientMapDao {
+    override suspend fun insertAll(edges: List<IngredientMapEntity>) = Unit
+    override suspend fun ingredientsForDrug(drugRxcui: String): List<IngredientMapEntity> = emptyList()
+    override suspend fun getForDrugs(drugRxcuis: List<String>): List<IngredientMapEntity> = emptyList()
+    override suspend fun getByIngredientRxcuis(rxcuis: List<String>): List<IngredientMapEntity> = emptyList()
     override suspend fun count(): Int = 0
-    override suspend fun getAll(): List<IngredientEntity> = emptyList()
 }
 
 private class NoOpScheduleDao : ScheduleDao {

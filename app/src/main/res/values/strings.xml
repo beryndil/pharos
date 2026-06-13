@@ -26,16 +26,17 @@
     <string name="add_as_custom_desc">Reminders and refill tracking, but no ingredient checking or interaction reference.</string>
     <!-- %1$s = ingredient name(s) shown in each search-result item subtitle -->
     <string name="search_result_ingredients">%1$s</string>
-    <!-- %1$s = strength, %2$s = form -->
-    <string name="search_result_subtitle">%1$s · %2$s</string>
-    <!-- Accessibility: %1$s = name, %2$s = strength, %3$s = form. -->
-    <string name="cd_search_result_item">%1$s, %2$s, %3$s. Tap to select.</string>
+    <!-- %1$s = RxNorm term type (e.g., "IN", "BN", "MIN") -->
+    <string name="search_result_subtitle">%1$s</string>
+    <!-- Accessibility: %1$s = name, %2$s = RxNorm term type. -->
+    <string name="cd_search_result_item">%1$s, %2$s. Tap to select.</string>
 
     <!-- ── Confirm step ──────────────────────────────────────────────── -->
     <string name="step_confirm_heading">Confirm medication</string>
     <string name="confirm_question">Is this the right medication?</string>
     <string name="label_ingredient">Ingredient</string>
     <string name="label_ingredients">Ingredients</string>
+    <string name="label_type">Type</string>
     <string name="label_strength">Strength</string>
     <string name="label_form">Form</string>
     <string name="btn_confirm">Confirm</string>

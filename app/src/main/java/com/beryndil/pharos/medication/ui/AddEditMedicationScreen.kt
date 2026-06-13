@@ -265,18 +265,13 @@ private fun SearchResultItem(result: DrugSearchResult, onClick: () -> Unit) {
     val desc = stringResource(
         R.string.cd_search_result_item,
         result.name,
-        result.strength,
-        result.rxNormForm,
+        result.tty,
     )
     ListItem(
         headlineContent = { Text(result.name, style = MaterialTheme.typography.bodyLarge) },
         supportingContent = {
             Text(
-                text = stringResource(
-                    R.string.search_result_subtitle,
-                    result.strength,
-                    result.rxNormForm,
-                ),
+                text = stringResource(R.string.search_result_subtitle, result.tty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -354,12 +349,8 @@ private fun ConfirmStep(
                     )
                 }
                 LabeledValue(
-                    label = stringResource(R.string.label_strength),
-                    value = drug.strength,
-                )
-                LabeledValue(
-                    label = stringResource(R.string.label_form),
-                    value = drug.rxNormForm,
+                    label = stringResource(R.string.label_type),
+                    value = drug.tty,
                 )
             }
         }

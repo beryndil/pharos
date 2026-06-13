@@ -355,7 +355,9 @@ class AddEditMedicationViewModel(
 
     private fun onConfirmDrug() {
         val drug = _uiState.value.pendingDrug ?: return
-        val mappedForm = repository.mapRxNormForm(drug.rxNormForm)
+        // The RxNorm pipeline schema (v2) does not expose strength or form as separate columns —
+        // they are encoded in the drug name for clinical types (DECISIONS.md G2b). The user
+        // enters strength and form in the DETAILS step. Do not pre-fill them here.
         _uiState.update {
             it.copy(
                 step = FormStep.DETAILS,
@@ -363,10 +365,6 @@ class AddEditMedicationViewModel(
                 displayName = drug.name,
                 ingredientNames = drug.ingredientNames,
                 ingredientRxcuis = drug.ingredientRxcuis,
-                // Pre-fill strength and form from RxNorm; user can still change them.
-                strength = drug.strength.ifEmpty { it.strength },
-                selectedForm = if (mappedForm != MedicationForm.OTHER) mappedForm
-                    else it.selectedForm,
             )
         }
     }

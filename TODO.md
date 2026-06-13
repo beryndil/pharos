@@ -6,8 +6,15 @@ Append in the moment work is deferred or a wall is hit. Read before answering
 ## Dave-only walls (physical / account / payment — pipeline skips, never stops)
 
 - [ ] Provision drug-DB CDN: Backblaze B2 bucket + Cloudflare in front. Pipeline builds
-      against the documented contract + a local fixture until this exists. (Account +
+      against the documented contract + bundled asset until this exists. (Account +
       billing — Dave.)
+- [ ] **CDN atomic-swap user_version fix** (G2b): `build_drug_db.py` emits `user_version=0`
+      in the raw SQLite output. `DrugRefDatabaseFactory.swapFromFile` replaces the Room-managed
+      DB file, but Room will find `user_version != 2` on next open and trigger
+      `fallbackToDestructiveMigration`, wiping the CDN data and reseeding from the bundled asset.
+      Fix: add `PRAGMA user_version = 2` to the CDN build script after creating the DB, or add
+      a post-download step in `DrugDbUpdater` to set it before the swap. CDN is not yet
+      provisioned — fix before the first real CDN push.
 - [ ] **Replace CDN keypair and URL** (Slice 8): Follow the keypair replacement procedure in
       DECISIONS.md. Replace `ManifestVerifier.APP_PUBLIC_KEY_HEX` with the real public key,
       set `DrugDbUpdateWorker.CDN_BASE_URL` to the real CDN base URL, and store the private
@@ -65,9 +72,9 @@ Append in the moment work is deferred or a wall is hit. Read before answering
       SDK JAR download (~120 MB per SDK version) will re-run if `/tmp` was cleared.
       Mitigation: the `tasks.withType<Test>` config creates the dir at test time; no manual
       action needed per session.
-- [ ] **Real RxNorm CDN bundle**: `drug_ref_fixture.db` contains 5 sample medications.
-      Production bundle requires the full trimmed RxNorm dataset via the CDN pipeline
-      (Slice 8 / parallel track). Dave task: provision Backblaze B2 + Cloudflare CDN.
+- [x] **Real RxNorm bundled DB (G2a/G2b)**: `drug_ref.db` (1,640 drugs, 1,828 ingredient edges,
+      356 KB) shipped as the APK asset. Full CDN DB requires Dave to provision Backblaze B2 +
+      Cloudflare and provide a UMLS API key for the RRF pipeline (`build_drug_db.py`).
 
 ### Slice 4 — Alarm engine & reliability (2026-06-12)
 

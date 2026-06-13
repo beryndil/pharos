@@ -13,7 +13,7 @@ import androidx.room.PrimaryKey
  */
 @Entity(tableName = "label_cache")
 data class LabelCacheEntity(
-    /** RxCUI of the product this label belongs to. Links to [ProductEntity.rxcui]. */
+    /** RxCUI of the drug concept this label belongs to (same as [MedicationEntity.rxcui]). */
     @PrimaryKey val productRxcui: String,
 
     /** Adverse reactions / side effects section text, or null if unavailable. */

@@ -73,8 +73,8 @@ class AppContainer(private val applicationContext: Context) {
     val medicationRepository: MedicationRepository by lazy {
         MedicationRepository(
             medicationDao = regimenDatabase.medicationDao(),
-            productDao = drugRefDatabase.productDao(),
-            ingredientDao = drugRefDatabase.ingredientDao(),
+            drugSearchDao = drugRefDatabase.drugSearchDao(),
+            ingredientMapDao = drugRefDatabase.ingredientMapDao(),
         )
     }
 

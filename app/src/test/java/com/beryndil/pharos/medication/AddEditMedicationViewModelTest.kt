@@ -5,8 +5,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.beryndil.pharos.data.drugref.DrugRefDatabase
-import com.beryndil.pharos.data.drugref.entity.IngredientEntity
-import com.beryndil.pharos.data.drugref.entity.ProductEntity
+import com.beryndil.pharos.data.drugref.entity.DrugSearchEntity
+import com.beryndil.pharos.data.drugref.entity.IngredientMapEntity
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
@@ -58,9 +58,6 @@ class AddEditMedicationViewModelTest {
         Dispatchers.setMain(testDispatcher)
 
         val ctx = ApplicationProvider.getApplicationContext<Context>()
-        // Direct executor: Room queries run inline (no real background threads).
-        // This ensures withContext(testDispatcher) { dao.insert(...) } stays on
-        // testDispatcher — advanceUntilIdle() can drain the entire call chain.
         val directExec = java.util.concurrent.Executor { it.run() }
         regimenDb = Room.inMemoryDatabaseBuilder(ctx, RegimenDatabase::class.java)
             .allowMainThreadQueries()
@@ -74,15 +71,14 @@ class AddEditMedicationViewModelTest {
             .build()
         repo = MedicationRepository(
             medicationDao = regimenDb.medicationDao(),
-            productDao = drugRefDb.productDao(),
-            ingredientDao = drugRefDb.ingredientDao(),
+            drugSearchDao = drugRefDb.drugSearchDao(),
+            ingredientMapDao = drugRefDb.ingredientMapDao(),
         )
         scheduleRepo = ScheduleRepository(
             scheduleDao = regimenDb.scheduleDao(),
             schedulePhaseDao = regimenDb.schedulePhaseDao(),
             doseInstanceDao = regimenDb.doseInstanceDao(),
         )
-        // runBlocking: seed DB synchronously — no scheduler interaction needed.
         runBlocking { seedDrugRefFixture() }
     }
 
@@ -108,7 +104,7 @@ class AddEditMedicationViewModelTest {
         regimenDb.medicationDao().insert(med)
 
         val vm = buildViewModel(editMedId = med.id)
-        advanceUntilIdle() // Let loadExistingMedication coroutine complete.
+        advanceUntilIdle()
 
         val state = vm.uiState.value
         assertEquals(FormStep.DETAILS, state.step)
@@ -122,7 +118,6 @@ class AddEditMedicationViewModelTest {
     @Test
     fun saveRequested_missingStrength_setsStrengthError() = runTest(testDispatcher) {
         val vm = buildFilledViewModel(strength = "")
-        // Validation is synchronous; no advanceUntilIdle needed.
         vm.onEvent(AddEditMedEvent.SaveRequested)
         assertTrue(vm.uiState.value.strengthError)
         assertFalse(vm.uiState.value.savedSuccessfully)
@@ -148,7 +143,7 @@ class AddEditMedicationViewModelTest {
     fun saveRequested_allFieldsValid_savesSuccessfully() = runTest(testDispatcher) {
         val vm = buildFilledViewModel()
         vm.onEvent(AddEditMedEvent.SaveRequested)
-        advanceUntilIdle() // Run duplicate-check + save coroutines.
+        advanceUntilIdle()
         assertTrue("savedSuccessfully must be true after valid save", vm.uiState.value.savedSuccessfully)
     }
 
@@ -161,7 +156,7 @@ class AddEditMedicationViewModelTest {
 
         val vm = buildFilledViewModel(ingredientRxcuis = listOf("161"))
         vm.onEvent(AddEditMedEvent.SaveRequested)
-        advanceUntilIdle() // Run duplicate-check coroutine.
+        advanceUntilIdle()
 
         assertTrue("Duplicate warning dialog must be shown", vm.uiState.value.showDuplicateWarning)
         assertFalse("Must NOT save yet", vm.uiState.value.savedSuccessfully)
@@ -193,7 +188,7 @@ class AddEditMedicationViewModelTest {
         assertTrue(vm.uiState.value.showDuplicateWarning)
 
         vm.onEvent(AddEditMedEvent.DuplicateWarningConfirmed)
-        advanceUntilIdle() // Run save coroutine.
+        advanceUntilIdle()
         assertTrue("Must save successfully after confirmation", vm.uiState.value.savedSuccessfully)
     }
 
@@ -207,7 +202,7 @@ class AddEditMedicationViewModelTest {
     }
 
     @Test
-    fun confirmDrug_movesToDetailsStep_andPreFillsFields() {
+    fun confirmDrug_movesToDetailsStep_andSetsNameAndIngredients() {
         val vm = buildViewModel()
         vm.onEvent(AddEditMedEvent.DrugSelected(tylenolDrug()))
         vm.onEvent(AddEditMedEvent.ConfirmDrug)
@@ -215,10 +210,12 @@ class AddEditMedicationViewModelTest {
         val state = vm.uiState.value
         assertEquals(FormStep.DETAILS, state.step)
         assertEquals("Tylenol 500 MG", state.displayName)
-        assertEquals("500 mg", state.strength)
-        assertEquals(MedicationForm.TABLET, state.selectedForm)
         assertEquals(listOf("161"), state.ingredientRxcuis)
         assertFalse(state.isFreeText)
+        // Strength and form are NOT pre-filled from RxNorm (v2 schema has no separate
+        // strength/form columns — user enters them in the DETAILS step — DECISIONS.md G2b).
+        assertTrue("strength must be blank after confirm (user enters it)", state.strength.isBlank())
+        assertNull("form must be unset after confirm (user selects it)", state.selectedForm)
     }
 
     @Test
@@ -246,11 +243,9 @@ class AddEditMedicationViewModelTest {
     @Test
     fun missWindowMinutesChanged_validValue_clearsError() {
         val vm = buildFilledViewModel()
-        // Set an invalid value first.
         vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("0"))
         assertTrue(vm.uiState.value.missWindowMinutesError)
 
-        // Valid value must clear the error.
         vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("30"))
         assertEquals("30", vm.uiState.value.missWindowMinutesText)
         assertFalse(vm.uiState.value.missWindowMinutesError)
@@ -259,16 +254,15 @@ class AddEditMedicationViewModelTest {
     @Test
     fun missWindowMinutesChanged_outOfRange_setsError() {
         val vm = buildFilledViewModel()
-        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("4")) // below min
+        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("4"))
         assertTrue("4 is below minimum 5", vm.uiState.value.missWindowMinutesError)
 
-        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("361")) // above max
+        vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged("361"))
         assertTrue("361 is above maximum 360", vm.uiState.value.missWindowMinutesError)
     }
 
     @Test
     fun missWindowMinutesChanged_emptyString_doesNotSetError() {
-        // Intermediate empty state during typing must not show an error.
         val vm = buildFilledViewModel()
         vm.onEvent(AddEditMedEvent.MissWindowMinutesChanged(""))
         assertFalse("Empty field during typing must not show error", vm.uiState.value.missWindowMinutesError)
@@ -306,8 +300,6 @@ class AddEditMedicationViewModelTest {
         } else {
             SavedStateHandle()
         }
-        // Inject testDispatcher as ioDispatcher so withContext(ioDispatcher) runs on the same
-        // TestCoroutineScheduler as viewModelScope — advanceUntilIdle() drains both.
         return AddEditMedicationViewModel(
             repository = repo,
             scheduleRepository = scheduleRepo,
@@ -316,7 +308,6 @@ class AddEditMedicationViewModelTest {
         )
     }
 
-    /** Pre-loads the VM at DETAILS step with valid required fields. */
     private fun buildFilledViewModel(
         strength: String = "500 mg",
         form: MedicationForm? = MedicationForm.TABLET,
@@ -331,8 +322,7 @@ class AddEditMedicationViewModelTest {
             val drug = com.beryndil.pharos.medication.model.DrugSearchResult(
                 rxcui = "209387",
                 name = "TestDrug",
-                strength = "500 mg",
-                rxNormForm = "Oral Tablet",
+                tty = "SCD",
                 ingredientRxcuis = ingredientRxcuis,
                 ingredientNames = ingredientRxcuis,
             )
@@ -349,28 +339,22 @@ class AddEditMedicationViewModelTest {
     private fun tylenolDrug() = com.beryndil.pharos.medication.model.DrugSearchResult(
         rxcui = "209387",
         name = "Tylenol 500 MG",
-        strength = "500 mg",
-        rxNormForm = "Oral Tablet",
+        tty = "BN",
         ingredientRxcuis = listOf("161"),
         ingredientNames = listOf("Acetaminophen"),
     )
 
     private suspend fun seedDrugRefFixture() {
-        drugRefDb.ingredientDao().insertAll(
+        drugRefDb.drugSearchDao().insertAll(
             listOf(
-                IngredientEntity(rxcui = "161", name = "Acetaminophen", tty = "IN"),
-                IngredientEntity(rxcui = "41493", name = "Metoprolol Succinate", tty = "IN"),
+                DrugSearchEntity(rxcui = "161", name = "Acetaminophen", nameLower = "acetaminophen", tty = "IN"),
+                DrugSearchEntity(rxcui = "41493", name = "Metoprolol Succinate", nameLower = "metoprolol succinate", tty = "PIN"),
+                DrugSearchEntity(rxcui = "209387", name = "Tylenol 500 MG Oral Tablet", nameLower = "tylenol 500 mg oral tablet", tty = "BN"),
             ),
         )
-        drugRefDb.productDao().insertAll(
+        drugRefDb.ingredientMapDao().insertAll(
             listOf(
-                ProductEntity(
-                    rxcui = "209387",
-                    name = "Tylenol 500 MG Oral Tablet",
-                    ingredientsJson = """["161"]""",
-                    form = "Oral Tablet",
-                    strength = "500 mg",
-                ),
+                IngredientMapEntity(drugRxcui = "209387", ingredientRxcui = "161", ingredientName = "Acetaminophen"),
             ),
         )
     }

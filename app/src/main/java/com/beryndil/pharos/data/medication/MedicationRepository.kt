@@ -1,7 +1,7 @@
 package com.beryndil.pharos.data.medication
 
-import com.beryndil.pharos.data.drugref.dao.IngredientDao
-import com.beryndil.pharos.data.drugref.dao.ProductDao
+import com.beryndil.pharos.data.drugref.dao.DrugSearchDao
+import com.beryndil.pharos.data.drugref.dao.IngredientMapDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
@@ -23,43 +23,42 @@ import kotlinx.serialization.json.Json
  */
 class MedicationRepository(
     private val medicationDao: MedicationDao,
-    private val productDao: ProductDao,
-    private val ingredientDao: IngredientDao,
+    private val drugSearchDao: DrugSearchDao,
+    private val ingredientMapDao: IngredientMapDao,
 ) {
 
     // ── Drug reference search ─────────────────────────────────────────────
 
     /**
-     * Search the local RxNorm fixture by product name (contains, case-insensitive).
-     * Returns up to 30 results. Resolves ingredient names for each product.
+     * Search the local RxNorm asset by drug name (prefix-first, then contains).
+     * Returns up to 30 results. Resolves ingredient names for each result.
      *
      * Returns empty list if [query] is fewer than 2 characters.
+     *
+     * SAFETY: the drug-reference DB is non-critical public data (spec §2.11). If it is
+     * unavailable or unreadable, search degrades to "no matches" so the user falls back to
+     * free-text entry — it must NEVER crash the add-medication flow.
      */
     suspend fun searchDrugs(query: String): List<DrugSearchResult> {
         if (query.length < 2) return emptyList()
-        // The drug-reference DB is non-critical public data (spec §2.11). If it is unavailable or
-        // unreadable, drug search degrades to "no matches" so the user falls back to free-text
-        // entry — it must never crash the add-medication flow.
         return try {
-            val products = productDao.searchByName(query)
-            if (products.isEmpty()) return emptyList()
+            val q = query.lowercase().trim()
+            val results = drugSearchDao.searchByName(q)
+            if (results.isEmpty()) return emptyList()
 
-            // Collect all unique ingredient RxCUIs across all results, batch-fetch names once.
-            val allRxcuis = products
-                .flatMap { parseIngredientRxcuis(it.ingredientsJson) }
-                .distinct()
-            val ingredientMap = ingredientDao.getByRxcuiList(allRxcuis)
-                .associateBy { it.rxcui }
+            // Batch-fetch all ingredient edges for all results in one query (avoids N+1).
+            val allDrugRxcuis = results.map { it.rxcui }.distinct()
+            val allEdges = ingredientMapDao.getForDrugs(allDrugRxcuis)
+            val edgesByDrug = allEdges.groupBy { it.drugRxcui }
 
-            products.map { product ->
-                val rxcuis = parseIngredientRxcuis(product.ingredientsJson)
+            results.map { drug ->
+                val edges = edgesByDrug[drug.rxcui] ?: emptyList()
                 DrugSearchResult(
-                    rxcui = product.rxcui,
-                    name = product.name,
-                    strength = product.strength,
-                    rxNormForm = product.form,
-                    ingredientRxcuis = rxcuis,
-                    ingredientNames = rxcuis.mapNotNull { ingredientMap[it]?.name },
+                    rxcui = drug.rxcui,
+                    name = drug.name,
+                    tty = drug.tty,
+                    ingredientRxcuis = edges.map { it.ingredientRxcui },
+                    ingredientNames = edges.map { it.ingredientName },
                 )
             }
         } catch (e: Exception) {
@@ -75,6 +74,10 @@ class MedicationRepository(
      *
      * Returns a [DuplicateWarning] for each (existingMed, sharedIngredient) pair found.
      * An empty list means no duplicates.
+     *
+     * SAFETY: RxCUI-set intersection is the source of truth. If the drug-ref DB is unavailable,
+     * the comparison still holds (RxCUIs are compared directly) — we simply show the RxCUI
+     * as the ingredient name rather than the resolved name. The warning is NEVER suppressed.
      *
      * @param newIngredientRxcuis Active ingredient RxCUIs of the medication being added/edited.
      * @param excludeMedId ID of the medication being *edited* — excluded from comparison so a
@@ -97,12 +100,10 @@ class MedicationRepository(
             val shared = existingRxcuis.filter { it in newSet }
             if (shared.isEmpty()) continue
 
-            // Resolve ingredient names for display. If the drug-ref DB is unavailable, the
-            // duplicate comparison above still holds (it compares RxCUIs, not names) — we just
-            // show the RxCUI instead of the resolved name. The safety warning is never suppressed.
-            val ingredientMap = safeIngredientNames(shared)
+            // Resolve ingredient names for display. Falls back to the RxCUI string if unavailable.
+            val nameMap = safeIngredientNames(shared)
             for (rxcui in shared) {
-                val ingredientName = ingredientMap[rxcui] ?: rxcui
+                val ingredientName = nameMap[rxcui] ?: rxcui
                 warnings += DuplicateWarning(
                     existingMedName = med.name,
                     ingredientName = ingredientName,
@@ -123,13 +124,15 @@ class MedicationRepository(
     }
 
     /**
-     * Batch-resolve ingredient RxCUIs to names from the drug-reference DB, failing soft.
+     * Batch-resolve ingredient RxCUIs to names from `ingredient_map`, failing soft.
      * Returns rxcui -> name. On any drug-ref DB error returns an empty map so callers fall back
      * to showing the RxCUI; a reference-DB problem never throws into a calling flow.
      */
     private suspend fun safeIngredientNames(rxcuis: List<String>): Map<String, String> =
         try {
-            ingredientDao.getByRxcuiList(rxcuis).associate { it.rxcui to it.name }
+            ingredientMapDao.getByIngredientRxcuis(rxcuis)
+                .groupBy { it.ingredientRxcui }
+                .mapValues { (_, entries) -> entries.first().ingredientName }
         } catch (e: Exception) {
             android.util.Log.w(TAG, "Ingredient name lookup failed; using RxCUIs. ${e.javaClass.simpleName}")
             emptyMap()
@@ -199,16 +202,15 @@ class MedicationRepository(
     // ── Helpers ──────────────────────────────────────────────────────────
 
     /**
-     * Encode a list of RxCUI strings to the JSON format used in [MedicationEntity.ingredientsJson]
-     * and [com.beryndil.pharos.data.drugref.entity.ProductEntity.ingredientsJson].
+     * Encode a list of RxCUI strings to the JSON format used in [MedicationEntity.ingredientsJson].
      * Example output: `["161","5640"]`
      */
     fun encodeIngredientsJson(rxcuis: List<String>): String =
         Json.encodeToString(rxcuis)
 
     /**
-     * Parse a JSON array of RxCUI strings.
-     * Returns an empty list on any parse error (malformed data is treated as no ingredients).
+     * Parse a JSON array of RxCUI strings from [MedicationEntity.ingredientsJson].
+     * Returns an empty list on any parse error (malformed data treated as no ingredients).
      */
     fun parseIngredientRxcuis(json: String): List<String> =
         try {
@@ -220,6 +222,7 @@ class MedicationRepository(
     /**
      * Map a RxNorm dosage form string to the closest [MedicationForm] enum value.
      * Falls through to [MedicationForm.OTHER] for unrecognised strings.
+     * Retained for potential future use (e.g., TTY-based form inference from drug names).
      */
     fun mapRxNormForm(rxNormForm: String): MedicationForm = when {
         rxNormForm.contains("tablet", ignoreCase = true) -> MedicationForm.TABLET
