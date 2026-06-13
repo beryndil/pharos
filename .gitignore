@@ -26,3 +26,6 @@ keystore.properties
 
 # Release APK build output
 dist/
+
+# Drug-DB build artifacts (binary — not committed; G2b copies to assets manually)
+tools/build/
