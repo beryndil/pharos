@@ -353,3 +353,19 @@ All A3 items are implemented. Device-only verification deferred below.
 - [ ] **Section C: Miss window field UX on device** — Open Add Medication. In the Details step, locate "Reminder grace period (minutes)" near the Critical reminder toggle. Confirm the numeric keyboard appears on focus, the default value is 60, and the helper text reads "How long after a dose is due before it is marked missed." Attempt to enter 4 → confirm error message. Enter 90 → confirm save succeeds.
 - [ ] **Section C: Custom miss window fires correctly** — Create a medication with missWindowMinutes=5. Fire a test dose alarm from the reliability dashboard (or wait for a real dose). After 5 minutes without action, confirm the dose transitions to MISSED in the dose history. Confirm a 60-min-window med on the same device does NOT miss at 5 min.
 - [ ] **Section C: Fallback path for absent medication row** — The `computeMissClose` fallback to `GRACE_MS` when `medicationDao.getById()` returns null is a defensive code path that cannot be triggered through normal app operation (medications are never physically deleted). No device test needed; the unit-test gap is documented here (DECISIONS.md G1-E).
+
+## v1.3.0 — Dave feature batch (planned 2026-06-12; defaults locked, override anytime)
+Full plan: ~/.claude/plans/pharos-v1.3-features.md. Recommended defaults in effect.
+- **F1 Saved prescribers & pharmacies**: local `prescribers(id,name,phone)` + `pharmacies(id,name,phone)`
+  tables; split MedicationEntity.pharmacy into name+phone, add prescriber phone; autocomplete in
+  Add/Edit; "Saved contacts" manage/edit/delete screen. Feeds refill call-pharmacy + F4.
+- **F2 Substitution link**: MedicationEntity.substituteForMedId (+ optional note); "Substitute for…"
+  picker in Add/Edit; SUPPRESS the duplicate-ingredient warning between two meds linked as
+  substitutes (you take one or the other); show "Substitute for: X" on both detail views (Law 3
+  reference framing only). DEFAULT = link + smart warning (no auto-pause of the original).
+- **F3 Enriched Today home**: promote Today to the home surface — "next up" timeline + quick-actions
+  row (email PDF to doctor, test reminder, reliability). Keep med list as its own route. NO second home.
+- **F4 Email meds-list PDF to doctor**: reuse the regimen PDF (currently in Backup); "Email to my
+  doctor" → ACTION_SEND application/pdf to the email app, prefilled to saved prescriber; one-line
+  "contains your health info" confirm before composing (Law 4, user-initiated export, NOT v2 caregiver).
+- Release: after F1–F4 + full gate → v1.3.0, tag, build signed APK HERE, upload to GitHub Release.
