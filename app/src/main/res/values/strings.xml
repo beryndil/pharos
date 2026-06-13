@@ -515,6 +515,12 @@
     <string name="action_backup">Backup &amp; restore</string>
     <string name="cd_open_backup">Backup and restore</string>
 
+    <!-- Auto-restore banner: shown on fresh install when a previous auto-backup exists -->
+    <string name="auto_restore_banner_title">Previous data found</string>
+    <string name="auto_restore_banner_body">An automatic backup from a previous install was found on this device. Restore it now to recover your medications, schedules, and history.</string>
+    <string name="auto_restore_banner_confirm">Restore now</string>
+    <string name="auto_restore_banner_skip">Skip</string>
+
     <!-- Encrypted backup section -->
     <string name="backup_section_encrypted">Encrypted backup</string>
     <string name="backup_encrypted_description">Creates an encrypted file protected by a passphrase you choose. Only you can open it. Save it to Downloads, Google Drive, or email it to yourself. The passphrase is never stored in the app — keep it somewhere safe.</string>

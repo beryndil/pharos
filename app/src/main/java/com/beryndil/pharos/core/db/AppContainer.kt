@@ -10,6 +10,7 @@ import com.beryndil.pharos.alarm.ReliabilityLog
 import com.beryndil.pharos.alarm.SettingsReliabilityLog
 import com.beryndil.pharos.core.crypto.PassphraseProvider
 import com.beryndil.pharos.core.crypto.TinkPassphraseProvider
+import com.beryndil.pharos.backup.AutoBackupManager
 import com.beryndil.pharos.backup.BackupRepository
 import com.beryndil.pharos.data.dose.DoseRepository
 import com.beryndil.pharos.data.drugref.DrugDbUpdater
@@ -253,6 +254,15 @@ class AppContainer(private val applicationContext: Context) {
                 DrugDbUpdateWorker.scheduleAfterRestore(applicationContext)
             },
         )
+    }
+
+    /**
+     * Manages automatic encrypted backups to Downloads/Pharos/pharos-auto-backup.pbk.
+     * Key derived from ANDROID_ID — survives uninstall+reinstall with the same signing key.
+     * Law 4: stays on device. Law 7: zero-user-action recovery after accidental uninstall.
+     */
+    val autoBackupManager: AutoBackupManager by lazy {
+        AutoBackupManager(context = applicationContext, repository = backupRepository)
     }
 
     /** Single-fire-and-reschedule coordinator: the brain of the alarm engine. */

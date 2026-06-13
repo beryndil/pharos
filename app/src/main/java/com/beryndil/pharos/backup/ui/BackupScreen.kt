@@ -14,14 +14,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.RestoreFromTrash
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -202,6 +207,13 @@ fun BackupScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
+                if (uiState.autoRestoreAvailable) {
+                    AutoRestoreBanner(
+                        onRestore = { onEvent(BackupEvent.RestoreFromAutoBackup) },
+                        onDismiss = { onEvent(BackupEvent.DismissAutoRestorePrompt) },
+                    )
+                }
+
                 EncryptedBackupSection(
                     onCreateBackup = { passphrase ->
                         pendingBackupPassphrase = passphrase
@@ -219,6 +231,66 @@ fun BackupScreen(
                 )
 
                 Spacer(Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+/**
+ * Banner shown when an auto-backup file is found in Downloads and the DB is empty.
+ * Lets the user restore with one tap — no passphrase needed (key derived from ANDROID_ID).
+ *
+ * §8: icon + text (not color-only); minimum 48dp tap targets via [FilledTonalButton].
+ */
+@Composable
+private fun AutoRestoreBanner(
+    onRestore: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.RestoreFromTrash,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringResource(R.string.auto_restore_banner_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+            Text(
+                text = stringResource(R.string.auto_restore_banner_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(
+                    onClick = onRestore,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.auto_restore_banner_confirm))
+                }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.auto_restore_banner_skip))
+                }
             }
         }
     }

@@ -3,6 +3,7 @@ package com.beryndil.pharos
 import android.app.Application
 import android.os.StrictMode
 import android.util.Log
+import com.beryndil.pharos.backup.AutoBackupWorker
 import com.beryndil.pharos.core.db.AppContainer
 import com.beryndil.pharos.data.drugref.DrugDbUpdateWorker
 import com.beryndil.pharos.refill.LowSupplyCheckWorker
@@ -30,6 +31,7 @@ class PharosApplication : Application() {
         rearmAlarmsOnStartup()
         scheduleLowSupplyCheck()
         scheduleDrugDbUpdate()
+        scheduleAutoBackup()
 
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
@@ -109,6 +111,20 @@ class PharosApplication : Application() {
         }.onFailure {
             if (BuildConfig.DEBUG) {
                 Log.w("PharosApplication", "drug-DB update schedule failed: ${it.javaClass.simpleName}")
+            }
+        }
+    }
+
+    /**
+     * Schedule the daily auto-backup job (Downloads/Pharos/pharos-auto-backup.pbk).
+     * WorkManager deduplicates via KEEP policy — safe to call every launch.
+     */
+    private fun scheduleAutoBackup() {
+        runCatching {
+            AutoBackupWorker.schedule(applicationContext)
+        }.onFailure {
+            if (BuildConfig.DEBUG) {
+                Log.w("PharosApplication", "auto-backup schedule failed: ${it.javaClass.simpleName}")
             }
         }
     }

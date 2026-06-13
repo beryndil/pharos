@@ -18,6 +18,11 @@ data class BackupUiState(
     val operation: BackupOperation = BackupOperation.Idle,
     /** SAF intent to fire (set while waiting for the launcher to return a URI). */
     val pendingAction: PendingAction? = null,
+    /**
+     * True when an auto-backup file is present in Downloads AND the regimen DB is empty
+     * (fresh install or post-uninstall). The UI shows a restore prompt when this is set.
+     */
+    val autoRestoreAvailable: Boolean = false,
 )
 
 sealed interface BackupOperation {
@@ -55,6 +60,12 @@ sealed interface BackupEvent {
 
     /** Clear any result/error toast so the screen returns to Idle. */
     data object DismissResult : BackupEvent
+
+    /** User confirmed the auto-restore prompt — restore from Downloads auto-backup. */
+    data object RestoreFromAutoBackup : BackupEvent
+
+    /** User dismissed the auto-restore prompt without restoring. */
+    data object DismissAutoRestorePrompt : BackupEvent
 }
 
 /**
@@ -63,13 +74,28 @@ sealed interface BackupEvent {
  * All crypto operations run on [kotlinx.coroutines.Dispatchers.IO] via [BackupRepository].
  * Passphrase [CharArray]s are not stored in the state; they are forwarded to [BackupRepository]
  * which zeros them after key derivation (Standards §6).
+ *
+ * On creation, checks whether an auto-backup file exists in Downloads AND the regimen DB is
+ * empty (e.g., fresh install after an uninstall). When both are true, [BackupUiState.autoRestoreAvailable]
+ * is set so the screen can prompt the user to restore with one tap.
  */
 class BackupViewModel(
     private val repository: BackupRepository,
+    private val autoBackupManager: AutoBackupManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BackupUiState())
     val uiState: StateFlow<BackupUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val isEmpty = repository.isRegimenEmpty()
+            val hasBackup = autoBackupManager.hasAutoBackupFile()
+            if (isEmpty && hasBackup) {
+                _uiState.update { it.copy(autoRestoreAvailable = true) }
+            }
+        }
+    }
 
     fun onEvent(event: BackupEvent) {
         when (event) {
@@ -78,6 +104,9 @@ class BackupViewModel(
             is BackupEvent.ExportPdf -> exportPdf(event.uri)
             is BackupEvent.ExportCsv -> exportCsv(event.uri)
             is BackupEvent.DismissResult -> _uiState.update { it.copy(operation = BackupOperation.Idle) }
+            is BackupEvent.RestoreFromAutoBackup -> restoreFromAutoBackup()
+            is BackupEvent.DismissAutoRestorePrompt ->
+                _uiState.update { it.copy(autoRestoreAvailable = false) }
         }
     }
 
@@ -141,11 +170,32 @@ class BackupViewModel(
         }
     }
 
+    private fun restoreFromAutoBackup() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(operation = BackupOperation.InProgress, autoRestoreAvailable = false) }
+            val result = autoBackupManager.restoreAutoBackup()
+            _uiState.update {
+                it.copy(
+                    operation = when (result) {
+                        is RestoreResult.Success -> BackupOperation.RestoreSuccess(result.medicationCount)
+                        is RestoreResult.Error -> BackupOperation.Error(result.message)
+                    },
+                )
+            }
+        }
+    }
+
     companion object {
-        fun factory(repository: BackupRepository): ViewModelProvider.Factory =
+        fun factory(
+            repository: BackupRepository,
+            autoBackupManager: AutoBackupManager,
+        ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-                    BackupViewModel(repository = repository)
+                    BackupViewModel(
+                        repository = repository,
+                        autoBackupManager = autoBackupManager,
+                    )
                 }
             }
     }

@@ -29,6 +29,7 @@ import com.beryndil.pharos.refill.RefillViewModel
 import com.beryndil.pharos.refill.ui.RefillDetailScreen
 import com.beryndil.pharos.reference.DrugReferenceViewModel
 import com.beryndil.pharos.reference.ui.DrugReferenceScreen
+import com.beryndil.pharos.backup.AutoBackupManager
 import com.beryndil.pharos.backup.BackupViewModel
 import com.beryndil.pharos.contacts.ContactsEvent
 import com.beryndil.pharos.contacts.SavedContactsScreen
@@ -66,6 +67,7 @@ fun PharosNavGraph(
     val refillRepository = app.appContainer.refillRepository
     val drugLabelRepository = app.appContainer.drugLabelRepository
     val backupRepository = app.appContainer.backupRepository
+    val autoBackupManager = app.appContainer.autoBackupManager
     val contactRepository = app.appContainer.contactRepository
 
     NavHost(
@@ -273,7 +275,10 @@ fun PharosNavGraph(
         // ── Backup / restore / export (Slice 9, spec §2.12) ─────────────
         composable(NavRoute.BackupRestore.route) {
             val viewModel: BackupViewModel = viewModel(
-                factory = BackupViewModel.factory(repository = backupRepository),
+                factory = BackupViewModel.factory(
+                    repository = backupRepository,
+                    autoBackupManager = autoBackupManager,
+                ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             BackupScreen(
