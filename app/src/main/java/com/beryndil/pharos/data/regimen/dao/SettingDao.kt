@@ -23,4 +23,8 @@ interface SettingDao {
     /** Returns every settings row — backup export only. */
     @Query("SELECT * FROM settings ORDER BY key ASC")
     suspend fun getAll(): List<SettingEntity>
+
+    /** Reactive read of a single key; emits null when the key does not exist. */
+    @Query("SELECT * FROM settings WHERE key = :key")
+    fun observeByKey(key: String): Flow<SettingEntity?>
 }

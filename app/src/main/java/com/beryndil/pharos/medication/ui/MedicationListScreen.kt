@@ -69,6 +69,8 @@ fun MedicationListScreen(
     onOpenBackup: () -> Unit,
     /** Navigate to the Legal screen (spec §4.2 — Terms, Privacy, Medical Disclaimer). */
     onOpenLegal: () -> Unit = {},
+    /** Navigate to the Settings screen (A5-S1 — theme, text size, about/legal). */
+    onOpenSettings: () -> Unit = {},
     onEvent: (MedicationListEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -93,6 +95,13 @@ fun MedicationListScreen(
                             expanded = globalMenuExpanded,
                             onDismissRequest = { globalMenuExpanded = false },
                         ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.screen_settings)) },
+                                onClick = {
+                                    globalMenuExpanded = false
+                                    onOpenSettings()
+                                },
+                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_saved_contacts)) },
                                 onClick = {

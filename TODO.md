@@ -379,3 +379,12 @@ Full plan: ~/.claude/plans/pharos-v1.3-features.md. Recommended defaults in effe
 | F1-C3 | Migrate `MedicationBackup` to include `isCritical` and `missWindowMinutes` fields (pre-existing gap — A1 and G1 added these to the entity but not the backup DTO). Restore currently resets both to defaults (false/60). | Pre-existing gap; V1.3-F1 scope is contacts. Low safety risk (non-critical and 60-min window are safe defaults). |
 | F1-C4 | Add `prescriberPhone`/`pharmacyPhone` to the regimen PDF (backup PDF exported in Slice 9). | F4 scope (email meds-list to doctor) — deferred to V1.3-F4 executor. |
 
+
+## §C — A5-S1 device-only verification (all code ships now; lived verification is device-gated)
+
+| ID | Task | Blocked on |
+|----|------|-----------|
+| A5S1-C1 | TalkBack end-to-end pass on Settings, About, and License screens: verify every row is announced with correct role ("Radio button"), selected state, and action label. Verify back button announces "Go back". | Physical device with TalkBack enabled. |
+| A5S1-C2 | System 2× font scale + in-app Largest (1.5×): verify no truncation of theme labels, text-size labels, About content, or license text. All primary actions (back button, nav rows) must remain fully visible. | Physical device, Accessibility settings > Font size > Largest + in-app Largest. |
+| A5S1-C3 | Theme switching live test: navigate to Settings, switch SYSTEM→DARK→LIGHT — verify the app recomposes without restart within ~1 frame after the row tap. | Physical device. |
+| A5S1-C4 | Dark mode full pass on Settings/About/License: verify text contrast, icon tints, and dividers are readable. | Physical device + dark mode toggle. |

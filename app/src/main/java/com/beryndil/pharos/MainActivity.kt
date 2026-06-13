@@ -10,7 +10,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import com.beryndil.pharos.settings.TextScale
+import com.beryndil.pharos.settings.ThemeMode
 import com.beryndil.pharos.ui.navigation.NavRoute
 import com.beryndil.pharos.ui.navigation.PharosNavGraph
 import com.beryndil.pharos.ui.navigation.resolveStartDestination
@@ -28,26 +31,42 @@ class MainActivity : ComponentActivity() {
         // ClearWindowSecurity(). The global flag is no longer set here — see DECISIONS.md A3-5.
 
         setContent {
-            PharosTheme {
-                val app = application as PharosApplication
+            val app = application as PharosApplication
 
-                // Resolve start destination asynchronously (DB read) to avoid StrictMode main-
-                // thread I/O. produceState suspends on a coroutine launched in the composition
-                // scope; the surface renders nothing until the value is available (one DB query
-                // round-trip — typically sub-millisecond on a warm database).
-                val startDestination by produceState<String?>(initialValue = null) {
-                    value = withContext(Dispatchers.IO) {
-                        resolveStartDestination(
-                            isOnboardingComplete = {
-                                app.appContainer.onboardingRepository.isComplete()
-                            },
-                            countNonEndedMedications = {
-                                app.appContainer.regimenDatabase.medicationDao().countNonEnded()
-                            },
-                        )
-                    }
+            // Resolve start destination asynchronously (DB read) to avoid StrictMode main-
+            // thread I/O. produceState suspends on a coroutine launched in the composition
+            // scope; the surface renders nothing until the value is available (one DB query
+            // round-trip — typically sub-millisecond on a warm database).
+            val startDestination by produceState<String?>(initialValue = null) {
+                value = withContext(Dispatchers.IO) {
+                    resolveStartDestination(
+                        isOnboardingComplete = {
+                            app.appContainer.onboardingRepository.isComplete()
+                        },
+                        countNonEndedMedications = {
+                            app.appContainer.regimenDatabase.medicationDao().countNonEnded()
+                        },
+                    )
                 }
+            }
 
+            // Appearance preferences collected as live state so a settings change recomposes
+            // PharosTheme immediately — no restart required (Law 10: accessibility settings apply
+            // without delay). Initial values are the safe defaults (SYSTEM / DEFAULT) rendered
+            // while the DB round-trip is in-flight; the DB read is fast enough that the flash is
+            // imperceptible on any warm database.
+            val themeMode by app.appContainer.appearanceRepository
+                .observeThemeMode()
+                .collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
+
+            val textScale by app.appContainer.appearanceRepository
+                .observeTextScale()
+                .collectAsStateWithLifecycle(initialValue = TextScale.DEFAULT)
+
+            PharosTheme(
+                themeMode = themeMode,
+                textScale = textScale.factor,
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,

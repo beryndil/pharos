@@ -37,6 +37,10 @@ import com.beryndil.pharos.backup.ui.BackupScreen
 import com.beryndil.pharos.legal.ui.LegalScreen
 import com.beryndil.pharos.reliability.ReliabilityDashboardViewModel
 import com.beryndil.pharos.reliability.ui.ReliabilityDashboardScreen
+import com.beryndil.pharos.settings.SettingsViewModel
+import com.beryndil.pharos.settings.ui.AboutScreen
+import com.beryndil.pharos.settings.ui.LicenseScreen
+import com.beryndil.pharos.settings.ui.SettingsScreen
 
 /**
  * The Pharos nav graph.
@@ -110,6 +114,7 @@ fun PharosNavGraph(
                 onOpenReliability = {
                     navController.navigate(NavRoute.ReliabilityDashboard.route)
                 },
+                onOpenSettings = { navController.navigate(NavRoute.Settings.route) },
             )
         }
 
@@ -165,6 +170,7 @@ fun PharosNavGraph(
                     navController.navigate(NavRoute.BackupRestore.route)
                 },
                 onOpenLegal = { navController.navigate(NavRoute.Legal.route) },
+                onOpenSettings = { navController.navigate(NavRoute.Settings.route) },
                 onEvent = viewModel::onEvent,
             )
         }
@@ -291,6 +297,37 @@ fun PharosNavGraph(
             LegalScreen(onBack = { navController.popBackStack() })
         }
 
+        // ── Settings (A5-S1 — theme, text size, about, legal) ───────────
+        composable(NavRoute.Settings.route) {
+            val viewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModel.factory(
+                    appearanceRepository = app.appContainer.appearanceRepository,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            SettingsScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onOpenAbout = { navController.navigate(NavRoute.About.route) },
+                onOpenLegal = { navController.navigate(NavRoute.Legal.route) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── About (A5-S1 — identity, version, data attributions) ─────────
+        composable(NavRoute.About.route) {
+            AboutScreen(
+                onOpenLicense = { navController.navigate(NavRoute.License.route) },
+                onOpenLegal = { navController.navigate(NavRoute.Legal.route) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── License and credits (A5-S1 — hand-written OSS + data credits) ─
+        composable(NavRoute.License.route) {
+            LicenseScreen(onBack = { navController.popBackStack() })
+        }
+
         // ── Reliability dashboard (Law 6 — reliability is visible) ────────
         composable(NavRoute.ReliabilityDashboard.route) {
             val viewModel: ReliabilityDashboardViewModel = viewModel(
@@ -355,4 +392,10 @@ sealed class NavRoute(val route: String) {
     data object Legal : NavRoute("legal")
 
     data object SavedContacts : NavRoute("settings/saved-contacts")
+
+    data object Settings : NavRoute("settings")
+
+    data object About : NavRoute("settings/about")
+
+    data object License : NavRoute("settings/license")
 }

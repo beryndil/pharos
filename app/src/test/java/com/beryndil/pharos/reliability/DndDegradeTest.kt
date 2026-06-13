@@ -148,6 +148,7 @@ private class FakeSettingDao2 : SettingDao {
     override suspend fun get(key: String): SettingEntity? = null
     override fun observeAll(): Flow<List<SettingEntity>> = _all.asStateFlow()
     override suspend fun getAll(): List<SettingEntity> = emptyList()
+    override fun observeByKey(key: String): Flow<SettingEntity?> = MutableStateFlow(null)
 }
 
 private class FakeMedicationDao(private val meds: List<MedicationEntity>) : MedicationDao {

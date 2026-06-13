@@ -401,6 +401,9 @@ private class FakeSettingDao : SettingDao {
     override fun observeAll(): Flow<List<SettingEntity>> = _all.asStateFlow()
 
     override suspend fun getAll(): List<SettingEntity> = _all.value
+
+    override fun observeByKey(key: String): Flow<SettingEntity?> =
+        MutableStateFlow(_all.value.find { it.key == key })
 }
 
 /** Empty [MedicationDao] stub for existing tests that don't test critical-med logic. */

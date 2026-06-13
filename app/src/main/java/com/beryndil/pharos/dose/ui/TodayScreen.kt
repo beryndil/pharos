@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,6 +63,7 @@ fun TodayScreen(
     onOpenMedications: () -> Unit,
     onOpenHistory: (String) -> Unit,
     onOpenReliability: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     com.beryndil.pharos.core.ui.SecureWindow()
@@ -83,6 +85,12 @@ fun TodayScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ListAlt,
                             contentDescription = stringResource(R.string.cd_open_medications),
+                        )
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = stringResource(R.string.cd_open_settings),
                         )
                     }
                 },

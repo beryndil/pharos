@@ -80,4 +80,7 @@ private class InMemorySettingDao : SettingDao {
         MutableStateFlow(store.values.toList())
 
     override suspend fun getAll(): List<SettingEntity> = store.values.toList()
+
+    override fun observeByKey(key: String): Flow<SettingEntity?> =
+        MutableStateFlow(store[key])
 }

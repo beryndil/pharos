@@ -28,6 +28,7 @@ import com.beryndil.pharos.dose.AndroidDoseTransitionScheduler
 import com.beryndil.pharos.dose.DoseStateMachine
 import com.beryndil.pharos.dose.DoseTransitionScheduler
 import com.beryndil.pharos.onboarding.OnboardingRepository
+import com.beryndil.pharos.settings.AppearanceRepository
 import com.beryndil.pharos.refill.AndroidRefillNotifier
 import com.beryndil.pharos.refill.LowSupplyCheckWorker
 import com.beryndil.pharos.refill.RefillNotifier
@@ -154,6 +155,14 @@ class AppContainer(private val applicationContext: Context) {
      */
     val onboardingRepository: OnboardingRepository by lazy {
         OnboardingRepository(regimenDatabase.settingDao())
+    }
+
+    /**
+     * Persists and exposes the user's appearance preferences (theme mode and in-app text scale).
+     * [com.beryndil.pharos.MainActivity] collects these as state to recompose [PharosTheme] live.
+     */
+    val appearanceRepository: AppearanceRepository by lazy {
+        AppearanceRepository(regimenDatabase.settingDao())
     }
 
     // ── Refill tracking (Slice 7, spec §2.9) ─────────────────────────────────
