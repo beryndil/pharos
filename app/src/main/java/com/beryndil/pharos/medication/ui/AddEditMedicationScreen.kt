@@ -473,6 +473,9 @@ private fun DetailsStep(
                 label = stringResource(R.string.label_prescriber),
                 suggestions = uiState.prescriberSuggestions,
                 onSuggestionPicked = { onEvent(AddEditMedEvent.PrescriberSuggestionPicked(it)) },
+                practiceValue = uiState.prescriberPractice,
+                onPracticeChange = { onEvent(AddEditMedEvent.PrescriberPracticeChanged(it)) },
+                practiceLabel = stringResource(R.string.label_prescriber_practice),
                 phoneValue = uiState.prescriberPhone,
                 onPhoneChange = { onEvent(AddEditMedEvent.PrescriberPhoneChanged(it)) },
                 phoneLabel = stringResource(R.string.label_prescriber_phone),
@@ -941,6 +944,9 @@ private fun ContactAutocompleteField(
     phoneValue: String,
     onPhoneChange: (String) -> Unit,
     phoneLabel: String,
+    practiceValue: String = "",
+    onPracticeChange: (String) -> Unit = {},
+    practiceLabel: String = "",
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -977,6 +983,13 @@ private fun ContactAutocompleteField(
                         text = {
                             Column {
                                 Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
+                                if (!suggestion.practice.isNullOrBlank()) {
+                                    Text(
+                                        suggestion.practice,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                                 if (!suggestion.phone.isNullOrBlank()) {
                                     Text(
                                         suggestion.phone,
@@ -991,6 +1004,17 @@ private fun ContactAutocompleteField(
                     )
                 }
             }
+        }
+        if (practiceLabel.isNotEmpty()) {
+            OutlinedTextField(
+                value = practiceValue,
+                onValueChange = onPracticeChange,
+                label = { Text(practiceLabel) },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = practiceLabel },
+            )
         }
         OutlinedTextField(
             value = phoneValue,

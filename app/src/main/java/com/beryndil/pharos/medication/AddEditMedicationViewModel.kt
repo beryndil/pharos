@@ -86,6 +86,7 @@ data class AddEditMedicationUiState(
     val endDate: LocalDate? = null,
     val prescriber: String = "",
     val prescriberPhone: String = "",
+    val prescriberPractice: String = "",
     val pharmacy: String = "",
     val pharmacyPhone: String = "",
     val purpose: String = "",
@@ -168,7 +169,8 @@ sealed interface AddEditMedEvent {
     data class EndDateSelected(val date: LocalDate?) : AddEditMedEvent
     data class PrescriberChanged(val value: String) : AddEditMedEvent
     data class PrescriberPhoneChanged(val value: String) : AddEditMedEvent
-    /** User picked an autocomplete suggestion — fills both name and phone. */
+    data class PrescriberPracticeChanged(val value: String) : AddEditMedEvent
+    /** User picked an autocomplete suggestion — fills name, phone, and practice. */
     data class PrescriberSuggestionPicked(val prescriber: PrescriberEntity) : AddEditMedEvent
     data class PharmacyChanged(val value: String) : AddEditMedEvent
     data class PharmacyPhoneChanged(val value: String) : AddEditMedEvent
@@ -261,9 +263,17 @@ class AddEditMedicationViewModel(
             is AddEditMedEvent.StrengthChanged ->
                 _uiState.update { it.copy(strength = event.value, strengthError = false) }
             is AddEditMedEvent.FormSelected ->
-                _uiState.update { it.copy(selectedForm = event.form, formError = false) }
+                _uiState.update { state ->
+                    state.copy(
+                        selectedForm = event.form,
+                        formError = false,
+                        doseAmount = autoFormatDoseAmount(state.doseAmount, event.form),
+                    )
+                }
             is AddEditMedEvent.DoseAmountChanged ->
-                _uiState.update { it.copy(doseAmount = event.value) }
+                _uiState.update { state ->
+                    state.copy(doseAmount = autoFormatDoseAmount(event.value, state.selectedForm))
+                }
             is AddEditMedEvent.StartDateSelected ->
                 _uiState.update { it.copy(startDate = event.date, startDateError = false) }
             is AddEditMedEvent.EndDateSelected ->
@@ -277,11 +287,14 @@ class AddEditMedicationViewModel(
                 }
             is AddEditMedEvent.PrescriberPhoneChanged ->
                 _uiState.update { it.copy(prescriberPhone = event.value) }
+            is AddEditMedEvent.PrescriberPracticeChanged ->
+                _uiState.update { it.copy(prescriberPractice = event.value) }
             is AddEditMedEvent.PrescriberSuggestionPicked ->
                 _uiState.update {
                     it.copy(
                         prescriber = event.prescriber.name,
                         prescriberPhone = event.prescriber.phone ?: it.prescriberPhone,
+                        prescriberPractice = event.prescriber.practice ?: it.prescriberPractice,
                     )
                 }
             is AddEditMedEvent.PharmacyChanged ->
@@ -393,6 +406,7 @@ class AddEditMedicationViewModel(
                     },
                     prescriber = med.prescriber ?: "",
                     prescriberPhone = med.prescriberPhone ?: "",
+                    prescriberPractice = med.prescriberPractice ?: "",
                     pharmacy = med.pharmacy ?: "",
                     pharmacyPhone = med.pharmacyPhone ?: "",
                     purpose = med.purpose ?: "",
@@ -622,6 +636,7 @@ class AddEditMedicationViewModel(
             doseAmount = state.doseAmount.trim(),
             prescriber = state.prescriber.trim().ifEmpty { null },
             prescriberPhone = state.prescriberPhone.trim().ifEmpty { null },
+            prescriberPractice = state.prescriberPractice.trim().ifEmpty { null },
             pharmacy = state.pharmacy.trim().ifEmpty { null },
             pharmacyPhone = state.pharmacyPhone.trim().ifEmpty { null },
             substituteForMedId = state.substituteForMedId,
@@ -663,7 +678,7 @@ class AddEditMedicationViewModel(
                 if (contactRepository != null && (savedPrescriber != null || savedPharmacy != null)) {
                     viewModelScope.launch(ioDispatcher) {
                         if (savedPrescriber != null) {
-                            contactRepository.rememberPrescriber(savedPrescriber, entity.prescriberPhone)
+                            contactRepository.rememberPrescriber(savedPrescriber, entity.prescriberPhone, entity.prescriberPractice)
                         }
                         if (savedPharmacy != null) {
                             contactRepository.rememberPharmacy(savedPharmacy, entity.pharmacyPhone)
@@ -700,6 +715,25 @@ class AddEditMedicationViewModel(
     }
 
     companion object {
+        /**
+         * If [form] is TABLET, CAPSULE, or PATCH and [input] is a bare number, appends the
+         * appropriate singular or plural unit. Otherwise returns [input] unchanged.
+         */
+        fun autoFormatDoseAmount(input: String, form: MedicationForm?): String {
+            if (form !in setOf(MedicationForm.TABLET, MedicationForm.CAPSULE, MedicationForm.PATCH)) {
+                return input
+            }
+            if (!input.matches(Regex("""^\d*\.?\d+$"""))) return input
+            val number = input.toDoubleOrNull() ?: return input
+            val unit = when (form) {
+                MedicationForm.TABLET -> if (number == 1.0) "tablet" else "tablets"
+                MedicationForm.CAPSULE -> if (number == 1.0) "capsule" else "capsules"
+                MedicationForm.PATCH -> if (number == 1.0) "patch" else "patches"
+                else -> return input
+            }
+            return "$input $unit"
+        }
+
         fun factory(
             repository: MedicationRepository,
             scheduleRepository: ScheduleRepository,

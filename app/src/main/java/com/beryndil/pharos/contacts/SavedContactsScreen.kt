@@ -95,6 +95,7 @@ fun SavedContactsScreen(
                     ContactRow(
                         name = prescriber.name,
                         phone = prescriber.phone,
+                        practice = prescriber.practice,
                         onEdit = { onEvent(ContactsEvent.EditPrescriberRequested(prescriber)) },
                         onDelete = { onEvent(ContactsEvent.DeleteRequested(prescriber.id, isPharmacy = false)) },
                     )
@@ -134,9 +135,11 @@ fun SavedContactsScreen(
             title = stringResource(R.string.saved_contacts_add_prescriber),
             name = dialog.currentName,
             phone = dialog.currentPhone,
+            practice = dialog.currentPractice,
             confirmLabel = stringResource(R.string.btn_add),
             onNameChange = { onEvent(ContactsEvent.EditNameChanged(it)) },
             onPhoneChange = { onEvent(ContactsEvent.EditPhoneChanged(it)) },
+            onPracticeChange = { onEvent(ContactsEvent.EditPracticeChanged(it)) },
             onConfirm = { onEvent(ContactsEvent.SaveConfirmed) },
             onDismiss = { onEvent(ContactsEvent.DialogDismissed) },
         )
@@ -154,9 +157,11 @@ fun SavedContactsScreen(
             title = stringResource(R.string.saved_contacts_edit_prescriber),
             name = dialog.currentName,
             phone = dialog.currentPhone,
+            practice = dialog.currentPractice,
             confirmLabel = stringResource(R.string.btn_save),
             onNameChange = { onEvent(ContactsEvent.EditNameChanged(it)) },
             onPhoneChange = { onEvent(ContactsEvent.EditPhoneChanged(it)) },
+            onPracticeChange = { onEvent(ContactsEvent.EditPracticeChanged(it)) },
             onConfirm = { onEvent(ContactsEvent.SaveConfirmed) },
             onDismiss = { onEvent(ContactsEvent.DialogDismissed) },
         )
@@ -223,13 +228,15 @@ private fun EmptyContactsHint(text: String) {
 private fun ContactRow(
     name: String,
     phone: String?,
+    practice: String? = null,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val supportingParts = listOfNotNull(practice?.takeIf { it.isNotBlank() }, phone?.takeIf { it.isNotBlank() })
     ListItem(
         headlineContent = { Text(name) },
-        supportingContent = if (!phone.isNullOrBlank()) {
-            { Text(phone, style = MaterialTheme.typography.bodySmall) }
+        supportingContent = if (supportingParts.isNotEmpty()) {
+            { Text(supportingParts.joinToString(" · "), style = MaterialTheme.typography.bodySmall) }
         } else {
             null
         },
@@ -264,6 +271,8 @@ private fun ContactDialog(
     onPhoneChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    practice: String? = null,
+    onPracticeChange: ((String) -> Unit)? = null,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -277,6 +286,15 @@ private fun ContactDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (practice != null && onPracticeChange != null) {
+                    OutlinedTextField(
+                        value = practice,
+                        onValueChange = onPracticeChange,
+                        label = { Text(stringResource(R.string.saved_contacts_field_practice)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 OutlinedTextField(
                     value = phone,
                     onValueChange = onPhoneChange,

@@ -49,6 +49,12 @@ data class MedicationEntity(
     val prescriberPhone: String? = null,
 
     /**
+     * Optional prescriber practice or clinic name (V1.3-F1 extension). Stored alongside
+     * [prescriber] and [prescriberPhone] for display in the details screen and Saved Contacts.
+     */
+    val prescriberPractice: String? = null,
+
+    /**
      * Pharmacy name. The original field held "name or phone hint"; going forward this stores the
      * pharmacy NAME only — the dedicated [pharmacyPhone] column carries the phone number. Existing
      * data is back-compat (migration v4\u2192v5 adds the phone columns with DEFAULT NULL).

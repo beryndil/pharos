@@ -35,7 +35,7 @@ class ContactRepository(
      * (case-insensitive), updates its phone if [phone] is non-null and non-blank. If no entry
      * exists, inserts a new one. No-ops on blank name.
      */
-    suspend fun rememberPrescriber(name: String, phone: String?) {
+    suspend fun rememberPrescriber(name: String, phone: String?, practice: String? = null) {
         val trimmed = name.trim()
         if (trimmed.isBlank()) return
         val existing = prescriberDao.getByName(trimmed)
@@ -45,11 +45,16 @@ class ContactRepository(
                     id = UUID.randomUUID().toString(),
                     name = trimmed,
                     phone = phone?.trim()?.ifEmpty { null },
+                    practice = practice?.trim()?.ifEmpty { null },
                     createdAtEpochMs = System.currentTimeMillis(),
                 ),
             )
-        } else if (phone != null && phone.trim().isNotEmpty() && existing.phone != phone.trim()) {
-            prescriberDao.update(existing.copy(phone = phone.trim()))
+        } else {
+            val newPhone = if (phone != null && phone.trim().isNotEmpty()) phone.trim() else existing.phone
+            val newPractice = if (!practice.isNullOrBlank()) practice.trim() else existing.practice
+            if (newPhone != existing.phone || newPractice != existing.practice) {
+                prescriberDao.update(existing.copy(phone = newPhone, practice = newPractice))
+            }
         }
     }
 

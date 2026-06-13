@@ -683,6 +683,8 @@
     <string name="saved_contacts_delete_body">This removes the saved contact. Medications that listed this contact keep their stored information.</string>
     <string name="saved_contacts_field_name">Name</string>
     <string name="saved_contacts_field_phone">Phone (optional)</string>
+    <string name="saved_contacts_field_practice">Practice / Clinic</string>
+    <string name="label_prescriber_practice">Practice / Clinic (optional)</string>
     <string name="refill_pharmacy_dial_cd">Call pharmacy: %1$s</string>
 
     <!-- ── Settings screen (A5-S1) ─────────────────────────────────────── -->

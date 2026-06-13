@@ -29,6 +29,7 @@ sealed interface ContactEditDialog {
     data class AddPrescriber(
         val currentName: String = "",
         val currentPhone: String = "",
+        val currentPractice: String = "",
     ) : ContactEditDialog
 
     /** Adding a new pharmacy. */
@@ -42,6 +43,7 @@ sealed interface ContactEditDialog {
         val prescriber: PrescriberEntity,
         val currentName: String,
         val currentPhone: String,
+        val currentPractice: String,
     ) : ContactEditDialog
 
     /** Editing an existing pharmacy. */
@@ -69,6 +71,7 @@ sealed interface ContactsEvent {
     data class EditPharmacyRequested(val pharmacy: PharmacyEntity) : ContactsEvent
     data class EditNameChanged(val value: String) : ContactsEvent
     data class EditPhoneChanged(val value: String) : ContactsEvent
+    data class EditPracticeChanged(val value: String) : ContactsEvent
     /** Confirms both add-new and save-edit dialogs. */
     data object SaveConfirmed : ContactsEvent
     data class DeleteRequested(val id: String, val isPharmacy: Boolean) : ContactsEvent
@@ -114,6 +117,7 @@ class SavedContactsViewModel(
                             prescriber = event.prescriber,
                             currentName = event.prescriber.name,
                             currentPhone = event.prescriber.phone ?: "",
+                            currentPractice = event.prescriber.practice ?: "",
                         ),
                     )
                 }
@@ -151,6 +155,16 @@ class SavedContactsViewModel(
                         },
                     )
                 }
+            is ContactsEvent.EditPracticeChanged ->
+                _uiState.update { state ->
+                    state.copy(
+                        dialog = when (val d = state.dialog) {
+                            is ContactEditDialog.AddPrescriber  -> d.copy(currentPractice = event.value)
+                            is ContactEditDialog.EditPrescriber -> d.copy(currentPractice = event.value)
+                            else -> d
+                        },
+                    )
+                }
             is ContactsEvent.SaveConfirmed -> onSaveConfirmed()
             is ContactsEvent.DeleteRequested ->
                 _uiState.update {
@@ -170,7 +184,11 @@ class SavedContactsViewModel(
                     is ContactEditDialog.AddPrescriber -> {
                         val name = dialog.currentName.trim()
                         if (name.isNotEmpty()) {
-                            repository.rememberPrescriber(name, dialog.currentPhone.trim().ifEmpty { null })
+                            repository.rememberPrescriber(
+                                name,
+                                dialog.currentPhone.trim().ifEmpty { null },
+                                dialog.currentPractice.trim().ifEmpty { null },
+                            )
                         }
                     }
                     is ContactEditDialog.AddPharmacy -> {
@@ -182,8 +200,9 @@ class SavedContactsViewModel(
                     is ContactEditDialog.EditPrescriber ->
                         repository.updatePrescriber(
                             dialog.prescriber.copy(
-                                name  = dialog.currentName.trim().ifEmpty { dialog.prescriber.name },
-                                phone = dialog.currentPhone.trim().ifEmpty { null },
+                                name     = dialog.currentName.trim().ifEmpty { dialog.prescriber.name },
+                                phone    = dialog.currentPhone.trim().ifEmpty { null },
+                                practice = dialog.currentPractice.trim().ifEmpty { null },
                             ),
                         )
                     is ContactEditDialog.EditPharmacy ->

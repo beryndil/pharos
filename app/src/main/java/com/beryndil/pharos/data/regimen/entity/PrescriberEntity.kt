@@ -22,5 +22,8 @@ data class PrescriberEntity(
     /** Optional phone number string. */
     val phone: String?,
 
+    /** Optional practice, clinic, or organization name. */
+    val practice: String? = null,
+
     val createdAtEpochMs: Long,
 )
