@@ -1,21 +1,18 @@
 # Pharos CI — build, lint, unit tests.
 #
-# Policy: GitHub Actions runs only at SemVer ≥ 1.0.0 (Beryndil CI Discipline).
-# Pre-1.0 tags are explicitly excluded via the condition below.
-# Introduced at the 1.0.0 version bump (Slice 11).
+# Trigger: manual only (workflow_dispatch). Run from the GitHub Actions tab or:
+#   gh workflow run build.yml
+#
+# Intentionally NOT on push/pull_request — CI minutes are reserved for
+# deliberate verification runs, not every commit (Beryndil CI Discipline).
 
 name: Build
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
-    # Skip on pre-1.0 tags (belt-and-suspenders; main branch pushes are not tagged pushes).
-    if: "!startsWith(github.ref, 'refs/tags/v0.')"
     runs-on: ubuntu-latest
 
     steps:
