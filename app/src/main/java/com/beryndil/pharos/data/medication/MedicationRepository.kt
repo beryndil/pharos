@@ -162,6 +162,10 @@ class MedicationRepository(
     fun observeActiveMedications(): Flow<List<MedicationEntity>> =
         medicationDao.observeActive()
 
+    /** Observe ALL medications regardless of status, ordered by name. Emits on every change. */
+    fun observeAllMedications(): Flow<List<MedicationEntity>> =
+        medicationDao.observeAll()
+
     /** Insert a new medication. */
     suspend fun saveMedication(entity: MedicationEntity) {
         medicationDao.insert(entity)

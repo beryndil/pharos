@@ -443,20 +443,37 @@ class AddEditMedicationViewModel(
         else all.filter { it.name.contains(query, ignoreCase = true) && !it.name.equals(query, ignoreCase = true) }
 
     /**
-     * Keeps [AddEditMedicationUiState.substituteMedOptions] in sync with the live list of
-     * active medications (V1.3-F2). The med being edited is excluded from its own picker so
-     * a medication cannot be declared a substitute for itself.
+     * Keeps [AddEditMedicationUiState.substituteMedOptions] in sync with ALL medications
+     * (V1.3-F2). Includes ENDED and PAUSED meds so the user can link a new medication to
+     * one they have already stopped taking. The med being edited is excluded from its own
+     * picker. Options are sorted: active first, then paused, then ended; alpha within each tier.
      */
     private fun startSubstituteOptionsCollection() {
         viewModelScope.launch {
-            repository.observeActiveMedications().collect { meds ->
+            repository.observeAllMedications().collect { meds ->
                 _allActiveMeds.value = meds
                 val editId = _uiState.value.editMedId
+                val options = meds
+                    .filter { it.id != editId }
+                    .sortedWith(
+                        compareBy(
+                            { statusSortKey(it.status) },
+                            { it.name },
+                        ),
+                    )
                 _uiState.update { state ->
-                    state.copy(substituteMedOptions = meds.filter { it.id != editId })
+                    state.copy(substituteMedOptions = options)
                 }
             }
         }
+    }
+
+    private fun statusSortKey(status: String): Int = when (
+        runCatching { MedicationStatus.valueOf(status) }.getOrDefault(MedicationStatus.ACTIVE)
+    ) {
+        MedicationStatus.ACTIVE -> 0
+        MedicationStatus.PAUSED -> 1
+        MedicationStatus.ENDED  -> 2
     }
 
     /**

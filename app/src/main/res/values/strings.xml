@@ -312,7 +312,9 @@
     <string name="label_substitute_for">Substitute for (optional)</string>
     <string name="label_substitute_for_none">None</string>
     <string name="label_substitute_note">Note (optional)</string>
-    <string name="substitute_for_helper">Link this to a medication it replaces — for your reference only.</string>
+    <string name="substitute_for_helper">Link this to the medication it replaces, including ones you no longer take.</string>
+    <string name="med_status_paused">Paused</string>
+    <string name="med_status_ended">Ended</string>
     <string name="med_substitute_for">Substitute for: %1$s</string>
     <string name="med_has_substitute">Has substitute: %1$s</string>
     <string name="cd_substitute_picker">Substitute for picker. Currently: %1$s. Tap to change.</string>
@@ -571,6 +573,10 @@
     <!-- ── F3: Enriched Today — next-up summary + quick actions ────────────── -->
     <!-- Section header for the upcoming-doses summary at the top of Today. -->
     <string name="today_section_next_up">Next up</string>
+    <!-- Section header for doses that need action right now (DUE or SNOOZED). -->
+    <string name="today_section_needs_attention">Needs attention</string>
+    <!-- Section header for doses already acted on today (TAKEN, SKIPPED, or MISSED). -->
+    <string name="today_section_completed_today">Completed today</string>
     <!-- Section header for the quick-actions row. -->
     <string name="today_quick_actions_label">Quick actions</string>
     <!-- Button: open the email-to-doctor flow (F4). In-app UI; Law 1 — never a notification. -->

@@ -175,24 +175,73 @@ fun TodayScreen(
                     )
                 }
 
-                if (hasDoses) {
+                // Split doses by category. SCHEDULED doses are already shown in Next Up;
+                // repeating them here as non-actionable cards caused confusing duplication.
+                val actionableDoses = uiState.doses.filter {
+                    it.state == DoseState.DUE || it.state == DoseState.SNOOZED
+                }
+                val completedDoses = uiState.doses.filter {
+                    it.state == DoseState.TAKEN ||
+                    it.state == DoseState.SKIPPED ||
+                    it.state == DoseState.MISSED
+                }
+                val hasActionable = actionableDoses.isNotEmpty()
+                val hasCompleted  = completedDoses.isNotEmpty()
+
+                if (hasActionable || hasCompleted) {
                     item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
                 }
 
-                // ── Scheduled / DUE / SNOOZED dose rows ──────────────────────
-                items(uiState.doses, key = { it.doseId }) { dose ->
-                    DoseCard(
-                        dose = dose,
-                        onTake    = { onEvent(TodayEvent.Take(dose.doseId)) },
-                        onSnooze  = { onEvent(TodayEvent.Snooze(dose.doseId)) },
-                        onSkip    = { onEvent(TodayEvent.Skip(dose.doseId)) },
-                        onHistory = { onOpenHistory(dose.medicationId) },
-                    )
+                // ── Doses needing attention (DUE / SNOOZED) ──────────────────
+                if (hasActionable) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.today_section_needs_attention),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(actionableDoses, key = { it.doseId }) { dose ->
+                        DoseCard(
+                            dose = dose,
+                            onTake    = { onEvent(TodayEvent.Take(dose.doseId)) },
+                            onSnooze  = { onEvent(TodayEvent.Snooze(dose.doseId)) },
+                            onSkip    = { onEvent(TodayEvent.Skip(dose.doseId)) },
+                            onHistory = { onOpenHistory(dose.medicationId) },
+                        )
+                    }
+                }
+
+                // ── Doses completed today (TAKEN / SKIPPED / MISSED) ─────────
+                if (hasCompleted) {
+                    if (hasActionable) {
+                        item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+                    }
+                    item {
+                        Text(
+                            text = stringResource(R.string.today_section_completed_today),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(completedDoses, key = { it.doseId }) { dose ->
+                        DoseCard(
+                            dose = dose,
+                            onTake    = { onEvent(TodayEvent.Take(dose.doseId)) },
+                            onSnooze  = { onEvent(TodayEvent.Snooze(dose.doseId)) },
+                            onSkip    = { onEvent(TodayEvent.Skip(dose.doseId)) },
+                            onHistory = { onOpenHistory(dose.medicationId) },
+                        )
+                    }
                 }
 
                 // ── PRN (as-needed) section ───────────────────────────────────
                 if (hasPrn) {
-                    if (hasDoses) {
+                    // Only add a divider if dose cards were actually rendered above.
+                    // SCHEDULED-only days produce no cards (Next Up covers them), so no divider.
+                    if (hasActionable || hasCompleted) {
                         item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
                     }
                     item {

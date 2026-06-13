@@ -32,6 +32,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -73,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
+import com.beryndil.pharos.data.regimen.entity.MedicationStatus
 import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
 import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
 import com.beryndil.pharos.medication.AddEditMedEvent
@@ -920,9 +922,15 @@ private fun LocalDatePickerDialog(
  * Name field with dropdown autocomplete from the saved contacts store, plus a companion
  * phone field. Used for both prescriber and pharmacy fields in Add/Edit medication.
  *
+ * Uses [ExposedDropdownMenuBox] + [menuAnchor] so the suggestion list is reliably anchored
+ * directly below the text field regardless of scroll position (plain [DropdownMenu] without
+ * an anchor positions relative to the parent container, which caused inconsistent placement).
+ *
  * @param suggestions Filtered suggestions from the saved store for the current name query.
- * @param onSuggestionPicked Called with the PrescriberEntity when a suggestion is tapped.
+ *   When empty the dropdown closes automatically.
+ * @param onSuggestionPicked Called with the [PrescriberEntity] when a suggestion is tapped.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ContactAutocompleteField(
     value: String,
@@ -936,38 +944,52 @@ private fun ContactAutocompleteField(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        var dropExpanded by remember { mutableStateOf(false) }
-        LaunchedEffect(suggestions) { dropExpanded = suggestions.isNotEmpty() }
+        // Track user-initiated dismiss separately from the suggestion list being empty.
+        // Key on suggestion identity so dismissal resets if a genuinely new result set arrives.
+        var dismissed by remember(suggestions.size, suggestions.firstOrNull()?.name) {
+            mutableStateOf(false)
+        }
+        val dropExpanded = suggestions.isNotEmpty() && !dismissed
 
-        OutlinedTextField(
-            value = value,
-            onValueChange = { onValueChange(it); if (it.isBlank()) dropExpanded = false },
-            label = { Text(label) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = label },
-        )
-        DropdownMenu(
-            expanded = dropExpanded && suggestions.isNotEmpty(),
-            onDismissRequest = { dropExpanded = false },
+        ExposedDropdownMenuBox(
+            expanded = dropExpanded,
+            onExpandedChange = { if (!it) dismissed = true },
         ) {
-            suggestions.forEach { suggestion ->
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
-                            if (!suggestion.phone.isNullOrBlank()) {
-                                Text(
-                                    suggestion.phone,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+            OutlinedTextField(
+                value = value,
+                onValueChange = {
+                    dismissed = false // new keystrokes re-open suggestions
+                    onValueChange(it)
+                },
+                label = { Text(label) },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryEditable)
+                    .semantics { contentDescription = label },
+            )
+            ExposedDropdownMenu(
+                expanded = dropExpanded,
+                onDismissRequest = { dismissed = true },
+            ) {
+                suggestions.forEach { suggestion ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
+                                if (!suggestion.phone.isNullOrBlank()) {
+                                    Text(
+                                        suggestion.phone,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
-                        }
-                    },
-                    onClick = { onSuggestionPicked(suggestion); dropExpanded = false },
-                )
+                        },
+                        onClick = { onSuggestionPicked(suggestion); dismissed = true },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                }
             }
         }
         OutlinedTextField(
@@ -984,9 +1006,10 @@ private fun ContactAutocompleteField(
 }
 
 /**
- * Pharmacy-specific autocomplete field — same layout as the prescriber overload but for
- * [PharmacyEntity] suggestions. Named distinctly to avoid JVM signature erasure clash.
+ * Pharmacy-specific autocomplete field — same anchoring fix as [ContactAutocompleteField]
+ * but typed for [PharmacyEntity] to avoid JVM signature erasure clash.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PharmacyAutocompleteField(
     value: String,
@@ -1000,38 +1023,50 @@ private fun PharmacyAutocompleteField(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        var dropExpanded by remember { mutableStateOf(false) }
-        LaunchedEffect(suggestions) { dropExpanded = suggestions.isNotEmpty() }
+        var dismissed by remember(suggestions.size, suggestions.firstOrNull()?.name) {
+            mutableStateOf(false)
+        }
+        val dropExpanded = suggestions.isNotEmpty() && !dismissed
 
-        OutlinedTextField(
-            value = value,
-            onValueChange = { onValueChange(it); if (it.isBlank()) dropExpanded = false },
-            label = { Text(label) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = label },
-        )
-        DropdownMenu(
-            expanded = dropExpanded && suggestions.isNotEmpty(),
-            onDismissRequest = { dropExpanded = false },
+        ExposedDropdownMenuBox(
+            expanded = dropExpanded,
+            onExpandedChange = { if (!it) dismissed = true },
         ) {
-            suggestions.forEach { suggestion ->
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
-                            if (!suggestion.phone.isNullOrBlank()) {
-                                Text(
-                                    suggestion.phone,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+            OutlinedTextField(
+                value = value,
+                onValueChange = {
+                    dismissed = false
+                    onValueChange(it)
+                },
+                label = { Text(label) },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryEditable)
+                    .semantics { contentDescription = label },
+            )
+            ExposedDropdownMenu(
+                expanded = dropExpanded,
+                onDismissRequest = { dismissed = true },
+            ) {
+                suggestions.forEach { suggestion ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
+                                if (!suggestion.phone.isNullOrBlank()) {
+                                    Text(
+                                        suggestion.phone,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
-                        }
-                    },
-                    onClick = { onSuggestionPicked(suggestion); dropExpanded = false },
-                )
+                        },
+                        onClick = { onSuggestionPicked(suggestion); dismissed = true },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                }
             }
         }
         OutlinedTextField(
@@ -1101,7 +1136,7 @@ private fun SubstituteSection(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = pickerExpanded) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     .semantics { contentDescription = pickerCd },
             )
             ExposedDropdownMenu(
@@ -1118,13 +1153,29 @@ private fun SubstituteSection(
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
                 options.forEach { med ->
+                    val medStatus = runCatching { MedicationStatus.valueOf(med.status) }
+                        .getOrDefault(MedicationStatus.ACTIVE)
+                    val statusLabel = when (medStatus) {
+                        MedicationStatus.PAUSED -> stringResource(R.string.med_status_paused)
+                        MedicationStatus.ENDED  -> stringResource(R.string.med_status_ended)
+                        MedicationStatus.ACTIVE -> null
+                    }
                     DropdownMenuItem(
                         text = {
-                            Text(
-                                text = med.name,
-                                overflow = TextOverflow.Ellipsis,
-                                maxLines = 1,
-                            )
+                            Column {
+                                Text(
+                                    text = med.name,
+                                    overflow = TextOverflow.Ellipsis,
+                                    maxLines = 1,
+                                )
+                                if (statusLabel != null) {
+                                    Text(
+                                        text = statusLabel,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                         },
                         onClick = {
                             onSubstituteChanged(med.id)
