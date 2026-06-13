@@ -100,6 +100,23 @@ Detailed plan: `~/.claude/plans/pharos-v1.3-features.md` + the v1.3.0 block in `
   health-info confirm first (Law 4, user-initiated export — NOT the v2 caregiver feature).
 Ships as **v1.2.x/v1.3.0** (semver continues; conceptually completes the v1 line).
 
+### A5. Settings + Appearance + Accessibility — **REQUIRED v1 (release-gating)**
+Plan: `~/.claude/plans/pharos-settings-accessibility.md`. Modeled on Spyglass (settings/about/license).
+- **S1 Settings + theme (System/Light/Dark) + in-app TEXT SIZE (Default/Large/XL/Largest) + About +
+  License/credits** (data attributions: RxNorm/NLM/RxNav, openFDA — Law 9). Theme + textScale persisted
+  in SettingDao; text scale is multiplicative on top of the system font scale.
+- **S2 Accessibility hardening — `[LAUNCH-BLOCKER]` (PROGRAMMING_STANDARDS §8 / Law 10 / spec §2.15):**
+  TalkBack `contentDescription` on every actionable control; **no truncation at MAX font scale**;
+  ≥48dp targets; icon+text (no color-only). Core flows operable under TalkBack + at max font.
+  **Accessibility failures BLOCK the v1 release.** Lived TalkBack/2×-font passes → device TODO §C, but
+  ALL code fixes land here — not deferred.
+
+> **Standing rule (mirrors `~/.claude/CLAUDE.md` autonomy contract):** every `[LAUNCH-BLOCKER]` in
+> `PROGRAMMING_STANDARDS.md` is an UNCONDITIONAL acceptance criterion for every slice. Read the
+> standards doc before dispatching; carry its launch-blockers into each executor prompt as hard,
+> gating criteria. Never defer one to a "later"/"device-only" TODO or reframe an already-mandated
+> requirement as new scope. Code that meets the standard ships now; only lived verification is a device task.
+
 ---
 
 ## SECTION B — needs Dave (account / payment) — DO NOT attempt; keep in TODO
