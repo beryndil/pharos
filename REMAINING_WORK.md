@@ -84,6 +84,22 @@ selection, DND-denied degrade, lazy permission on first critical med. §8 device
 - Minor: PDF export word-wrap, "share backup" snackbar action, dose-history cause line,
   INTERVAL explicit anchor-time field, boot-trigger human-readable label in dashboard.
 
+### A4. v1 feature completion — **DAVE-AUTHORIZED 2026-06-12** (overrides the earlier "new-scope hold")
+These were Dave's original v1 intent (cancelled by an earlier AI pass) and are now **explicitly
+authorized as in-scope v1 work** with a STANDING GO — do not re-block or re-ask to build these.
+Build them the same way as A1–A3 (serialized executors, full gate, ship a tagged signed APK).
+Detailed plan: `~/.claude/plans/pharos-v1.3-features.md` + the v1.3.0 block in `TODO.md`.
+- **F1 Saved prescribers & pharmacies** — local store (name + phone) with autocomplete + a
+  manage/edit/delete screen; split med pharmacy into name + phone.
+- **F2 Drug substitution link** — per-med "Substitute for: X" (Law 3 reference framing only);
+  suppress the duplicate-ingredient warning between two meds linked as substitutes. Default:
+  link + smart warning, no auto-pause of the original.
+- **F3 Enriched Today as the home screen** — "next up" timeline + quick-actions row; no second
+  landing surface (Today is already `startDestination`).
+- **F4 Email meds-list PDF to doctor** — reuse the regimen PDF + ACTION_SEND to the email app,
+  health-info confirm first (Law 4, user-initiated export — NOT the v2 caregiver feature).
+Ships as **v1.2.x/v1.3.0** (semver continues; conceptually completes the v1 line).
+
 ---
 
 ## SECTION B — needs Dave (account / payment) — DO NOT attempt; keep in TODO
