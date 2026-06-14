@@ -106,6 +106,8 @@
     <string name="schedule_daily_window">Daily window</string>
     <string name="schedule_window_start">Window opens</string>
     <string name="schedule_window_end">Window closes</string>
+    <string name="schedule_prn_indication_hint">As needed for…</string>
+    <string name="schedule_prn_indication_placeholder">e.g. nausea, sleep, pain</string>
     <string name="schedule_prn_daily_max">Daily maximum</string>
     <string name="schedule_prn_daily_max_hint">Maximum doses per day</string>
     <!-- %1$d = phase number (1-based) -->
@@ -237,6 +239,8 @@
 
     <!-- PRN (as-needed) medications — Today screen section (spec §2.7) -->
     <string name="today_prn_section_header">As needed</string>
+    <!-- %1$s = indication text, e.g. "As needed for sleep" -->
+    <string name="today_prn_label_with_indication">As needed for %1$s</string>
     <!-- Button: record an as-needed dose immediately (no SCHEDULED state; user-initiated log only) -->
     <string name="today_prn_log_dose">Log dose</string>
     <!-- Accessibility: %1$s = medication name -->

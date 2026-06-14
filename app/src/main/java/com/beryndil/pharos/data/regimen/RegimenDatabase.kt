@@ -47,7 +47,7 @@ import com.beryndil.pharos.data.regimen.entity.SettingEntity
         PrescriberEntity::class,
         PharmacyEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = true,
 )
 abstract class RegimenDatabase : RoomDatabase() {

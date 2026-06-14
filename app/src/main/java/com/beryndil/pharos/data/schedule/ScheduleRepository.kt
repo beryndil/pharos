@@ -244,6 +244,7 @@ class ScheduleRepository(
                 windowStartTime = null,
                 windowEndTime = null,
                 dailyMaxDoses = input.dailyMaxDoses,
+                indication = input.indication?.trim()?.ifBlank { null },
                 zoneId = zone,
                 isActive = true,
                 startEpochMs = startMs,
@@ -370,6 +371,7 @@ class ScheduleRepository(
             ScheduleType.PRN -> ScheduleInput(
                 type = type,
                 dailyMaxDoses = entity.dailyMaxDoses,
+                indication = entity.indication,
             )
 
             ScheduleType.TEMPORARY -> ScheduleInput(

@@ -24,7 +24,7 @@ object RegimenDatabaseFactory {
      * AND by the newer-schema guard to detect on-disk databases from future app versions.
      * Keep in sync with [RegimenDatabase]'s `@Database` annotation.
      */
-    const val CURRENT_VERSION = 10
+    const val CURRENT_VERSION = 11
 
     /**
      * v1 → v2 (Slice 5): adds the append-only [dose_transitions] history table. Additive only —
@@ -173,6 +173,12 @@ object RegimenDatabaseFactory {
         }
     }
 
+    val MIGRATION_10_11: Migration = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `schedules` ADD COLUMN `indication` TEXT")
+        }
+    }
+
     /**
      * Builds [RegimenDatabase] with a newer-schema version guard.
      *
@@ -195,7 +201,7 @@ object RegimenDatabaseFactory {
         enforceSchemaVersion(context, passphrase)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
             .build()
     }
 

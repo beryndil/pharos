@@ -30,6 +30,7 @@ data class ScheduleInput(
 
     // PRN
     val dailyMaxDoses: Int? = null,
+    val indication: String? = null,
 
     // TAPER
     val phases: List<PhaseInput> = listOf(PhaseInput()),

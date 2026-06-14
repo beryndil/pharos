@@ -369,7 +369,8 @@ class BackupRepository(
         scheduledTimesJson = scheduledTimesJson, daysOfWeekJson = daysOfWeekJson,
         intervalHours = intervalHours, intervalAnchorType = intervalAnchorType,
         windowStartTime = windowStartTime, windowEndTime = windowEndTime,
-        dailyMaxDoses = dailyMaxDoses, zoneId = zoneId, isActive = isActive,
+        dailyMaxDoses = dailyMaxDoses, indication = indication,
+        zoneId = zoneId, isActive = isActive,
         startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs,
     )
@@ -379,7 +380,8 @@ class BackupRepository(
         scheduledTimesJson = scheduledTimesJson, daysOfWeekJson = daysOfWeekJson,
         intervalHours = intervalHours, intervalAnchorType = intervalAnchorType,
         windowStartTime = windowStartTime, windowEndTime = windowEndTime,
-        dailyMaxDoses = dailyMaxDoses, zoneId = zoneId, isActive = isActive,
+        dailyMaxDoses = dailyMaxDoses, indication = indication,
+        zoneId = zoneId, isActive = isActive,
         startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs,
     )

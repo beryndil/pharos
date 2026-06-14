@@ -81,6 +81,12 @@ data class ScheduleEntity(
      */
     val dailyMaxDoses: Int?,
 
+    /**
+     * Optional indication for [ScheduleType.PRN] schedules (user's own words).
+     * Shown on the Today screen as "As needed for {indication}". Null = no indication set.
+     */
+    val indication: String? = null,
+
     /** IANA zone string at schedule creation time. Used for all alarm math via DoseClock. */
     val zoneId: String,
 

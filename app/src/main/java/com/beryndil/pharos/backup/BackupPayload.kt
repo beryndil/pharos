@@ -84,6 +84,8 @@ data class ScheduleBackup(
     val startEpochMs: Long?,
     val endEpochMs: Long?,
     val createdAtEpochMs: Long,
+    /** PRN indication (v1.5.4+). Default null for backups from older app versions. */
+    val indication: String? = null,
 )
 
 @Serializable

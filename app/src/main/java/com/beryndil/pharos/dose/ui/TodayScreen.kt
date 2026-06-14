@@ -570,6 +570,12 @@ private fun PrnMedCard(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Text(
+                text = prn.doseAmount,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -582,7 +588,11 @@ private fun PrnMedCard(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = stringResource(R.string.schedule_type_prn),
+                    text = if (prn.indication != null) {
+                        stringResource(R.string.today_prn_label_with_indication, prn.indication)
+                    } else {
+                        stringResource(R.string.schedule_type_prn)
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

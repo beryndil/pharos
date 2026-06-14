@@ -349,6 +349,14 @@ private fun PrnSection(
     input: ScheduleInput,
     onInputChanged: (ScheduleInput) -> Unit,
 ) {
+    OutlinedTextField(
+        value = input.indication ?: "",
+        onValueChange = { onInputChanged(input.copy(indication = it.ifBlank { null })) },
+        label = { Text(stringResource(R.string.schedule_prn_indication_hint)) },
+        placeholder = { Text(stringResource(R.string.schedule_prn_indication_placeholder)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,

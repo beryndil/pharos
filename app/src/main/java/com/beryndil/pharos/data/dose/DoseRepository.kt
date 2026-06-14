@@ -97,6 +97,8 @@ class DoseRepository(
                     scheduleId = sched.id,
                     medName = med.name,
                     strength = med.strength,
+                    doseAmount = med.doseAmount,
+                    indication = sched.indication,
                     dosesToday = takenCountByMed[med.id] ?: 0,
                     dailyMax = sched.dailyMaxDoses,
                 )
@@ -149,6 +151,8 @@ data class PrnMedRow(
     val scheduleId: String,
     val medName: String,
     val strength: String,
+    val doseAmount: String,
+    val indication: String?,
     val dosesToday: Int,
     val dailyMax: Int?,
 )
