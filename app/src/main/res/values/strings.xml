@@ -802,6 +802,12 @@
     <string name="profile_label_address">Address</string>
     <string name="profile_label_allergies">Known allergies</string>
     <string name="profile_placeholder_allergies">e.g. Penicillin, shellfish</string>
+    <string name="profile_section_insurance">Insurance</string>
+    <string name="profile_label_insurance_provider">Insurance provider</string>
+    <string name="profile_label_insurance_member_id">Member / Policy ID</string>
+    <string name="profile_section_emergency_contact">Emergency contact</string>
+    <string name="profile_label_emergency_contact_name">Contact name</string>
+    <string name="profile_label_emergency_contact_phone">Contact phone</string>
     <string name="profile_saved">Profile saved</string>
 
     <!-- ── Common actions ─────────────────────────────────────────────────── -->

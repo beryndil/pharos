@@ -144,6 +144,53 @@ fun UserProfileScreen(
                 maxLines = 4,
             )
 
+            Text(
+                text = stringResource(R.string.profile_section_insurance),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+
+            OutlinedTextField(
+                value = uiState.insuranceProvider,
+                onValueChange = { onEvent(UserProfileEvent.InsuranceProviderChanged(it)) },
+                label = { Text(stringResource(R.string.profile_label_insurance_provider)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+
+            OutlinedTextField(
+                value = uiState.insuranceMemberId,
+                onValueChange = { onEvent(UserProfileEvent.InsuranceMemberIdChanged(it)) },
+                label = { Text(stringResource(R.string.profile_label_insurance_member_id)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+
+            Text(
+                text = stringResource(R.string.profile_section_emergency_contact),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+
+            OutlinedTextField(
+                value = uiState.emergencyContactName,
+                onValueChange = { onEvent(UserProfileEvent.EmergencyContactNameChanged(it)) },
+                label = { Text(stringResource(R.string.profile_label_emergency_contact_name)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+
+            OutlinedTextField(
+                value = uiState.emergencyContactPhone,
+                onValueChange = { onEvent(UserProfileEvent.EmergencyContactPhoneChanged(it)) },
+                label = { Text(stringResource(R.string.profile_label_emergency_contact_phone)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            )
+
             Spacer(Modifier.height(8.dp))
 
             Button(

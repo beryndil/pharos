@@ -10,10 +10,16 @@ data class UserProfile(
     val phone: String? = null,
     val address: String? = null,
     val allergies: String? = null,
+    val insuranceProvider: String? = null,
+    val insuranceMemberId: String? = null,
+    val emergencyContactName: String? = null,
+    val emergencyContactPhone: String? = null,
 ) {
     fun isEmpty(): Boolean =
         name.isNullOrBlank() && dateOfBirth.isNullOrBlank() && phone.isNullOrBlank() &&
-            address.isNullOrBlank() && allergies.isNullOrBlank()
+            address.isNullOrBlank() && allergies.isNullOrBlank() &&
+            insuranceProvider.isNullOrBlank() && insuranceMemberId.isNullOrBlank() &&
+            emergencyContactName.isNullOrBlank() && emergencyContactPhone.isNullOrBlank()
 }
 
 class UserProfileRepository(private val settingDao: SettingDao) {
@@ -24,6 +30,10 @@ class UserProfileRepository(private val settingDao: SettingDao) {
         phone = settingDao.get(KEY_PHONE)?.value,
         address = settingDao.get(KEY_ADDRESS)?.value,
         allergies = settingDao.get(KEY_ALLERGIES)?.value,
+        insuranceProvider = settingDao.get(KEY_INSURANCE_PROVIDER)?.value,
+        insuranceMemberId = settingDao.get(KEY_INSURANCE_MEMBER_ID)?.value,
+        emergencyContactName = settingDao.get(KEY_EMERGENCY_CONTACT_NAME)?.value,
+        emergencyContactPhone = settingDao.get(KEY_EMERGENCY_CONTACT_PHONE)?.value,
     )
 
     suspend fun saveProfile(profile: UserProfile, nowMs: Long = System.currentTimeMillis()) {
@@ -32,6 +42,10 @@ class UserProfileRepository(private val settingDao: SettingDao) {
         upsertOrDelete(KEY_PHONE, profile.phone, nowMs)
         upsertOrDelete(KEY_ADDRESS, profile.address, nowMs)
         upsertOrDelete(KEY_ALLERGIES, profile.allergies, nowMs)
+        upsertOrDelete(KEY_INSURANCE_PROVIDER, profile.insuranceProvider, nowMs)
+        upsertOrDelete(KEY_INSURANCE_MEMBER_ID, profile.insuranceMemberId, nowMs)
+        upsertOrDelete(KEY_EMERGENCY_CONTACT_NAME, profile.emergencyContactName, nowMs)
+        upsertOrDelete(KEY_EMERGENCY_CONTACT_PHONE, profile.emergencyContactPhone, nowMs)
     }
 
     private suspend fun upsertOrDelete(key: String, value: String?, nowMs: Long) {
@@ -48,5 +62,9 @@ class UserProfileRepository(private val settingDao: SettingDao) {
         const val KEY_PHONE = "profile.phone"
         const val KEY_ADDRESS = "profile.address"
         const val KEY_ALLERGIES = "profile.allergies"
+        const val KEY_INSURANCE_PROVIDER = "profile.insurance_provider"
+        const val KEY_INSURANCE_MEMBER_ID = "profile.insurance_member_id"
+        const val KEY_EMERGENCY_CONTACT_NAME = "profile.emergency_contact_name"
+        const val KEY_EMERGENCY_CONTACT_PHONE = "profile.emergency_contact_phone"
     }
 }

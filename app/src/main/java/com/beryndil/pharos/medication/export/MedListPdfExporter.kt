@@ -146,41 +146,57 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
             return layout.height.toFloat()
         }
 
-        // ── Page header ───────────────────────────────────────────────────
-        // User profile block (if any profile data was provided)
-        if (userProfile != null && !userProfile.isEmpty()) {
-            if (!userProfile.name.isNullOrBlank()) {
-                canvas.drawText(userProfile.name, margin, y + titlePaint.textSize, titlePaint)
-                y += titlePaint.textSize + 4f
-            }
+        // ── Page header — patient info block ─────────────────────────────
+        if (userProfile != null && !userProfile.name.isNullOrBlank()) {
+            canvas.drawText(userProfile.name, margin, y + titlePaint.textSize, titlePaint)
+            y += titlePaint.textSize + 4f
+        }
+        if (userProfile != null) {
             listOfNotNull(
                 userProfile.dateOfBirth?.let { "DOB: $it" },
                 userProfile.phone,
                 userProfile.address,
-                userProfile.allergies?.let { "Allergies: $it" },
             ).forEach { line ->
                 y += drawFull(line, y, headerSubPaint) + 3f
             }
+            if (!userProfile.insuranceProvider.isNullOrBlank() || !userProfile.insuranceMemberId.isNullOrBlank()) {
+                val insuranceLine = buildString {
+                    if (!userProfile.insuranceProvider.isNullOrBlank()) append(userProfile.insuranceProvider)
+                    if (!userProfile.insuranceMemberId.isNullOrBlank()) {
+                        if (isNotEmpty()) append("  ·  ID: ") else append("ID: ")
+                        append(userProfile.insuranceMemberId)
+                    }
+                }
+                y += drawFull("Insurance: $insuranceLine", y, headerSubPaint) + 3f
+            }
+            if (!userProfile.emergencyContactName.isNullOrBlank() || !userProfile.emergencyContactPhone.isNullOrBlank()) {
+                val ecLine = buildString {
+                    if (!userProfile.emergencyContactName.isNullOrBlank()) append(userProfile.emergencyContactName)
+                    if (!userProfile.emergencyContactPhone.isNullOrBlank()) {
+                        if (isNotEmpty()) append("  ") else Unit
+                        append(userProfile.emergencyContactPhone)
+                    }
+                }
+                y += drawFull("Emergency contact: $ecLine", y, headerSubPaint) + 3f
+            }
+            if (!userProfile.allergies.isNullOrBlank()) {
+                y += drawFull("Allergies: ${userProfile.allergies}", y, headerSubPaint) + 3f
+            }
+        }
+        if (userProfile != null && !userProfile.isEmpty()) {
             y += 8f
             canvas.drawLine(margin, y, pageWidth - margin, y, separatorPaint)
             y += 12f
         }
 
-        val listTitle = if (userProfile != null && !userProfile.name.isNullOrBlank())
-            "Medication List" else "Pharos — Medication List"
-        canvas.drawText(listTitle, margin, y + titlePaint.textSize, titlePaint)
-        y += titlePaint.textSize + 4f
-        val dateStr = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
-            .withZone(ZoneId.systemDefault())
-            .format(Instant.ofEpochMilli(exportedAtEpochMs))
-        canvas.drawText("Exported $dateStr", margin, y + headerSubPaint.textSize, headerSubPaint)
-        y += headerSubPaint.textSize + 6f
+        // ── Document title + disclaimer ───────────────────────────────────
+        canvas.drawText("Medication List", margin, y + titlePaint.textSize, titlePaint)
+        y += titlePaint.textSize + 6f
         y += drawFull(
-            "This list is for reference only. Check with your doctor or pharmacist before making any changes.",
+            "For reference only. Check with your doctor or pharmacist before making any changes.",
             y, disclaimerP,
         )
         y += 10f
-        // Full-width separator under header
         canvas.drawLine(margin, y, pageWidth - margin, y, separatorPaint)
         y += 12f
 
@@ -279,8 +295,12 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
         // Trailing separator and footer
         canvas.drawLine(margin, y, pageWidth - margin, y, separatorPaint)
         y += 8f
-        val countStr = "${medications.size} medication${if (medications.size == 1) "" else "s"}"
+        val dateStr = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
+            .withZone(ZoneId.systemDefault())
+            .format(Instant.ofEpochMilli(exportedAtEpochMs))
+        val countStr = "${medications.size} medication${if (medications.size == 1) "" else "s"}  ·  Exported $dateStr"
         canvas.drawText(countStr, margin, y + disclaimerP.textSize, disclaimerP)
+        y += disclaimerP.textSize + 4f
         val footerStr = "Printed with Pharos · github.com/beryndil/pharos"
         val footerW = disclaimerP.measureText(footerStr)
         canvas.drawText(footerStr, pageWidth - margin - footerW, y + disclaimerP.textSize, disclaimerP)
