@@ -40,6 +40,14 @@ object BarcodeNdcService {
     suspend fun lookup(rawBarcode: String): DrugLookupResult? = withContext(Dispatchers.IO) {
         val digits = rawBarcode.filter { it.isDigit() }
 
+        // Path 0.5: For 9-digit strings, the most natural FDA interpretation is a 5-digit labeler
+        // + 4-digit product NDC (no package code). Search product_ndc directly before trying the
+        // zero-padded candidates, which create different labeler codes and almost never match.
+        if (digits.length == 9) {
+            queryProductNdc("${digits.take(5)}-${digits.drop(5)}")
+                ?.let { return@withContext it }
+        }
+
         // Path 1: Try formatted NDC candidates against the NDC endpoint (structured response).
         for (ndc in buildNdcCandidates(rawBarcode, digits)) {
             queryNdcEndpoint(ndc)?.let { return@withContext it }
@@ -184,6 +192,15 @@ object BarcodeNdcService {
 
         if (BuildConfig.DEBUG) Log.d(TAG, "NDC match: $name / $strength / $form")
         return DrugLookupResult(name = name, strength = strength, form = form)
+    }
+
+    // ── openFDA product_ndc search (no package code) ─────────────────────
+
+    private fun queryProductNdc(productNdc: String): DrugLookupResult? {
+        val encoded = URLEncoder.encode("\"$productNdc\"", "UTF-8")
+        return fetchJson(
+            "https://api.fda.gov/drug/ndc.json?search=product_ndc:$encoded&limit=1",
+        )?.let { parseNdcBody(it) }
     }
 
     // ── openFDA Label endpoint (UPC path) ─────────────────────────────────
