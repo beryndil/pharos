@@ -36,10 +36,41 @@ object DrugRefDatabaseFactory {
      */
     fun build(context: Context): DrugRefDatabase {
         handleNewerSchema(context)
+        handleEmptyDatabase(context)
         return Room.databaseBuilder(context, DrugRefDatabase::class.java, DATABASE_NAME)
             .fallbackToDestructiveMigration()
             .addCallback(SeedCallback(context))
             .build()
+    }
+
+    /**
+     * Deletes the DB file if it exists but the drug_search table is empty.
+     *
+     * This recovers devices where a prior destructive migration wiped the schema but did not
+     * re-seed (because [SeedCallback.onCreate] is not called on [fallbackToDestructiveMigration]
+     * paths — only [SeedCallback.onDestructiveMigration] is). Deleting here forces Room to call
+     * [SeedCallback.onCreate] on next open.
+     */
+    private fun handleEmptyDatabase(context: Context) {
+        val dbFile = context.getDatabasePath(DATABASE_NAME)
+        if (!dbFile.exists()) return
+        try {
+            val empty = SQLiteDatabase.openDatabase(
+                dbFile.path,
+                null,
+                SQLiteDatabase.OPEN_READONLY,
+            ).use { db ->
+                db.rawQuery("SELECT COUNT(*) FROM drug_search", null).use { cursor ->
+                    cursor.moveToFirst() && cursor.getInt(0) == 0
+                }
+            }
+            if (empty) {
+                Log.w(TAG, "DrugRef DB is empty (seeding missed on prior migration). Deleting to force reseed.")
+                dbFile.delete()
+            }
+        } catch (_: Exception) {
+            // Unreadable or missing table — let Room handle it.
+        }
     }
 
     /**
@@ -125,6 +156,8 @@ object DrugRefDatabaseFactory {
      */
     private class SeedCallback(private val context: Context) :
         androidx.room.RoomDatabase.Callback() {
+        override fun onDestructiveMigration(db: SupportSQLiteDatabase) = onCreate(db)
+
         override fun onCreate(db: SupportSQLiteDatabase) {
             val data = try {
                 BundledDrugRefLoader(context).load() ?: return
