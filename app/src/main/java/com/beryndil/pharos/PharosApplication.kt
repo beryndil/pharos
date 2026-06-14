@@ -139,6 +139,7 @@ class PharosApplication : Application() {
         appScope.launch {
             runCatching {
                 appContainer.doseNotifier.ensureChannels()
+                appContainer.alarmCoordinator.sweepStaleDoses()
                 appContainer.alarmCoordinator.rearmNextDoseAlarm()
                 appContainer.alarmCoordinator.scheduleDailyRollover()
             }.onFailure {

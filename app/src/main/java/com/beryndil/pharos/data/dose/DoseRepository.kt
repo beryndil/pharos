@@ -30,9 +30,10 @@ class DoseRepository(
 
     /** Today's actionable + upcoming doses (DUE / SNOOZED / SCHEDULED before tomorrow). */
     fun observeTodayDoses(): Flow<List<DoseRow>> {
+        val scheduledFrom = startOfDayEpochMs()
         val before = startOfTomorrowEpochMs()
         return combine(
-            doseInstanceDao.observeActionable(before),
+            doseInstanceDao.observeActionable(scheduledFrom, before),
             medicationDao.observeAll(),
         ) { doses, meds ->
             val byId = meds.associateBy { it.id }

@@ -110,6 +110,27 @@ class AlarmCoordinator(
         scheduleDailyRollover()
     }
 
+    /**
+     * Sweep all SCHEDULED doses whose due time is already in the past. Called once at app startup
+     * before [rearmNextDoseAlarm] so the Today screen never shows stale SCHEDULED rows (which
+     * would otherwise pile up if alarms were suppressed by battery optimisation or the device
+     * was powered off).
+     *
+     * Each stale dose is first marked DUE (via the DAO), then handed to [doseDueListener] which
+     * either transitions it immediately to MISSED (if past the miss window) or leaves it DUE and
+     * arms the miss-check timer. No notification is posted — the user was absent; they will see
+     * the resulting MISSED/DUE rows on the Today screen when they open the app.
+     */
+    suspend fun sweepStaleDoses() {
+        val nowMs = now()
+        val stale = doseInstanceDao.getAllScheduledBefore(nowMs)
+        for (dose in stale) {
+            if (dose.state != com.beryndil.pharos.data.regimen.entity.DoseState.SCHEDULED.name) continue
+            doseInstanceDao.markDue(dose.id)
+            doseDueListener.onEnteredDue(dose.id, nowMs)
+        }
+    }
+
     /** Schedule a near-immediate test reminder through the SAME engine (Law 6). */
     suspend fun scheduleTestReminder(delayMs: Long = DEFAULT_TEST_DELAY_MS) {
         val triggerAt = now() + delayMs

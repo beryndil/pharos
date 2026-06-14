@@ -229,9 +229,9 @@ class TodayViewModel(
  * DUE and SNOOZED doses are already shown prominently in the action rows and are excluded
  * from the summary to avoid redundancy.
  */
-internal fun selectNextUp(doses: List<DoseRow>, max: Int = MAX_NEXT_UP): List<NextUpItem> =
+internal fun selectNextUp(doses: List<DoseRow>, max: Int = MAX_NEXT_UP, nowMs: Long = System.currentTimeMillis()): List<NextUpItem> =
     doses
-        .filter { it.state == DoseState.SCHEDULED }
+        .filter { it.state == DoseState.SCHEDULED && it.dueEpochMs > nowMs }
         .sortedBy { it.dueEpochMs }
         .take(max)
         .map { NextUpItem(doseId = it.doseId, medName = it.medName, strength = it.strength, dueEpochMs = it.dueEpochMs) }

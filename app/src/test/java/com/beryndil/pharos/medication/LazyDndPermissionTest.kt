@@ -233,7 +233,8 @@ private class NoOpDoseInstanceDao : DoseInstanceDao {
     override fun observePending(): Flow<List<DoseInstanceEntity>> = empty.asStateFlow()
     override suspend fun getNextScheduled(medicationId: String): DoseInstanceEntity? = null
     override suspend fun getNextScheduledAfter(medicationId: String, afterEpochMs: Long): DoseInstanceEntity? = null
-    override fun observeActionable(beforeEpochMs: Long): Flow<List<DoseInstanceEntity>> = empty.asStateFlow()
+    override fun observeActionable(scheduledFromEpochMs: Long, beforeEpochMs: Long): Flow<List<DoseInstanceEntity>> = empty.asStateFlow()
+    override suspend fun getAllScheduledBefore(beforeEpochMs: Long): List<DoseInstanceEntity> = emptyList()
     override suspend fun countTakenSince(medicationId: String, sinceEpochMs: Long): Int = 0
     override suspend fun getEarliestScheduled(): DoseInstanceEntity? = null
     override suspend fun countById(id: String): Int = 0

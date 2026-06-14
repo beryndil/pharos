@@ -108,6 +108,13 @@ object BarcodeNdcService {
             }
             // 10-digit NDC, configuration unknown — try all three.
             10 -> candidates += allThreeFormats(digits)
+            // 9 digits: common when scanner strips a leading zero or the barcode uses a non-digit
+            // prefix (e.g. "X138028700" → 9 digits after filter). Try prepending "0" to form a
+            // 10-digit NDC, and "00" to form a padded 11-digit NDC.
+            9 -> {
+                candidates += allThreeFormats("0$digits")
+                candidates += paddedNdcFormat("00$digits")
+            }
         }
 
         return candidates.distinct()

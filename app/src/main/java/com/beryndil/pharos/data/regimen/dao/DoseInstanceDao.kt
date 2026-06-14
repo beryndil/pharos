@@ -100,15 +100,26 @@ interface DoseInstanceDao {
 
     /**
      * Doses the user can still act on (DUE or SNOOZED) plus near-term SCHEDULED, for the
-     * today/upcoming surface. Ordered by due time. Includes all states except the terminal ones
-     * are filtered by the caller via [dueEpochMs] bounds.
+     * today/upcoming surface. Ordered by due time.
+     *
+     * DUE/SNOOZED: all instances due before [beforeEpochMs] (always need attention).
+     * SCHEDULED: only instances from [scheduledFromEpochMs] onwards (today's upcoming doses only —
+     * past SCHEDULED rows are stale and handled by the startup sweep in AlarmCoordinator).
      */
     @Query(
         "SELECT * FROM dose_instances " +
-            "WHERE state IN ('DUE', 'SNOOZED', 'SCHEDULED') " +
-            "AND dueEpochMs < :beforeEpochMs ORDER BY dueEpochMs ASC",
+            "WHERE (state IN ('DUE', 'SNOOZED') AND dueEpochMs < :beforeEpochMs) " +
+            "OR (state = 'SCHEDULED' AND dueEpochMs >= :scheduledFromEpochMs AND dueEpochMs < :beforeEpochMs) " +
+            "ORDER BY dueEpochMs ASC",
     )
-    fun observeActionable(beforeEpochMs: Long): Flow<List<DoseInstanceEntity>>
+    fun observeActionable(scheduledFromEpochMs: Long, beforeEpochMs: Long): Flow<List<DoseInstanceEntity>>
+
+    /** All SCHEDULED instances with dueEpochMs before [beforeEpochMs] — used by the startup sweep. */
+    @Query(
+        "SELECT * FROM dose_instances WHERE state = 'SCHEDULED' AND dueEpochMs < :beforeEpochMs " +
+            "ORDER BY dueEpochMs ASC",
+    )
+    suspend fun getAllScheduledBefore(beforeEpochMs: Long): List<DoseInstanceEntity>
 
     /**
      * Count of TAKEN doses for a medication on/after [sinceEpochMs] — drives the PRN daily-max
