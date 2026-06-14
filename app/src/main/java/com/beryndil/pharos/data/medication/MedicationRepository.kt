@@ -2,7 +2,12 @@ package com.beryndil.pharos.data.medication
 
 import com.beryndil.pharos.data.drugref.dao.DrugSearchDao
 import com.beryndil.pharos.data.drugref.dao.IngredientMapDao
+import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
+import com.beryndil.pharos.data.regimen.dao.DoseTransitionDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
+import com.beryndil.pharos.data.regimen.dao.RefillRecordDao
+import com.beryndil.pharos.data.regimen.dao.ScheduleDao
+import com.beryndil.pharos.data.regimen.dao.SchedulePhaseDao
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
 import com.beryndil.pharos.data.regimen.entity.MedicationStatus
@@ -25,6 +30,11 @@ class MedicationRepository(
     private val medicationDao: MedicationDao,
     private val drugSearchDao: DrugSearchDao,
     private val ingredientMapDao: IngredientMapDao,
+    private val doseTransitionDao: DoseTransitionDao,
+    private val doseInstanceDao: DoseInstanceDao,
+    private val schedulePhaseDao: SchedulePhaseDao,
+    private val scheduleDao: ScheduleDao,
+    private val refillRecordDao: RefillRecordDao,
 ) {
 
     // ── Drug reference search ─────────────────────────────────────────────
@@ -219,6 +229,33 @@ class MedicationRepository(
                 updatedAtEpochMs = System.currentTimeMillis(),
             ),
         )
+    }
+
+    /**
+     * Permanently delete an ENDED medication and all its associated records.
+     *
+     * Deletion order respects FK RESTRICT constraints:
+     *  1. dose_transitions (references dose_instances + medications)
+     *  2. dose_instances (references medications + schedules)
+     *  3. schedule_phases (references schedules)
+     *  4. schedules (references medications)
+     *  5. refill_records (references medications)
+     *  6. Clear substituteForMedId cross-references on other medications
+     *  7. medications row
+     *
+     * No-op if the medication is not found or is not in ENDED status (guard
+     * against accidental deletion of active medications).
+     */
+    suspend fun deleteMedication(medId: String) {
+        val med = medicationDao.getById(medId) ?: return
+        if (med.status != MedicationStatus.ENDED.name) return
+        doseTransitionDao.deleteByMedication(medId)
+        doseInstanceDao.deleteByMedication(medId)
+        schedulePhaseDao.deleteByMedication(medId)
+        scheduleDao.deleteByMedication(medId)
+        refillRecordDao.deleteByMedication(medId)
+        medicationDao.clearSubstituteRef(medId)
+        medicationDao.deleteById(medId)
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

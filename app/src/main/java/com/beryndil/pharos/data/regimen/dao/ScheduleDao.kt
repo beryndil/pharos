@@ -50,5 +50,7 @@ interface ScheduleDao {
     @Query("SELECT * FROM schedules WHERE type = 'PRN' AND isActive = 1")
     fun observeAllActivePrn(): Flow<List<ScheduleEntity>>
 
-    // No DELETE method — see class-level comment.
+    /** Delete all schedule versions for a medication (medication-delete flow; phases must be deleted first). */
+    @Query("DELETE FROM schedules WHERE medicationId = :medicationId")
+    suspend fun deleteByMedication(medicationId: String)
 }

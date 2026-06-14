@@ -83,6 +83,11 @@ class AppContainer(private val applicationContext: Context) {
             medicationDao = regimenDatabase.medicationDao(),
             drugSearchDao = drugRefDatabase.drugSearchDao(),
             ingredientMapDao = drugRefDatabase.ingredientMapDao(),
+            doseTransitionDao = regimenDatabase.doseTransitionDao(),
+            doseInstanceDao = regimenDatabase.doseInstanceDao(),
+            schedulePhaseDao = regimenDatabase.schedulePhaseDao(),
+            scheduleDao = regimenDatabase.scheduleDao(),
+            refillRecordDao = regimenDatabase.refillRecordDao(),
         )
     }
 

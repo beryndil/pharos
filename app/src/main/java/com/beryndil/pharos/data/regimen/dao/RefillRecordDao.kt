@@ -29,5 +29,7 @@ interface RefillRecordDao {
     @Query("SELECT * FROM refill_records ORDER BY createdAtEpochMs ASC")
     suspend fun getAll(): List<RefillRecordEntity>
 
-    // No UPDATE or DELETE. Each refill event is a permanent ledger entry.
+    /** Delete all refill records for a medication (medication-delete flow). */
+    @Query("DELETE FROM refill_records WHERE medicationId = :medicationId")
+    suspend fun deleteByMedication(medicationId: String)
 }

@@ -42,5 +42,11 @@ interface DoseTransitionDao {
     @Query("SELECT * FROM dose_transitions ORDER BY atEpochMs ASC, id ASC")
     suspend fun getAll(): List<DoseTransitionEntity>
 
-    // No DELETE / @Update — dose history is permanent (spec §3.3, Law 9).
+    /**
+     * Delete all transition records for a medication. Called only from the explicit
+     * user-initiated medication-delete flow; must run before [DoseInstanceDao.deleteByMedication]
+     * to satisfy the FK constraint on dose_instances.
+     */
+    @Query("DELETE FROM dose_transitions WHERE medicationId = :medicationId")
+    suspend fun deleteByMedication(medicationId: String)
 }

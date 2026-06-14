@@ -21,5 +21,10 @@ interface SchedulePhaseDao {
     @Query("SELECT * FROM schedule_phases ORDER BY scheduleId ASC, phaseOrder ASC")
     suspend fun getAll(): List<SchedulePhaseEntity>
 
-    // No UPDATE or DELETE. Phases belong to an immutable schedule version.
+    /** Delete all phases for all schedules belonging to a medication (medication-delete flow). */
+    @Query(
+        "DELETE FROM schedule_phases WHERE scheduleId IN " +
+            "(SELECT id FROM schedules WHERE medicationId = :medicationId)",
+    )
+    suspend fun deleteByMedication(medicationId: String)
 }

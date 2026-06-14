@@ -174,5 +174,11 @@ interface DoseInstanceDao {
     )
     fun observeAllTakenSince(sinceEpochMs: Long): Flow<List<DoseInstanceEntity>>
 
-    // No DELETE method. Dose history is permanent (spec §3.3, Law 9).
+    /**
+     * Delete all dose instances for a medication. Called only from the explicit
+     * user-initiated medication-delete flow; must run after transitions are deleted
+     * and before schedules are deleted to satisfy FK constraints.
+     */
+    @Query("DELETE FROM dose_instances WHERE medicationId = :medicationId")
+    suspend fun deleteByMedication(medicationId: String)
 }

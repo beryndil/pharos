@@ -54,6 +54,16 @@ interface MedicationDao {
     @Query("SELECT COUNT(*) FROM medications WHERE status != 'ENDED'")
     suspend fun countNonEnded(): Int
 
-    // NOTE: No DELETE method. Medications are never physically removed (spec §3.3).
-    // To end a medication, update its status to ENDED via [update].
+    /**
+     * Permanently remove a medication row. Call only after all child records
+     * (dose_transitions → dose_instances → schedule_phases → schedules → refill_records)
+     * have been deleted, and after [clearSubstituteRef] has been called so no other
+     * medication points to this one.
+     */
+    @Query("DELETE FROM medications WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    /** Clear any cross-medication substitute link that pointed at the medication being deleted. */
+    @Query("UPDATE medications SET substituteForMedId = NULL WHERE substituteForMedId = :medId")
+    suspend fun clearSubstituteRef(medId: String)
 }
