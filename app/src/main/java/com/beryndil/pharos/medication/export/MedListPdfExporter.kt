@@ -11,6 +11,7 @@ import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.entity.MedicationStatus
 import com.beryndil.pharos.data.regimen.entity.ScheduleEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleType
+import com.beryndil.pharos.settings.UserProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.OutputStream
@@ -52,6 +53,7 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
         outputStream: OutputStream,
         exportedAtEpochMs: Long = Instant.now().toEpochMilli(),
         options: PdfExportOptions = PdfExportOptions(),
+        userProfile: UserProfile? = null,
     ) = withContext(Dispatchers.IO) {
 
         // ── Data load ─────────────────────────────────────────────────────
@@ -145,7 +147,28 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
         }
 
         // ── Page header ───────────────────────────────────────────────────
-        canvas.drawText("Pharos — Medication List", margin, y + titlePaint.textSize, titlePaint)
+        // User profile block (if any profile data was provided)
+        if (userProfile != null && !userProfile.isEmpty()) {
+            if (!userProfile.name.isNullOrBlank()) {
+                canvas.drawText(userProfile.name, margin, y + titlePaint.textSize, titlePaint)
+                y += titlePaint.textSize + 4f
+            }
+            listOfNotNull(
+                userProfile.dateOfBirth?.let { "DOB: $it" },
+                userProfile.phone,
+                userProfile.address,
+                userProfile.allergies?.let { "Allergies: $it" },
+            ).forEach { line ->
+                y += drawFull(line, y, headerSubPaint) + 3f
+            }
+            y += 8f
+            canvas.drawLine(margin, y, pageWidth - margin, y, separatorPaint)
+            y += 12f
+        }
+
+        val listTitle = if (userProfile != null && !userProfile.name.isNullOrBlank())
+            "Medication List" else "Pharos — Medication List"
+        canvas.drawText(listTitle, margin, y + titlePaint.textSize, titlePaint)
         y += titlePaint.textSize + 4f
         val dateStr = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
             .withZone(ZoneId.systemDefault())
@@ -246,11 +269,14 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
             y += 8f // gap after each medication block
         }
 
-        // Trailing separator and page count note
+        // Trailing separator and footer
         canvas.drawLine(margin, y, pageWidth - margin, y, separatorPaint)
         y += 8f
         val countStr = "${medications.size} medication${if (medications.size == 1) "" else "s"}"
         canvas.drawText(countStr, margin, y + disclaimerP.textSize, disclaimerP)
+        val footerStr = "Printed with Pharos · github.com/beryndil/pharos"
+        val footerW = disclaimerP.measureText(footerStr)
+        canvas.drawText(footerStr, pageWidth - margin - footerW, y + disclaimerP.textSize, disclaimerP)
 
         pdfDoc.finishPage(page)
         pdfDoc.writeTo(outputStream)

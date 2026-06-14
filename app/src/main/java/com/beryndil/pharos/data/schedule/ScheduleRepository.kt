@@ -53,10 +53,12 @@ class ScheduleRepository(
     ) {
         val nowMs = System.currentTimeMillis()
 
-        // 1. Deactivate old active schedules
+        // 1. Deactivate old active schedules and cancel their pending SCHEDULED instances so
+        //    they don't appear alongside the new schedule's instances on the Today screen.
         val oldActive = scheduleDao.getActiveByMedicationOnce(medId)
         for (old in oldActive) {
             scheduleDao.deactivate(old.id)
+            doseInstanceDao.cancelScheduledBySchedule(old.id, nowMs)
         }
 
         // 2. Build and insert the new schedule

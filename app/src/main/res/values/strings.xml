@@ -778,4 +778,21 @@
 
     <string name="license_apache_notice">Full text of the Apache License, Version 2.0 is available at http://www.apache.org/licenses/LICENSE-2.0</string>
 
+    <!-- ── User profile screen ────────────────────────────────────────────── -->
+    <string name="screen_profile">My Profile</string>
+    <string name="settings_action_profile">My Profile</string>
+    <string name="cd_navigate_profile">Open my profile</string>
+    <string name="profile_description">Your profile appears at the top of exported medication lists so providers can identify the list quickly. All fields are optional.</string>
+    <string name="profile_label_name">Full name</string>
+    <string name="profile_label_dob">Date of birth</string>
+    <string name="profile_placeholder_dob">e.g. January 1, 1980</string>
+    <string name="profile_label_phone">Phone number</string>
+    <string name="profile_label_address">Address</string>
+    <string name="profile_label_allergies">Known allergies</string>
+    <string name="profile_placeholder_allergies">e.g. Penicillin, shellfish</string>
+    <string name="profile_saved">Profile saved</string>
+
+    <!-- ── Common actions ─────────────────────────────────────────────────── -->
+    <string name="action_save">Save</string>
+
 </resources>

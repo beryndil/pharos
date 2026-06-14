@@ -65,6 +65,7 @@ fun SettingsScreen(
     onEvent: (SettingsEvent) -> Unit,
     onOpenAbout: () -> Unit,
     onOpenLegal: () -> Unit,
+    onOpenProfile: () -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -156,6 +157,18 @@ fun SettingsScreen(
             // Live preview — shows bodyLarge at the currently applied scale (PharosTheme
             // recomposes when the selection changes) so the user can judge legibility.
             TextSizePreview()
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+
+            // ── Profile section ───────────────────────────────────────────
+            SectionHeader(stringResource(R.string.screen_profile))
+
+            NavigationRow(
+                label = stringResource(R.string.settings_action_profile),
+                contentDesc = stringResource(R.string.cd_navigate_profile),
+                onClick = onOpenProfile,
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()

@@ -14,6 +14,7 @@ import com.beryndil.pharos.data.regimen.entity.SettingEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleType
 import com.beryndil.pharos.medication.export.MedListPdfExporter
 import com.beryndil.pharos.medication.export.PdfExportOptions
+import com.beryndil.pharos.settings.UserProfileRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -46,6 +47,11 @@ class BackupRepository(
      * Injected so both callers share the same instance from AppContainer.
      */
     val pdfExporter: MedListPdfExporter = MedListPdfExporter(db),
+    /**
+     * Loaded once per PDF export to populate the user-info header.
+     * Nullable so that callers that don't have a profile (e.g., tests) can omit it.
+     */
+    private val userProfileRepository: UserProfileRepository? = null,
     /**
      * Called after a restore completes successfully, while still on the IO dispatcher.
      * Use this to re-arm exact alarms and re-enqueue WorkManager jobs keyed to the restored
@@ -186,8 +192,9 @@ class BackupRepository(
         exportedAtEpochMs: Long = Instant.now().toEpochMilli(),
     ): ExportResult = withContext(Dispatchers.IO) {
         try {
+            val profile = userProfileRepository?.getProfile()
             context.contentResolver.openOutputStream(outputUri)?.use { stream ->
-                pdfExporter.writeTo(stream, exportedAtEpochMs, options)
+                pdfExporter.writeTo(stream, exportedAtEpochMs, options, profile)
             } ?: return@withContext ExportResult.Error("Could not open output file.")
             ExportResult.Success
         } catch (e: Exception) {

@@ -63,6 +63,24 @@ interface DoseInstanceDao {
     )
     suspend fun markMissed(id: String, missedEpochMs: Long)
 
+    /** Mark all SCHEDULED instances for a deactivated schedule as MISSED so they leave the Today screen. */
+    @Query(
+        "UPDATE dose_instances SET state = 'MISSED', missedEpochMs = :missedEpochMs " +
+            "WHERE scheduleId = :scheduleId AND state = 'SCHEDULED'",
+    )
+    suspend fun cancelScheduledBySchedule(scheduleId: String, missedEpochMs: Long)
+
+    /**
+     * Startup cleanup: mark SCHEDULED instances belonging to deactivated schedules as MISSED.
+     * Fixes stale instances that were left behind when a medication's schedule was replaced.
+     */
+    @Query(
+        "UPDATE dose_instances SET state = 'MISSED', missedEpochMs = :nowMs " +
+            "WHERE state = 'SCHEDULED' " +
+            "AND scheduleId NOT IN (SELECT id FROM schedules WHERE isActive = 1)",
+    )
+    suspend fun cancelOrphanedScheduled(nowMs: Long)
+
     // ── queries ───────────────────────────────────────────────────────────────
 
     @Query("SELECT * FROM dose_instances WHERE id = :id")

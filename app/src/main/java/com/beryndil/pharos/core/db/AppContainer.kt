@@ -31,6 +31,7 @@ import com.beryndil.pharos.dose.DoseStateMachine
 import com.beryndil.pharos.dose.DoseTransitionScheduler
 import com.beryndil.pharos.onboarding.OnboardingRepository
 import com.beryndil.pharos.settings.AppearanceRepository
+import com.beryndil.pharos.settings.UserProfileRepository
 import com.beryndil.pharos.refill.AndroidRefillNotifier
 import com.beryndil.pharos.refill.LowSupplyCheckWorker
 import com.beryndil.pharos.refill.RefillNotifier
@@ -176,6 +177,11 @@ class AppContainer(private val applicationContext: Context) {
         AppearanceRepository(regimenDatabase.settingDao())
     }
 
+    /** Persists the user's personal profile for PDF export headers (all fields optional). */
+    val userProfileRepository: UserProfileRepository by lazy {
+        UserProfileRepository(regimenDatabase.settingDao())
+    }
+
     // ── Refill tracking (Slice 7, spec §2.9) ─────────────────────────────────
 
     /**
@@ -253,6 +259,7 @@ class AppContainer(private val applicationContext: Context) {
             db = regimenDatabase,
             context = applicationContext,
             pdfExporter = medListPdfExporter,
+            userProfileRepository = userProfileRepository,
             onRestoreComplete = {
                 alarmCoordinator.onReRegistration("restore")
                 LowSupplyCheckWorker.scheduleAfterRestore(applicationContext)

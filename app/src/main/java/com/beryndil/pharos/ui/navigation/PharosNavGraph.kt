@@ -39,9 +39,11 @@ import com.beryndil.pharos.legal.ui.LegalScreen
 import com.beryndil.pharos.reliability.ReliabilityDashboardViewModel
 import com.beryndil.pharos.reliability.ui.ReliabilityDashboardScreen
 import com.beryndil.pharos.settings.SettingsViewModel
+import com.beryndil.pharos.settings.UserProfileViewModel
 import com.beryndil.pharos.settings.ui.AboutScreen
 import com.beryndil.pharos.settings.ui.LicenseScreen
 import com.beryndil.pharos.settings.ui.SettingsScreen
+import com.beryndil.pharos.settings.ui.UserProfileScreen
 
 /**
  * The Pharos nav graph.
@@ -319,6 +321,22 @@ fun PharosNavGraph(
                 onEvent = viewModel::onEvent,
                 onOpenAbout = { navController.navigate(NavRoute.About.route) },
                 onOpenLegal = { navController.navigate(NavRoute.Legal.route) },
+                onOpenProfile = { navController.navigate(NavRoute.UserProfile.route) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── User profile (PDF export header) ─────────────────────────────
+        composable(NavRoute.UserProfile.route) {
+            val viewModel: UserProfileViewModel = viewModel(
+                factory = UserProfileViewModel.factory(
+                    repository = app.appContainer.userProfileRepository,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            UserProfileScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
                 onBack = { navController.popBackStack() },
             )
         }
@@ -407,4 +425,6 @@ sealed class NavRoute(val route: String) {
     data object About : NavRoute("settings/about")
 
     data object License : NavRoute("settings/license")
+
+    data object UserProfile : NavRoute("settings/profile")
 }

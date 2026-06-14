@@ -123,6 +123,9 @@ class AlarmCoordinator(
      */
     suspend fun sweepStaleDoses() {
         val nowMs = now()
+        // Cancel any SCHEDULED instances whose schedule was deactivated (e.g., after a schedule edit).
+        // This runs before the stale sweep so orphaned instances don't get incorrectly marked DUE.
+        doseInstanceDao.cancelOrphanedScheduled(nowMs)
         val stale = doseInstanceDao.getAllScheduledBefore(nowMs)
         for (dose in stale) {
             if (dose.state != com.beryndil.pharos.data.regimen.entity.DoseState.SCHEDULED.name) continue
