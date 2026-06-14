@@ -526,6 +526,14 @@ private fun DetailsStep(
                 onNoteChanged = { onEvent(AddEditMedEvent.SubstituteNoteChanged(it)) },
             )
 
+            CombinedPrescriptionSection(
+                availableMeds = uiState.allActiveMeds,
+                selectedMedId = uiState.combinedWithMedId,
+                combinedDisplayStrength = uiState.combinedDisplayStrength,
+                onMedSelected = { onEvent(AddEditMedEvent.CombinedWithMedChanged(it)) },
+                onStrengthChanged = { onEvent(AddEditMedEvent.CombinedDisplayStrengthChanged(it)) },
+            )
+
             SectionHeader(stringResource(R.string.section_critical_alerts))
             CriticalToggleRow(
                 isCritical = uiState.isCritical,
@@ -1219,6 +1227,98 @@ private fun SubstituteSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .semantics { contentDescription = noteCd },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CombinedPrescriptionSection(
+    availableMeds: List<MedicationEntity>,
+    selectedMedId: String?,
+    combinedDisplayStrength: String,
+    onMedSelected: (String?) -> Unit,
+    onStrengthChanged: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (availableMeds.isEmpty()) return
+
+    val selectedName = availableMeds.firstOrNull { it.id == selectedMedId }?.name
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(stringResource(R.string.section_combined_prescription))
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+        ) {
+            OutlinedTextField(
+                value = selectedName ?: "",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.label_combined_partner)) },
+                placeholder = { Text(stringResource(R.string.combined_partner_placeholder)) },
+                supportingText = {
+                    Text(
+                        text = stringResource(R.string.combined_partner_helper),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                trailingIcon = if (selectedMedId != null) {
+                    {
+                        IconButton(onClick = { onMedSelected(null) }) {
+                            Icon(Icons.Outlined.Close, contentDescription = null)
+                        }
+                    }
+                } else {
+                    { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                availableMeds.forEach { med ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(med.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    text = med.strength,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                        onClick = {
+                            onMedSelected(med.id)
+                            expanded = false
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                }
+            }
+        }
+
+        if (selectedMedId != null) {
+            OutlinedTextField(
+                value = combinedDisplayStrength,
+                onValueChange = onStrengthChanged,
+                label = { Text(stringResource(R.string.label_combined_strength)) },
+                placeholder = { Text(stringResource(R.string.combined_strength_placeholder)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    imeAction = ImeAction.Next,
+                ),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

@@ -101,6 +101,7 @@ class MedicationRepository(
     suspend fun checkDuplicateIngredients(
         newIngredientRxcuis: List<String>,
         excludeMedId: String? = null,
+        combinedWithMedId: String? = null,
     ): List<DuplicateWarning> {
         if (newIngredientRxcuis.isEmpty()) return emptyList()
 
@@ -111,6 +112,8 @@ class MedicationRepository(
 
         for (med in activeMeds) {
             if (med.id == excludeMedId) continue
+            // Skip the combined-pair partner — user declared these as an intentional split prescription.
+            if (combinedWithMedId != null && med.id == combinedWithMedId) continue
 
             val existingRxcuis = parseIngredientRxcuis(med.ingredientsJson)
             val shared = existingRxcuis.filter { it in newSet }

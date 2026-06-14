@@ -330,6 +330,14 @@
     <string name="cd_substitute_picker">Substitute for picker. Currently: %1$s. Tap to change.</string>
     <string name="cd_substitute_note_field">Optional note about the substitution</string>
 
+    <!-- ── Combined / split prescription (v1.5.3) ────────────────────────── -->
+    <string name="section_combined_prescription">Combined prescription (optional)</string>
+    <string name="label_combined_partner">Linked prescription</string>
+    <string name="combined_partner_placeholder">Select a medication</string>
+    <string name="combined_partner_helper">Link two prescriptions that together make one dose. The PDF will show one combined entry for the doctor.</string>
+    <string name="label_combined_strength">Combined strength shown on PDF</string>
+    <string name="combined_strength_placeholder">e.g. 90 mg</string>
+
     <!-- ── Reliability dashboard (Slice 6, spec §2.13) ───────────────────── -->
     <string name="screen_reliability_dashboard">Reliability</string>
     <string name="cd_open_reliability">Reliability dashboard</string>

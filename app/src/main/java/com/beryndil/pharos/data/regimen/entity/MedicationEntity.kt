@@ -132,6 +132,26 @@ data class MedicationEntity(
 
     val createdAtEpochMs: Long,
     val updatedAtEpochMs: Long,
+
+    /**
+     * ID of another [MedicationEntity] in the regimen that this medication is prescribed
+     * together with as a split prescription (e.g., tamsulosin 30mg + tamsulosin 60mg = 90mg/day).
+     *
+     * When set, the medication whose ID this points to is hidden from PDF exports; this
+     * medication is shown in the PDF with [combinedDisplayStrength] as its strength.
+     * The duplicate-ingredient warning between the two is also suppressed.
+     *
+     * Not a Room foreign key — the referenced med may be ended; application code handles null.
+     * Null = standalone prescription (no split).
+     */
+    val combinedWithMedId: String? = null,
+
+    /**
+     * User-typed combined strength shown on PDF exports when [combinedWithMedId] is set.
+     * Example: "90 mg" for a 30mg + 60mg tamsulosin pair.
+     * Null (treated as blank) = no combined display override.
+     */
+    val combinedDisplayStrength: String? = null,
 )
 
 /** Lifecycle status of a medication in the user's regimen. */

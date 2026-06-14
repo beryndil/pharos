@@ -185,7 +185,12 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
         y += 12f
 
         // ── Medication entries ────────────────────────────────────────────
+        // Build set of IDs that are the "hidden" half of a combined prescription — they are
+        // represented by the declaring medication's combined display.
+        val hiddenMedIds = medications.mapNotNull { it.combinedWithMedId }.toSet()
+
         for (med in medications) {
+            if (med.id in hiddenMedIds) continue // shown as part of another med's combined entry
 
             // Estimate minimum block height to decide if we need a page break before starting.
             // Minimum: separator (1) + med name line + strength line + at least one field row.
@@ -211,8 +216,10 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
             y += medNamePaint.textSize + 5f
 
             // ── Strength · Form · Dose amount ─────────────────────────────
+            val displayStrength = if (!med.combinedDisplayStrength.isNullOrBlank())
+                "${med.combinedDisplayStrength} (combined prescription)" else med.strength
             val strengthLine = buildList {
-                add("${med.strength} · ${med.form.lowercase().replaceFirstChar { it.uppercase() }}")
+                add("$displayStrength · ${med.form.lowercase().replaceFirstChar { it.uppercase() }}")
                 if (options.includeDoseAmount && med.doseAmount.isNotBlank()) {
                     add(med.doseAmount)
                 }

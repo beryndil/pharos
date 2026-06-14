@@ -351,6 +351,7 @@ class BackupRepository(
         purpose = purpose, notes = notes, isFreeText = isFreeText, status = status,
         startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs, updatedAtEpochMs = updatedAtEpochMs,
+        combinedWithMedId = combinedWithMedId, combinedDisplayStrength = combinedDisplayStrength,
     )
 
     private fun MedicationBackup.toEntity() = MedicationEntity(
@@ -360,6 +361,7 @@ class BackupRepository(
         purpose = purpose, notes = notes, isFreeText = isFreeText, status = status,
         startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs, updatedAtEpochMs = updatedAtEpochMs,
+        combinedWithMedId = combinedWithMedId, combinedDisplayStrength = combinedDisplayStrength,
     )
 
     private fun ScheduleEntity.toBackup() = ScheduleBackup(

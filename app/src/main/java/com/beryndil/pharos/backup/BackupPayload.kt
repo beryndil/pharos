@@ -61,6 +61,10 @@ data class MedicationBackup(
     val endEpochMs: Long?,
     val createdAtEpochMs: Long,
     val updatedAtEpochMs: Long,
+    /** Combined prescription partner ID (v1.5.3+). Default null for older backups. */
+    val combinedWithMedId: String? = null,
+    /** User-typed combined display strength, e.g. "90 mg" (v1.5.3+). Default null for older backups. */
+    val combinedDisplayStrength: String? = null,
 )
 
 @Serializable

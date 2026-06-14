@@ -138,6 +138,14 @@ data class AddEditMedicationUiState(
     /** Optional free-text note attached to the substitution link. */
     val substituteNote: String = "",
 
+    // ── Combined prescription (split prescription) ────────────────────────
+    /** ID of the other medication in the regimen this is prescribed together with. Null = standalone. */
+    val combinedWithMedId: String? = null,
+    /** User-typed combined display strength for PDF exports (e.g. "90 mg"). */
+    val combinedDisplayStrength: String = "",
+    /** All active, non-ended medications for the combined-with picker (excluding the current med). */
+    val allActiveMeds: List<com.beryndil.pharos.data.regimen.entity.MedicationEntity> = emptyList(),
+
     // ── Validation ────────────────────────────────────────────────────────
     val strengthError: Boolean = false,
     val formError: Boolean = false,
@@ -187,6 +195,10 @@ sealed interface AddEditMedEvent {
     data class SubstituteSelected(val name: String?) : AddEditMedEvent
     /** User typed in the optional substitution note field. */
     data class SubstituteNoteChanged(val value: String) : AddEditMedEvent
+    /** User selected (or cleared) the combined-with medication. Null clears the link. */
+    data class CombinedWithMedChanged(val medId: String?) : AddEditMedEvent
+    /** User typed the combined display strength (e.g. "90 mg"). */
+    data class CombinedDisplayStrengthChanged(val value: String) : AddEditMedEvent
     data object SaveRequested : AddEditMedEvent
     data object DuplicateWarningConfirmed : AddEditMedEvent
     data object DuplicateWarningDismissed : AddEditMedEvent
@@ -245,6 +257,16 @@ class AddEditMedicationViewModel(
         }
         startSearchDebounce()
         startSuggestionCollection()
+        loadActiveMedsForPicker(editMedId)
+    }
+
+    private fun loadActiveMedsForPicker(excludeId: String?) {
+        viewModelScope.launch {
+            repository.observeActiveMedications()
+                .collect { meds ->
+                    _uiState.update { it.copy(allActiveMeds = meds.filter { m -> m.id != excludeId }) }
+                }
+        }
     }
 
     fun onEvent(event: AddEditMedEvent) {
@@ -328,6 +350,10 @@ class AddEditMedicationViewModel(
             is AddEditMedEvent.SubstituteSelected -> onSubstituteSelected(event.name)
             is AddEditMedEvent.SubstituteNoteChanged ->
                 _uiState.update { it.copy(substituteNote = event.value) }
+            is AddEditMedEvent.CombinedWithMedChanged ->
+                _uiState.update { it.copy(combinedWithMedId = event.medId) }
+            is AddEditMedEvent.CombinedDisplayStrengthChanged ->
+                _uiState.update { it.copy(combinedDisplayStrength = event.value) }
             is AddEditMedEvent.SaveRequested -> onSaveRequested()
             is AddEditMedEvent.DuplicateWarningConfirmed -> performSave()
             is AddEditMedEvent.DuplicateWarningDismissed ->
@@ -405,6 +431,8 @@ class AddEditMedicationViewModel(
                     substituteForDrugName = med.substituteForDrugName,
                     substituteSearch = med.substituteForDrugName ?: "",
                     substituteNote = med.substituteNote ?: "",
+                    combinedWithMedId = med.combinedWithMedId,
+                    combinedDisplayStrength = med.combinedDisplayStrength ?: "",
                     isCritical = med.isCritical,
                     missWindowMinutesText = med.missWindowMinutes.toString(),
                     originalCreatedAtMs = med.createdAtEpochMs,
@@ -576,6 +604,7 @@ class AddEditMedicationViewModel(
                 repository.checkDuplicateIngredients(
                     newIngredientRxcuis = state.ingredientRxcuis,
                     excludeMedId = state.editMedId,
+                    combinedWithMedId = state.combinedWithMedId,
                 )
             }
             if (warnings.isNotEmpty()) {
@@ -616,6 +645,8 @@ class AddEditMedicationViewModel(
             pharmacyPhone = state.pharmacyPhone.trim().ifEmpty { null },
             substituteForDrugName = state.substituteForDrugName?.trim()?.ifEmpty { null },
             substituteNote = state.substituteNote.trim().ifEmpty { null },
+            combinedWithMedId = state.combinedWithMedId?.ifEmpty { null },
+            combinedDisplayStrength = state.combinedDisplayStrength.trim().ifEmpty { null },
             purpose = state.purpose.trim().ifEmpty { null },
             notes = state.notes.trim().ifEmpty { null },
             isFreeText = state.isFreeText,
