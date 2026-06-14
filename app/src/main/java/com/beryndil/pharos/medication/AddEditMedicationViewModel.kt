@@ -97,6 +97,8 @@ data class AddEditMedicationUiState(
     val showBarcodeScanner: Boolean = false,
     /** True while a background NDC lookup is running after a barcode scan. */
     val isBarcodeScanning: Boolean = false,
+    /** True after a barcode scan that found no match — consumed by the UI to show a snackbar. */
+    val barcodeLookupFailed: Boolean = false,
 
     /** Autocomplete suggestions for the prescriber name field, drawn from the saved store. */
     val prescriberSuggestions: List<PrescriberEntity> = emptyList(),
@@ -201,6 +203,7 @@ sealed interface AddEditMedEvent {
     data object DuplicateWarningConfirmed : AddEditMedEvent
     data object DuplicateWarningDismissed : AddEditMedEvent
     data object ErrorDismissed : AddEditMedEvent
+    data object BarcodeLookupFailedDismissed : AddEditMedEvent
 }
 
 @OptIn(FlowPreview::class)
@@ -356,6 +359,8 @@ class AddEditMedicationViewModel(
                 _uiState.update { it.copy(showDuplicateWarning = false, isSaving = false) }
             is AddEditMedEvent.ErrorDismissed ->
                 _uiState.update { it.copy(saveError = null) }
+            is AddEditMedEvent.BarcodeLookupFailedDismissed ->
+                _uiState.update { it.copy(barcodeLookupFailed = false) }
         }
     }
 
@@ -615,16 +620,14 @@ class AddEditMedicationViewModel(
                         },
                     )
                 } else {
-                    // No NDC match — pre-fill the search field with whatever was scanned.
+                    // No NDC match — leave the search field empty and flag the failure so
+                    // the UI can show a snackbar. Putting the barcode value in the name
+                    // field just shows the user a string of digits with no results.
                     state.copy(
                         isBarcodeScanning = false,
-                        nameQuery = rawValue,
-                        isSearching = rawValue.length >= 2,
+                        barcodeLookupFailed = true,
                     )
                 }
-            }
-            if (result == null && rawValue.length >= 2) {
-                _searchTrigger.emit(rawValue)
             }
         }
     }

@@ -137,6 +137,14 @@ fun AddEditMedicationScreen(
         }
     }
 
+    val barcodeNotFoundText = stringResource(R.string.barcode_not_found)
+    LaunchedEffect(uiState.barcodeLookupFailed) {
+        if (uiState.barcodeLookupFailed) {
+            snackbarHostState.showSnackbar(barcodeNotFoundText)
+            onEvent(AddEditMedEvent.BarcodeLookupFailedDismissed)
+        }
+    }
+
     val screenTitle = when (uiState.step) {
         FormStep.SEARCH, FormStep.DETAILS -> stringResource(
             if (uiState.editMedId == null) R.string.screen_add_medication

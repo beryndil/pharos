@@ -63,6 +63,12 @@ object BarcodeNdcService {
             }
         }
 
+        // Path 3: Last resort — full-text search on the NDC endpoint with the raw digit string.
+        // Catches unusual NDC encodings that don't match any formatted candidate above.
+        if (digits.length >= 8) {
+            queryNdcRawText(digits)?.let { return@withContext it }
+        }
+
         null
     }
 
@@ -201,6 +207,13 @@ object BarcodeNdcService {
         val encoded = URLEncoder.encode("\"$productNdc\"", "UTF-8")
         return fetchJson(
             "https://api.fda.gov/drug/ndc.json?search=product_ndc:$encoded&limit=1",
+        )?.let { parseNdcBody(it) }
+    }
+
+    private fun queryNdcRawText(digits: String): DrugLookupResult? {
+        val encoded = URLEncoder.encode(digits, "UTF-8")
+        return fetchJson(
+            "https://api.fda.gov/drug/ndc.json?search=$encoded&limit=1",
         )?.let { parseNdcBody(it) }
     }
 

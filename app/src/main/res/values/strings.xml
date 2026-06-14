@@ -784,6 +784,7 @@
     <string name="cd_barcode_scan_button">Open camera to scan a pill bottle barcode and pre-fill medication information</string>
     <string name="barcode_scan_hint">Point the camera at the barcode on your pill bottle</string>
     <string name="barcode_looking_up">Looking up medication from barcode…</string>
+    <string name="barcode_not_found">Drug not found in the FDA database. Please type the medication name to search.</string>
     <string name="barcode_camera_permission_needed">Camera permission is required to scan barcodes. Tap the button again to grant it.</string>
     <string name="cd_barcode_scanner_close">Close barcode scanner</string>
 
