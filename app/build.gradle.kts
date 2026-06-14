@@ -16,8 +16,8 @@ android {
         applicationId = "com.beryndil.pharos"
         minSdk = 26
         targetSdk = 35
-        versionCode = 34
-        versionName = "1.4.8"
+        versionCode = 35
+        versionName = "1.4.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -164,12 +164,6 @@ dependencies {
     // so our dep's classes load from the app classloader without conflict.
     // API 31+ has no platform BC to conflict with. See DECISIONS.md S9-A1.
     implementation(libs.bouncycastle.prov)
-
-    // CameraX + ML Kit for in-app barcode scanning on pill bottles.
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-    implementation(libs.mlkit.barcode.scanning)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

@@ -776,16 +776,5 @@
     <string name="license_bouncy_castle_credit">Bouncy Castle\nCopyright 2000-2023 The Legion of the Bouncy Castle Inc.\nLicensed under the MIT License.\nhttps://www.bouncycastle.org/</string>
 
     <string name="license_apache_notice">Full text of the Apache License, Version 2.0 is available at http://www.apache.org/licenses/LICENSE-2.0</string>
-    <string name="license_mlkit_credit">ML Kit Barcode Scanning\nCopyright Google LLC\nLicensed under the Apache License, Version 2.0\nhttps://developers.google.com/ml-kit</string>
-    <string name="license_camerax_credit">CameraX (AndroidX Camera)\nCopyright 2019 The Android Open Source Project\nLicensed under the Apache License, Version 2.0\nhttps://developer.android.com/training/camerax</string>
-
-    <!-- ── Barcode scanner ─────────────────────────────────────────────── -->
-    <string name="barcode_scan_button">Scan pill bottle barcode</string>
-    <string name="cd_barcode_scan_button">Open camera to scan a pill bottle barcode and pre-fill medication information</string>
-    <string name="barcode_scan_hint">Point the camera at the barcode on your pill bottle</string>
-    <string name="barcode_looking_up">Looking up medication from barcode…</string>
-    <string name="barcode_not_found">Drug not found in the FDA database. Please type the medication name to search.</string>
-    <string name="barcode_camera_permission_needed">Camera permission is required to scan barcodes. Tap the button again to grant it.</string>
-    <string name="cd_barcode_scanner_close">Close barcode scanner</string>
 
 </resources>

@@ -21,7 +21,6 @@ import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Switch
@@ -111,15 +110,6 @@ fun AddEditMedicationScreen(
 ) {
     com.beryndil.pharos.core.ui.SecureWindow()
 
-    // Full-screen barcode scanner — shown instead of the normal form UI.
-    if (uiState.showBarcodeScanner) {
-        BarcodeScannerOverlay(
-            onBarcodeScanned = { raw -> onEvent(AddEditMedEvent.BarcodeDetected(raw)) },
-            onDismiss = { onEvent(AddEditMedEvent.BarcodeScanDismissed) },
-        )
-        return
-    }
-
     val snackbarHostState = remember { SnackbarHostState() }
     val errorText = when (uiState.saveError) {
         SaveError.GENERAL -> stringResource(R.string.error_save_failed)
@@ -134,14 +124,6 @@ fun AddEditMedicationScreen(
         if (errorText != null) {
             snackbarHostState.showSnackbar(errorText)
             onEvent(AddEditMedEvent.ErrorDismissed)
-        }
-    }
-
-    val barcodeNotFoundText = stringResource(R.string.barcode_not_found)
-    LaunchedEffect(uiState.barcodeLookupFailed) {
-        if (uiState.barcodeLookupFailed) {
-            snackbarHostState.showSnackbar(barcodeNotFoundText)
-            onEvent(AddEditMedEvent.BarcodeLookupFailedDismissed)
         }
     }
 
@@ -231,22 +213,6 @@ private fun SearchStep(
     onEvent: (AddEditMedEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // NDC lookup in-progress indicator shown after a barcode scan.
-    if (uiState.isBarcodeScanning) {
-        Column(
-            modifier = modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            CircularProgressIndicator()
-            Text(
-                text = stringResource(R.string.barcode_looking_up),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-        return
-    }
-
     Column(modifier = modifier) {
         Column(
             modifier = Modifier
@@ -279,21 +245,6 @@ private fun SearchStep(
                     }
                 } else null,
             )
-
-            // Barcode scan shortcut — tapping this opens the camera scanner overlay.
-            val scanCd = stringResource(R.string.cd_barcode_scan_button)
-            TextButton(
-                onClick = { onEvent(AddEditMedEvent.BarcodeScanRequested) },
-                modifier = Modifier.semantics { contentDescription = scanCd },
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.QrCodeScanner,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.size(6.dp))
-                Text(stringResource(R.string.barcode_scan_button))
-            }
 
             if (uiState.nameQuery.length >= 2) {
                 if (uiState.searchResults.isNotEmpty()) {
