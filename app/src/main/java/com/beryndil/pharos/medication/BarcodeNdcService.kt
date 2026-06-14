@@ -41,11 +41,12 @@ object BarcodeNdcService {
         val digits = rawBarcode.filter { it.isDigit() }
 
         // Path 0.5: For 9-digit strings, the most natural FDA interpretation is a 5-digit labeler
-        // + 4-digit product NDC (no package code). Search product_ndc directly before trying the
-        // zero-padded candidates, which create different labeler codes and almost never match.
+        // + 4-digit product NDC (no package code). Search both the NDC endpoint (product_ndc) and
+        // the label endpoint (openfda.product_ndc) — label has broader coverage for some generics.
         if (digits.length == 9) {
-            queryProductNdc("${digits.take(5)}-${digits.drop(5)}")
-                ?.let { return@withContext it }
+            val productNdc9 = "${digits.take(5)}-${digits.drop(5)}"
+            queryProductNdc(productNdc9)?.let { return@withContext it }
+            queryLabelByProductNdc(productNdc9)?.let { return@withContext it }
         }
 
         // Path 1: Try formatted NDC candidates against the NDC endpoint (structured response).
@@ -203,7 +204,14 @@ object BarcodeNdcService {
         )?.let { parseNdcBody(it) }
     }
 
-    // ── openFDA Label endpoint (UPC path) ─────────────────────────────────
+    // ── openFDA Label endpoint ────────────────────────────────────────────
+
+    private fun queryLabelByProductNdc(productNdc: String): DrugLookupResult? {
+        val encoded = URLEncoder.encode("\"$productNdc\"", "UTF-8")
+        return fetchJson(
+            "https://api.fda.gov/drug/label.json?search=openfda.product_ndc:$encoded&limit=1",
+        )?.let { parseLabelBody(it) }
+    }
 
     private fun queryLabelByUpc(upc: String): DrugLookupResult? {
         val encoded = URLEncoder.encode("\"$upc\"", "UTF-8")
