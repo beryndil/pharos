@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Medication
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +31,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -152,10 +155,8 @@ fun MedicationListScreen(
                     items = uiState.medications,
                     key = { it.id },
                 ) { med ->
-                    // Resolve substitute-for name from the same list (graceful: null if not found).
                     val substituteForName = med.substituteForMedId
                         ?.let { subId -> uiState.medications.find { it.id == subId }?.name }
-                    // Back-reference: any active med that declares this one as its substitute.
                     val hasSubstituteName = uiState.medications
                         .find { it.substituteForMedId == med.id }?.name
                     MedicationListItem(
@@ -169,10 +170,39 @@ fun MedicationListScreen(
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
                 }
-                // Bottom spacing so the FAB doesn't obscure the last item.
                 item { Spacer(modifier = Modifier.height(80.dp)) }
             }
         }
+    }
+
+    if (uiState.pendingDeleteMedId != null) {
+        AlertDialog(
+            onDismissRequest = { onEvent(MedicationListEvent.CancelDelete) },
+            title = { Text(stringResource(R.string.dialog_delete_med_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.dialog_delete_med_body,
+                        uiState.pendingDeleteMedName ?: "",
+                    ),
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { onEvent(MedicationListEvent.ConfirmDelete) },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    Text(stringResource(R.string.action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onEvent(MedicationListEvent.CancelDelete) }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            },
+        )
     }
 }
 
@@ -196,32 +226,47 @@ private fun MedicationListItem(
     val status = runCatching { MedicationStatus.valueOf(medication.status) }
         .getOrElse { MedicationStatus.ACTIVE }
 
+    val dimmed = status == MedicationStatus.ENDED
+    val contentAlpha = if (dimmed) 0.5f else 1f
+    val dimmedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+    val dimmedVariantColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+
     ListItem(
         headlineContent = {
-            Text(
-                text = medication.name,
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            Column {
+                Text(
+                    text = medication.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = dimmedColor,
+                )
+                if (dimmed) {
+                    Text(
+                        text = stringResource(R.string.med_status_ended),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    )
+                }
+            }
         },
         supportingContent = {
             Column {
                 Text(
                     text = stringResource(R.string.med_strength_form, medication.strength, formLabel),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = dimmedVariantColor,
                 )
                 if (substituteForMedName != null) {
                     Text(
                         text = stringResource(R.string.med_substitute_for, substituteForMedName),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = dimmedVariantColor,
                     )
                 }
                 if (hasSubstituteName != null) {
                     Text(
                         text = stringResource(R.string.med_has_substitute, hasSubstituteName),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = dimmedVariantColor,
                     )
                 }
             }
@@ -285,6 +330,20 @@ private fun MedicationListItem(
                             onClick = {
                                 menuExpanded = false
                                 onEvent(MedicationListEvent.EndMedication(medication.id))
+                            },
+                        )
+                    }
+                    if (status == MedicationStatus.ENDED) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = stringResource(R.string.action_delete),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onEvent(MedicationListEvent.RequestDelete(medication.id, medication.name))
                             },
                         )
                     }

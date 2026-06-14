@@ -123,10 +123,14 @@
     <string name="schedule_error_taper_empty">Add at least one phase.</string>
     <string name="schedule_error_taper_phase">Each phase needs a description, duration, and at least one time.</string>
 
-    <!-- Pause / resume / end -->
+    <!-- Pause / resume / end / delete -->
     <string name="action_pause">Pause</string>
     <string name="action_resume">Resume</string>
     <string name="action_end">End medication</string>
+    <string name="action_delete">Delete permanently</string>
+    <string name="dialog_delete_med_title">Delete medication?</string>
+    <!-- %1$s = medication name -->
+    <string name="dialog_delete_med_body">This will permanently delete %1$s and all its dose history, schedules, and refill records. This cannot be undone.</string>
     <!-- %1$s = medication name -->
     <string name="cd_med_options">Options for %1$s</string>
 

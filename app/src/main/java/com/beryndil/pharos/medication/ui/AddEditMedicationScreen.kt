@@ -1190,10 +1190,16 @@ private fun SubstituteSection(
     modifier: Modifier = Modifier,
 ) {
     var pickerExpanded by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
     val noneLabel = stringResource(R.string.label_substitute_for_none)
     val displayLabel = selectedMedName ?: noneLabel
     val pickerCd = stringResource(R.string.cd_substitute_picker, displayLabel)
     val noteCd = stringResource(R.string.cd_substitute_note_field)
+
+    val filteredOptions = remember(searchText, options) {
+        if (searchText.isBlank()) options
+        else options.filter { it.name.contains(searchText, ignoreCase = true) }
+    }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ExposedDropdownMenuBox(
@@ -1201,10 +1207,10 @@ private fun SubstituteSection(
             onExpandedChange = { pickerExpanded = it },
         ) {
             OutlinedTextField(
-                value = displayLabel,
-                onValueChange = {},
-                readOnly = true,
+                value = if (pickerExpanded) searchText else displayLabel,
+                onValueChange = { searchText = it },
                 label = { Text(stringResource(R.string.label_substitute_for)) },
+                placeholder = { if (pickerExpanded) Text(displayLabel) },
                 supportingText = {
                     Text(
                         text = stringResource(R.string.substitute_for_helper),
@@ -1214,14 +1220,18 @@ private fun SubstituteSection(
                     )
                 },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = pickerExpanded) },
+                singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .menuAnchor(MenuAnchorType.PrimaryEditable)
                     .semantics { contentDescription = pickerCd },
             )
             ExposedDropdownMenu(
                 expanded = pickerExpanded,
-                onDismissRequest = { pickerExpanded = false },
+                onDismissRequest = {
+                    pickerExpanded = false
+                    searchText = ""
+                },
             ) {
                 // "None" option — clears the link
                 DropdownMenuItem(
@@ -1229,10 +1239,11 @@ private fun SubstituteSection(
                     onClick = {
                         onSubstituteChanged(null)
                         pickerExpanded = false
+                        searchText = ""
                     },
                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
-                options.forEach { med ->
+                filteredOptions.forEach { med ->
                     val medStatus = runCatching { MedicationStatus.valueOf(med.status) }
                         .getOrDefault(MedicationStatus.ACTIVE)
                     val statusLabel = when (medStatus) {
@@ -1260,6 +1271,7 @@ private fun SubstituteSection(
                         onClick = {
                             onSubstituteChanged(med.id)
                             pickerExpanded = false
+                            searchText = ""
                         },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
