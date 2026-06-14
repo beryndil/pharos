@@ -318,10 +318,11 @@
     <string name="dnd_rationale_grant">Grant access</string>
 
     <!-- ── Substitution link (V1.3-F2) — reference framing only (Law 3) ────── -->
-    <string name="label_substitute_for">Substitute for (optional)</string>
+    <string name="label_substitute_for">Prescribed in place of (optional)</string>
     <string name="label_substitute_for_none">None</string>
+    <string name="substitute_for_placeholder">e.g. Flomax</string>
     <string name="label_substitute_note">Note (optional)</string>
-    <string name="substitute_for_helper">Link this to the medication it replaces, including ones you no longer take.</string>
+    <string name="substitute_for_helper">Type the brand or generic name this was prescribed to replace.</string>
     <string name="med_status_paused">Paused</string>
     <string name="med_status_ended">Ended</string>
     <string name="med_substitute_for">Substitute for: %1$s</string>

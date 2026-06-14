@@ -97,15 +97,10 @@ class MedicationRepository(
      * @param newIngredientRxcuis Active ingredient RxCUIs of the medication being added/edited.
      * @param excludeMedId ID of the medication being *edited* — excluded from comparison so a
      *   med doesn't flag itself. Pass null when adding a new medication.
-     * @param substituteForMedId The [MedicationEntity.substituteForMedId] of the new/edited
-     *   medication. When non-null, the warning is suppressed between the new med and the med
-     *   it is declared as a substitute for (direction A → B). The reverse direction (B → A) is
-     *   detected via [excludeMedId] vs existing rows' [MedicationEntity.substituteForMedId].
      */
     suspend fun checkDuplicateIngredients(
         newIngredientRxcuis: List<String>,
         excludeMedId: String? = null,
-        substituteForMedId: String? = null,
     ): List<DuplicateWarning> {
         if (newIngredientRxcuis.isEmpty()) return emptyList()
 
@@ -116,13 +111,6 @@ class MedicationRepository(
 
         for (med in activeMeds) {
             if (med.id == excludeMedId) continue
-
-            // Suppress duplicate warning between two meds linked as substitutes (V1.3-F2).
-            // Direction A→B: new med A is a substitute for this existing med B.
-            val isSubstituteOfThis = med.id == substituteForMedId
-            // Direction B→A: this existing med B is a substitute for the med being edited A.
-            val thisIsSubstituteOfEdited = excludeMedId != null && med.substituteForMedId == excludeMedId
-            if (isSubstituteOfThis || thisIsSubstituteOfEdited) continue
 
             val existingRxcuis = parseIngredientRxcuis(med.ingredientsJson)
             val shared = existingRxcuis.filter { it in newSet }

@@ -128,18 +128,15 @@ data class AddEditMedicationUiState(
      */
     val showDndPermissionRationale: Boolean = false,
 
-    // ── Substitution link (V1.3-F2) ───────────────────────────────────────
-    /**
-     * ID of the medication this one substitutes for. Null = no link. Reference framing only
-     * (Law 3 — never "take B instead of A"; this records that one was switched from another).
-     */
-    val substituteForMedId: String? = null,
-    /** Resolved display name of the linked medication (for the picker label). */
-    val substituteForMedName: String? = null,
+    // ── Substitution link ─────────────────────────────────────────────────
+    /** Drug name this medication substitutes for (e.g. "Flomax"). Free-text, null = no link. */
+    val substituteForDrugName: String? = null,
+    /** Current text in the substitute-for search field. */
+    val substituteSearch: String = "",
+    /** Drug DB results for the substitute-for search field. */
+    val substituteSearchResults: List<DrugSearchResult> = emptyList(),
     /** Optional free-text note attached to the substitution link. */
     val substituteNote: String = "",
-    /** Active medications available as substitution link targets (excludes self on edit). */
-    val substituteMedOptions: List<MedicationEntity> = emptyList(),
 
     // ── Validation ────────────────────────────────────────────────────────
     val strengthError: Boolean = false,
@@ -184,7 +181,10 @@ sealed interface AddEditMedEvent {
     data class MissWindowMinutesChanged(val value: String) : AddEditMedEvent
     data object DndPermissionRationaleDismissed : AddEditMedEvent
     /** User selected (or cleared) the substitute-for medication. Null clears the link. */
-    data class SubstituteForChanged(val medId: String?) : AddEditMedEvent
+    /** User typed in the substitute-for field — triggers a drug DB search. */
+    data class SubstituteSearchChanged(val query: String) : AddEditMedEvent
+    /** User picked a drug from search results, or null to clear the substitute link. */
+    data class SubstituteSelected(val name: String?) : AddEditMedEvent
     /** User typed in the optional substitution note field. */
     data class SubstituteNoteChanged(val value: String) : AddEditMedEvent
     data object SaveRequested : AddEditMedEvent
@@ -237,13 +237,6 @@ class AddEditMedicationViewModel(
     private val _allPrescribers = MutableStateFlow<List<PrescriberEntity>>(emptyList())
     private val _allPharmacies = MutableStateFlow<List<PharmacyEntity>>(emptyList())
 
-    /**
-     * Cache of all active medications for the substitute-for picker. Kept in sync with
-     * [MedicationRepository.observeActiveMedications] so the picker reflects live DB state.
-     * Also declared before init {} for the same init-order reason as [_allPrescribers].
-     */
-    private val _allActiveMeds = MutableStateFlow<List<MedicationEntity>>(emptyList())
-
     init {
         val editMedId: String? = savedStateHandle["medId"]
         if (editMedId != null) {
@@ -252,7 +245,6 @@ class AddEditMedicationViewModel(
         }
         startSearchDebounce()
         startSuggestionCollection()
-        startSubstituteOptionsCollection()
     }
 
     fun onEvent(event: AddEditMedEvent) {
@@ -332,7 +324,8 @@ class AddEditMedicationViewModel(
                 }
             is AddEditMedEvent.DndPermissionRationaleDismissed ->
                 _uiState.update { it.copy(showDndPermissionRationale = false) }
-            is AddEditMedEvent.SubstituteForChanged -> onSubstituteForChanged(event.medId)
+            is AddEditMedEvent.SubstituteSearchChanged -> onSubstituteSearchChanged(event.query)
+            is AddEditMedEvent.SubstituteSelected -> onSubstituteSelected(event.name)
             is AddEditMedEvent.SubstituteNoteChanged ->
                 _uiState.update { it.copy(substituteNote = event.value) }
             is AddEditMedEvent.SaveRequested -> onSaveRequested()
@@ -387,12 +380,6 @@ class AddEditMedicationViewModel(
                 }
             }
 
-            // Resolve substitute-for display name from cache (fast path) or DB (fallback).
-            val substituteName = med.substituteForMedId?.let { subId ->
-                _allActiveMeds.value.find { it.id == subId }?.name
-                    ?: withContext(ioDispatcher) { repository.getMedication(subId)?.name }
-            }
-
             _uiState.update {
                 it.copy(
                     step = FormStep.DETAILS,
@@ -415,8 +402,8 @@ class AddEditMedicationViewModel(
                     pharmacyPhone = med.pharmacyPhone ?: "",
                     purpose = med.purpose ?: "",
                     notes = med.notes ?: "",
-                    substituteForMedId = med.substituteForMedId,
-                    substituteForMedName = substituteName,
+                    substituteForDrugName = med.substituteForDrugName,
+                    substituteSearch = med.substituteForDrugName ?: "",
                     substituteNote = med.substituteNote ?: "",
                     isCritical = med.isCritical,
                     missWindowMinutesText = med.missWindowMinutes.toString(),
@@ -461,32 +448,6 @@ class AddEditMedicationViewModel(
         if (query.isBlank()) emptyList()
         else all.filter { it.name.contains(query, ignoreCase = true) && !it.name.equals(query, ignoreCase = true) }
 
-    /**
-     * Keeps [AddEditMedicationUiState.substituteMedOptions] in sync with ALL medications
-     * (V1.3-F2). Includes ENDED and PAUSED meds so the user can link a new medication to
-     * one they have already stopped taking. The med being edited is excluded from its own
-     * picker. Options are sorted: active first, then paused, then ended; alpha within each tier.
-     */
-    private fun startSubstituteOptionsCollection() {
-        viewModelScope.launch {
-            repository.observeAllMedications().collect { meds ->
-                _allActiveMeds.value = meds
-                val editId = _uiState.value.editMedId
-                val options = meds
-                    .filter { it.id != editId }
-                    .sortedWith(
-                        compareBy(
-                            { statusSortKey(it.status) },
-                            { it.name },
-                        ),
-                    )
-                _uiState.update { state ->
-                    state.copy(substituteMedOptions = options)
-                }
-            }
-        }
-    }
-
     private fun statusSortKey(status: String): Int = when (
         runCatching { MedicationStatus.valueOf(status) }.getOrDefault(MedicationStatus.ACTIVE)
     ) {
@@ -495,14 +456,24 @@ class AddEditMedicationViewModel(
         MedicationStatus.ENDED  -> 2
     }
 
-    /**
-     * Handles the user picking (or clearing) a substitute-for target.
-     * Resolves the display name from the cached active-med list so the UI reflects the
-     * selection immediately without a DB round-trip.
-     */
-    private fun onSubstituteForChanged(medId: String?) {
-        val name = medId?.let { id -> _allActiveMeds.value.find { it.id == id }?.name }
-        _uiState.update { it.copy(substituteForMedId = medId, substituteForMedName = name) }
+    private fun onSubstituteSearchChanged(query: String) {
+        _uiState.update { it.copy(substituteSearch = query, substituteForDrugName = null, substituteSearchResults = emptyList()) }
+        if (query.length >= 2) {
+            viewModelScope.launch {
+                val results = withContext(ioDispatcher) { repository.searchDrugs(query) }
+                _uiState.update { it.copy(substituteSearchResults = results) }
+            }
+        }
+    }
+
+    private fun onSubstituteSelected(name: String?) {
+        _uiState.update {
+            it.copy(
+                substituteForDrugName = name,
+                substituteSearch = name ?: "",
+                substituteSearchResults = emptyList(),
+            )
+        }
     }
 
     private fun startSearchDebounce() {
@@ -605,7 +576,6 @@ class AddEditMedicationViewModel(
                 repository.checkDuplicateIngredients(
                     newIngredientRxcuis = state.ingredientRxcuis,
                     excludeMedId = state.editMedId,
-                    substituteForMedId = state.substituteForMedId,
                 )
             }
             if (warnings.isNotEmpty()) {
@@ -644,7 +614,7 @@ class AddEditMedicationViewModel(
             prescriberPractice = state.prescriberPractice.trim().ifEmpty { null },
             pharmacy = state.pharmacy.trim().ifEmpty { null },
             pharmacyPhone = state.pharmacyPhone.trim().ifEmpty { null },
-            substituteForMedId = state.substituteForMedId,
+            substituteForDrugName = state.substituteForDrugName?.trim()?.ifEmpty { null },
             substituteNote = state.substituteNote.trim().ifEmpty { null },
             purpose = state.purpose.trim().ifEmpty { null },
             notes = state.notes.trim().ifEmpty { null },

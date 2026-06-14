@@ -76,7 +76,15 @@ data class MedicationEntity(
      * the link note is still valuable to the user. Application code must handle null-lookup
      * gracefully (show nothing, never crash).
      */
+    /** Dead column — superseded by [substituteForDrugName] in v9. Kept in schema to avoid migration complexity. */
     val substituteForMedId: String? = null,
+
+    /**
+     * Name of the drug this medication substitutes for (e.g. "Flomax" for tamsulosin).
+     * Free-text, searched against the local drug reference DB at entry time. Reference only
+     * (Law 3 — never advice). Null = no substitution link.
+     */
+    val substituteForDrugName: String? = null,
 
     /**
      * Optional free-text note the user attached to the substitution link, e.g.

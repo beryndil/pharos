@@ -24,7 +24,7 @@ object RegimenDatabaseFactory {
      * AND by the newer-schema guard to detect on-disk databases from future app versions.
      * Keep in sync with [RegimenDatabase]'s `@Database` annotation.
      */
-    const val CURRENT_VERSION = 8
+    const val CURRENT_VERSION = 9
 
     /**
      * v1 → v2 (Slice 5): adds the append-only [dose_transitions] history table. Additive only —
@@ -153,6 +153,20 @@ object RegimenDatabaseFactory {
     }
 
     /**
+     * v8 → v9: adds [substituteForDrugName] nullable TEXT column to [medications].
+     *
+     * Replaces the old FK-style [substituteForMedId] (which pointed to another medication in the
+     * regimen) with a free-text drug name searched from the drug reference DB. This lets the user
+     * record "tamsulosin substituted for Flomax" even when Flomax is not in their regimen.
+     * [substituteForMedId] is kept as a dead column to avoid a table-recreation migration.
+     */
+    val MIGRATION_8_9: Migration = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `medications` ADD COLUMN `substituteForDrugName` TEXT")
+        }
+    }
+
+    /**
      * Builds [RegimenDatabase] with a newer-schema version guard.
      *
      * @param openHelperFactory SQLCipher [net.zetetic.database.sqlcipher.SupportFactory] in
@@ -174,7 +188,7 @@ object RegimenDatabaseFactory {
         enforceSchemaVersion(context, passphrase)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
             .build()
     }
 

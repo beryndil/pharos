@@ -517,11 +517,12 @@ private fun DetailsStep(
             )
 
             SubstituteSection(
-                selectedMedId = uiState.substituteForMedId,
-                selectedMedName = uiState.substituteForMedName,
-                options = uiState.substituteMedOptions,
+                search = uiState.substituteSearch,
+                committedName = uiState.substituteForDrugName,
+                searchResults = uiState.substituteSearchResults,
                 note = uiState.substituteNote,
-                onSubstituteChanged = { onEvent(AddEditMedEvent.SubstituteForChanged(it)) },
+                onSearchChanged = { onEvent(AddEditMedEvent.SubstituteSearchChanged(it)) },
+                onSelected = { onEvent(AddEditMedEvent.SubstituteSelected(it)) },
                 onNoteChanged = { onEvent(AddEditMedEvent.SubstituteNoteChanged(it)) },
             )
 
@@ -1124,52 +1125,40 @@ private fun PharmacyAutocompleteField(
 // ── Substitution link section (V1.3-F2) ──────────────────────────────────
 
 /**
- * "Substitute for" picker + optional note field (V1.3-F2, Law 3 reference framing).
+ * "Substitute for" search field + optional note (Law 3 reference framing).
  *
- * Accessibility (§8): the picker exposes a [contentDescription] with the current selection;
- * both fields meet ≥48dp via OutlinedTextField defaults. Labels use full sp text so they
- * scale without truncation at max font size.
+ * The user types a drug name (e.g. "Flomax") and gets live results from the local drug DB.
+ * Selecting a result commits it; typing away without selecting commits the typed text as-is.
+ * This lets the user record "tamsulosin substituted for Flomax" even when Flomax is not in
+ * their regimen.
  *
- * @param selectedMedId Currently selected substitute-for med ID, or null for "None".
- * @param selectedMedName Resolved display name for the selected med, or null.
- * @param options Active medications available as substitution link targets (self excluded).
- * @param note Current value of the optional substitution note field.
- * @param onSubstituteChanged Called with the selected med ID (null = clear the link).
- * @param onNoteChanged Called whenever the note text changes.
+ * Accessibility (§8): both fields meet ≥48dp via OutlinedTextField defaults.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SubstituteSection(
-    selectedMedId: String?,
-    selectedMedName: String?,
-    options: List<MedicationEntity>,
+    search: String,
+    committedName: String?,
+    searchResults: List<DrugSearchResult>,
     note: String,
-    onSubstituteChanged: (String?) -> Unit,
+    onSearchChanged: (String) -> Unit,
+    onSelected: (String?) -> Unit,
     onNoteChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var pickerExpanded by remember { mutableStateOf(false) }
-    var searchText by remember { mutableStateOf("") }
-    val noneLabel = stringResource(R.string.label_substitute_for_none)
-    val displayLabel = selectedMedName ?: noneLabel
-    val pickerCd = stringResource(R.string.cd_substitute_picker, displayLabel)
     val noteCd = stringResource(R.string.cd_substitute_note_field)
-
-    val filteredOptions = remember(searchText, options) {
-        if (searchText.isBlank()) options
-        else options.filter { it.name.contains(searchText, ignoreCase = true) }
-    }
+    val dropdownExpanded = searchResults.isNotEmpty()
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ExposedDropdownMenuBox(
-            expanded = pickerExpanded,
-            onExpandedChange = { pickerExpanded = it },
+            expanded = dropdownExpanded,
+            onExpandedChange = { if (!it) onSelected(search.trim().ifEmpty { null }) },
         ) {
             OutlinedTextField(
-                value = if (pickerExpanded) searchText else displayLabel,
-                onValueChange = { searchText = it },
+                value = search,
+                onValueChange = onSearchChanged,
                 label = { Text(stringResource(R.string.label_substitute_for)) },
-                placeholder = { if (pickerExpanded) Text(displayLabel) },
+                placeholder = { Text(stringResource(R.string.substitute_for_placeholder)) },
                 supportingText = {
                     Text(
                         text = stringResource(R.string.substitute_for_helper),
@@ -1178,67 +1167,46 @@ private fun SubstituteSection(
                         overflow = TextOverflow.Clip,
                     )
                 },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = pickerExpanded) },
+                trailingIcon = if (search.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { onSelected(null) }) {
+                            Icon(Icons.Outlined.Close, contentDescription = null)
+                        }
+                    }
+                } else null,
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(MenuAnchorType.PrimaryEditable)
-                    .semantics { contentDescription = pickerCd },
+                    .menuAnchor(MenuAnchorType.PrimaryEditable),
             )
             ExposedDropdownMenu(
-                expanded = pickerExpanded,
-                onDismissRequest = {
-                    pickerExpanded = false
-                    searchText = ""
-                },
+                expanded = dropdownExpanded,
+                onDismissRequest = { onSelected(search.trim().ifEmpty { null }) },
             ) {
-                // "None" option — clears the link
-                DropdownMenuItem(
-                    text = { Text(noneLabel) },
-                    onClick = {
-                        onSubstituteChanged(null)
-                        pickerExpanded = false
-                        searchText = ""
-                    },
-                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                )
-                filteredOptions.forEach { med ->
-                    val medStatus = runCatching { MedicationStatus.valueOf(med.status) }
-                        .getOrDefault(MedicationStatus.ACTIVE)
-                    val statusLabel = when (medStatus) {
-                        MedicationStatus.PAUSED -> stringResource(R.string.med_status_paused)
-                        MedicationStatus.ENDED  -> stringResource(R.string.med_status_ended)
-                        MedicationStatus.ACTIVE -> null
-                    }
+                searchResults.forEach { drug ->
                     DropdownMenuItem(
                         text = {
                             Column {
+                                Text(drug.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(
-                                    text = med.name,
-                                    overflow = TextOverflow.Ellipsis,
-                                    maxLines = 1,
+                                    text = drug.tty,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                if (statusLabel != null) {
-                                    Text(
-                                        text = statusLabel,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
                             }
                         },
-                        onClick = {
-                            onSubstituteChanged(med.id)
-                            pickerExpanded = false
-                            searchText = ""
-                        },
+                        onClick = { onSelected(drug.name) },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
                 }
             }
         }
 
-        if (selectedMedId != null) {
+        if (committedName != null) {
             OutlinedTextField(
                 value = note,
                 onValueChange = onNoteChanged,

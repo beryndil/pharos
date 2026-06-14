@@ -155,14 +155,10 @@ fun MedicationListScreen(
                     items = uiState.medications,
                     key = { it.id },
                 ) { med ->
-                    val substituteForName = med.substituteForMedId
-                        ?.let { subId -> uiState.medications.find { it.id == subId }?.name }
-                    val hasSubstituteName = uiState.medications
-                        .find { it.substituteForMedId == med.id }?.name
                     MedicationListItem(
                         medication = med,
-                        substituteForMedName = substituteForName,
-                        hasSubstituteName = hasSubstituteName,
+                        substituteForMedName = med.substituteForDrugName,
+                        hasSubstituteName = null,
                         onClick = { onMedicationClicked(med.id) },
                         onRefillClicked = { onRefillClicked(med.id) },
                         onDrugReferenceClicked = { onDrugReferenceClicked(med.id) },
