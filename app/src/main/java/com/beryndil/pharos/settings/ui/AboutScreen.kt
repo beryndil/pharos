@@ -100,7 +100,7 @@ fun AboutScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                        painter = painterResource(R.mipmap.ic_launcher),
                         contentDescription = null,
                         modifier = Modifier.size(72.dp),
                     )
