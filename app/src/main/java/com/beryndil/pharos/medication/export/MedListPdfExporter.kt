@@ -70,6 +70,7 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
         val scheduleMap  = db.scheduleDao().getAll().groupBy { it.medicationId }
         val latestRefill = db.refillRecordDao().getAll().groupBy { it.medicationId }
             .mapValues { (_, records) -> records.maxByOrNull { it.createdAtEpochMs } }
+        val allMedById   = allMedications.associateBy { it.id }
 
         // ── Page geometry ─────────────────────────────────────────────────
         val pageWidth  = 595   // A4 pt
@@ -232,14 +233,38 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
             y += medNamePaint.textSize + 5f
 
             // ── Strength · Form · Dose amount ─────────────────────────────
-            val displayStrength = if (!med.combinedDisplayStrength.isNullOrBlank())
-                "${med.combinedDisplayStrength} (combined prescription)" else med.strength
-            val strengthLine = buildList {
-                add("$displayStrength · ${med.form.lowercase().replaceFirstChar { it.uppercase() }}")
-                if (options.includeDoseAmount && med.doseAmount.isNotBlank()) {
-                    add(med.doseAmount)
+            val partnerMed = med.combinedWithMedId?.let { allMedById[it] }
+            val strengthLine = if (partnerMed != null) {
+                // Split prescription: show each component's dose + strength, then total.
+                // e.g. "1 tablet (60 mg)  +  1 tablet (30 mg)  =  90 mg total  ·  Tablet"
+                buildString {
+                    if (options.includeDoseAmount && med.doseAmount.isNotBlank()) {
+                        append("${med.doseAmount} (${med.strength})")
+                    } else {
+                        append(med.strength)
+                    }
+                    append("  +  ")
+                    if (options.includeDoseAmount && partnerMed.doseAmount.isNotBlank()) {
+                        append("${partnerMed.doseAmount} (${partnerMed.strength})")
+                    } else {
+                        append(partnerMed.strength)
+                    }
+                    if (!med.combinedDisplayStrength.isNullOrBlank()) {
+                        append("  =  ${med.combinedDisplayStrength} total")
+                    }
+                    append("  ·  ${med.form.lowercase().replaceFirstChar { it.uppercase() }}")
                 }
-            }.joinToString("  ·  ")
+            } else {
+                // Standalone or partner no longer in regimen — keep original display.
+                val displayStrength = if (!med.combinedDisplayStrength.isNullOrBlank())
+                    "${med.combinedDisplayStrength} (combined prescription)" else med.strength
+                buildList {
+                    add("$displayStrength · ${med.form.lowercase().replaceFirstChar { it.uppercase() }}")
+                    if (options.includeDoseAmount && med.doseAmount.isNotBlank()) {
+                        add(med.doseAmount)
+                    }
+                }.joinToString("  ·  ")
+            }
             y += drawFull(strengthLine, y, strengthPaint) + 8f
 
             // ── Optional field rows ───────────────────────────────────────
