@@ -99,7 +99,7 @@ class DoseRepository(
                     medName = med.name,
                     strength = med.strength,
                     doseAmount = med.doseAmount,
-                    indication = sched.indication,
+                    indication = sched.indication ?: med.purpose,
                     dosesToday = takenCountByMed[med.id] ?: 0,
                     dailyMax = sched.dailyMaxDoses,
                 )
