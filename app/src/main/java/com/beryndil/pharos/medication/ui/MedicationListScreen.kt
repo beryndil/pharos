@@ -247,7 +247,11 @@ private fun MedicationListItem(
         supportingContent = {
             Column {
                 Text(
-                    text = stringResource(R.string.med_strength_form, medication.strength, formLabel),
+                    text = stringResource(
+                        R.string.med_strength_form,
+                        medication.strength,
+                        medication.doseAmount.ifBlank { formLabel },
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = dimmedVariantColor,
                 )
