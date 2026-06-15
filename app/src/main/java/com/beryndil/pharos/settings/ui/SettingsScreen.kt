@@ -66,6 +66,7 @@ fun SettingsScreen(
     onOpenAbout: () -> Unit,
     onOpenLegal: () -> Unit,
     onOpenProfile: () -> Unit = {},
+    onOpenReliability: () -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -168,6 +169,18 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_action_profile),
                 contentDesc = stringResource(R.string.cd_navigate_profile),
                 onClick = onOpenProfile,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+
+            // ── Reminders section ─────────────────────────────────────────
+            SectionHeader(stringResource(R.string.settings_section_reminders))
+
+            NavigationRow(
+                label = stringResource(R.string.settings_action_reliability),
+                contentDesc = stringResource(R.string.cd_navigate_reliability),
+                onClick = onOpenReliability,
             )
 
             Spacer(modifier = Modifier.height(16.dp))

@@ -320,9 +320,10 @@ fun PharosNavGraph(
             SettingsScreen(
                 uiState = uiState,
                 onEvent = viewModel::onEvent,
-                onOpenAbout = { navController.navigate(NavRoute.About.route) },
-                onOpenLegal = { navController.navigate(NavRoute.Legal.route) },
-                onOpenProfile = { navController.navigate(NavRoute.UserProfile.route) },
+                onOpenAbout        = { navController.navigate(NavRoute.About.route) },
+                onOpenLegal        = { navController.navigate(NavRoute.Legal.route) },
+                onOpenProfile      = { navController.navigate(NavRoute.UserProfile.route) },
+                onOpenReliability  = { navController.navigate(NavRoute.ReliabilityDashboard.route) },
                 onBack = { navController.popBackStack() },
             )
         }

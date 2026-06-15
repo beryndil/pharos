@@ -116,12 +116,6 @@ fun TodayScreen(
             LargeTopAppBar(
                 title = { Text(stringResource(R.string.screen_today)) },
                 actions = {
-                    IconButton(onClick = onOpenReliability) {
-                        Icon(
-                            imageVector = Icons.Outlined.CheckCircleOutline,
-                            contentDescription = stringResource(R.string.cd_open_reliability),
-                        )
-                    }
                     IconButton(onClick = onOpenMedications) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ListAlt,
@@ -168,10 +162,8 @@ fun TodayScreen(
                 // ── Quick-actions row (F3) ────────────────────────────────────
                 item {
                     QuickActionsRow(
-                        onEmailMedList  = { onEvent(TodayEvent.EmailMedListRequest) },
-                        onTestReminder  = onOpenReliability,
-                        onReliability   = onOpenReliability,
-                        onSettings      = onOpenSettings,
+                        onEmailMedList = { onEvent(TodayEvent.EmailMedListRequest) },
+                        onTestReminder = onOpenReliability,
                     )
                 }
 
@@ -386,8 +378,6 @@ private fun NextUpSection(nextUp: List<NextUpItem>) {
 private fun QuickActionsRow(
     onEmailMedList: () -> Unit,
     onTestReminder: () -> Unit,
-    onReliability: () -> Unit,
-    onSettings: () -> Unit,
 ) {
     // Label for the whole row (screen-reader context)
     val rowCd = stringResource(R.string.today_quick_actions_label)
