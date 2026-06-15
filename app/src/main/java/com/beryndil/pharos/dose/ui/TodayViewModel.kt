@@ -11,6 +11,7 @@ import com.beryndil.pharos.data.dose.DoseRow
 import com.beryndil.pharos.data.dose.PrnMedRow
 import com.beryndil.pharos.data.regimen.entity.DoseState
 import com.beryndil.pharos.medication.export.MedListPdfExporter
+import com.beryndil.pharos.settings.UserProfileRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -109,6 +110,7 @@ class TodayViewModel(
     private val pdfExporter: MedListPdfExporter,
     /** Application cache directory for writing the email-PDF temp file. */
     private val cacheDir: File,
+    private val userProfileRepository: UserProfileRepository,
 ) : ViewModel() {
 
     /** Non-null while the PRN daily-max advisory should be shown. */
@@ -176,11 +178,12 @@ class TodayViewModel(
     private fun generateEmailPdf() {
         viewModelScope.launch {
             try {
+                val profile = userProfileRepository.getProfile()
                 val exportDir = File(cacheDir, "exports")
                 exportDir.mkdirs()
                 val pdfFile = File(exportDir, "medication-list.pdf")
                 pdfFile.outputStream().use { stream ->
-                    pdfExporter.writeTo(stream)
+                    pdfExporter.writeTo(stream, userProfile = profile)
                 }
                 _emailState.value = _emailState.value.copy(pendingFile = pdfFile)
             } catch (e: Exception) {
@@ -209,6 +212,7 @@ class TodayViewModel(
             doseRepository: DoseRepository,
             pdfExporter: MedListPdfExporter,
             cacheDir: File,
+            userProfileRepository: UserProfileRepository,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -216,6 +220,7 @@ class TodayViewModel(
                         doseRepository = doseRepository,
                         pdfExporter = pdfExporter,
                         cacheDir = cacheDir,
+                        userProfileRepository = userProfileRepository,
                     )
                 }
             }

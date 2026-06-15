@@ -106,9 +106,10 @@ fun PharosNavGraph(
         composable(NavRoute.Today.route) {
             val viewModel: TodayViewModel = viewModel(
                 factory = TodayViewModel.factory(
-                    doseRepository = doseRepository,
-                    pdfExporter    = app.appContainer.medListPdfExporter,
-                    cacheDir       = app.cacheDir,
+                    doseRepository        = doseRepository,
+                    pdfExporter           = app.appContainer.medListPdfExporter,
+                    cacheDir              = app.cacheDir,
+                    userProfileRepository = app.appContainer.userProfileRepository,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()

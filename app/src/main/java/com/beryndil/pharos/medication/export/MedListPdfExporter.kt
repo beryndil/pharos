@@ -300,8 +300,7 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
             .format(Instant.ofEpochMilli(exportedAtEpochMs))
         val countStr = "${medications.size} medication${if (medications.size == 1) "" else "s"}  ·  Exported $dateStr"
         canvas.drawText(countStr, margin, y + disclaimerP.textSize, disclaimerP)
-        y += disclaimerP.textSize + 4f
-        val footerStr = "Printed with Pharos · github.com/beryndil/pharos"
+        val footerStr = "Printed with Pharos · by Beryndil · Available on Google Play"
         val footerW = disclaimerP.measureText(footerStr)
         canvas.drawText(footerStr, pageWidth - margin - footerW, y + disclaimerP.textSize, disclaimerP)
 
