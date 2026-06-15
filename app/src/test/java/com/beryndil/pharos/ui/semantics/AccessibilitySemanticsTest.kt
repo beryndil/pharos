@@ -95,6 +95,7 @@ class AccessibilitySemanticsTest {
             medicationId = "m1",
             medName = medName,
             strength = "500 mg",
+        doseAmount = "",
             dueEpochMs = 1_700_000_000_000L,
             state = DoseState.DUE,
         )
@@ -123,6 +124,7 @@ class AccessibilitySemanticsTest {
             medicationId = "m2",
             medName = medName,
             strength = "10 mg",
+        doseAmount = "",
             dueEpochMs = 1_700_000_000_000L,
             state = DoseState.DUE,
         )
@@ -153,6 +155,7 @@ class AccessibilitySemanticsTest {
             medicationId = "m3",
             medName = medName,
             strength = "20 mg",
+        doseAmount = "",
             dueEpochMs = 1_700_000_000_000L,
             state = DoseState.DUE,
         )
@@ -274,6 +277,7 @@ class AccessibilitySemanticsTest {
             medicationId = "m10",
             medName = "Metformin",
             strength = "500 mg",
+        doseAmount = "",
             dueEpochMs = 1_700_000_000_000L,
             state = DoseState.DUE,
         )
@@ -305,6 +309,7 @@ class AccessibilitySemanticsTest {
             medicationId = "m11",
             medName = "Lisinopril",
             strength = "10 mg",
+        doseAmount = "",
             dueEpochMs = 1_700_000_000_000L,
             state = DoseState.MISSED,
         )
@@ -335,6 +340,7 @@ class AccessibilitySemanticsTest {
             medicationId = "m12",
             medName = "Aspirin",
             strength = "81 mg",
+        doseAmount = "",
             dueEpochMs = 1_700_000_000_000L,
             state = DoseState.SNOOZED,
         )
@@ -394,6 +400,7 @@ class AccessibilitySemanticsTest {
             medicationId = "m13",
             medName = medName,
             strength = "5 mg",
+        doseAmount = "",
             dueEpochMs = 1_700_000_000_000L,
             state = DoseState.SCHEDULED,
         )

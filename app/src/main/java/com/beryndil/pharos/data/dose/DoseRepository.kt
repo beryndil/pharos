@@ -44,6 +44,7 @@ class DoseRepository(
                         medicationId = d.medicationId,
                         medName = m.name,
                         strength = m.strength,
+                        doseAmount = m.doseAmount,
                         dueEpochMs = d.dueEpochMs,
                         state = DoseState.valueOf(d.state),
                     )
@@ -134,6 +135,7 @@ data class DoseRow(
     val medicationId: String,
     val medName: String,
     val strength: String,
+    val doseAmount: String,
     val dueEpochMs: Long,
     val state: DoseState,
 )

@@ -20,7 +20,6 @@ import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -486,7 +485,10 @@ private fun DoseCard(
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text = stringResource(R.string.today_dose_summary, dose.strength, timeText),
+                text = buildString {
+                    if (dose.doseAmount.isNotBlank()) append("${dose.doseAmount}  ·  ")
+                    append("${dose.strength}  ·  $timeText")
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
@@ -561,34 +563,20 @@ private fun PrnMedCard(
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text = prn.doseAmount,
+                text = buildString {
+                    if (prn.doseAmount.isNotBlank()) append("${prn.doseAmount}  ·  ")
+                    append(prn.strength)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(top = 2.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.MedicalServices,
-                    contentDescription = null, // decorative — text below carries the meaning
-                    modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = if (prn.indication != null) {
-                        stringResource(R.string.today_prn_label_with_indication, prn.indication)
-                    } else {
-                        stringResource(R.string.schedule_type_prn)
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             Text(
-                text = prn.strength,
+                text = if (prn.indication != null) {
+                    stringResource(R.string.today_prn_label_with_indication, prn.indication)
+                } else {
+                    stringResource(R.string.schedule_type_prn)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),

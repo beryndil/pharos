@@ -29,6 +29,7 @@ class TodayNextUpTest {
         medicationId = "med-$id",
         medName = medName,
         strength = "10 mg",
+        doseAmount = "",
         dueEpochMs = dueEpochMs,
         state = state,
     )
