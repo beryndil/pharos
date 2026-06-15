@@ -36,6 +36,7 @@ data class NextUpItem(
     val doseId: String,
     val medName: String,
     val strength: String,
+    val doseAmount: String,
     val dueEpochMs: Long,
 )
 
@@ -239,4 +240,4 @@ internal fun selectNextUp(doses: List<DoseRow>, max: Int = MAX_NEXT_UP, nowMs: L
         .filter { it.state == DoseState.SCHEDULED && it.dueEpochMs > nowMs }
         .sortedBy { it.dueEpochMs }
         .take(max)
-        .map { NextUpItem(doseId = it.doseId, medName = it.medName, strength = it.strength, dueEpochMs = it.dueEpochMs) }
+        .map { NextUpItem(doseId = it.doseId, medName = it.medName, strength = it.strength, doseAmount = it.doseAmount, dueEpochMs = it.dueEpochMs) }

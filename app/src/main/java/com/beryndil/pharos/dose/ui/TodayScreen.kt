@@ -358,7 +358,10 @@ private fun NextUpSection(nextUp: List<NextUpItem>) {
                         maxLines = 1,
                     )
                     Text(
-                        text  = "${item.strength} · $timeText",
+                        text  = buildString {
+                            if (item.doseAmount.isNotBlank()) append("${item.doseAmount}  ·  ")
+                            append("${item.strength}  ·  $timeText")
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
