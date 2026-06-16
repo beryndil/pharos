@@ -14,7 +14,6 @@ import androidx.navigation.navArgument
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import androidx.core.content.FileProvider
 import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.R
 import com.beryndil.pharos.PharosApplication
@@ -333,25 +332,30 @@ fun PharosNavGraph(
                 onOpenReliability  = { navController.navigate(NavRoute.ReliabilityDashboard.route) },
                 onShareDebugLog = {
                     val logFile = DebugLogger.getLogFile(settingsContext)
-                    if (logFile.exists()) {
-                        val uri = FileProvider.getUriForFile(
-                            settingsContext,
-                            "${settingsContext.packageName}.fileprovider",
-                            logFile,
-                        )
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    val oldLogFile = DebugLogger.getOldLogFile(settingsContext)
+                    val content = buildString {
+                        if (oldLogFile.exists()) {
+                            append("=== PREVIOUS SESSION ===\n")
+                            append(oldLogFile.readText())
+                            append("\n")
                         }
-                        settingsContext.startActivity(
-                            Intent.createChooser(
-                                shareIntent,
-                                settingsContext.getString(R.string.debug_log_chooser_title),
-                            ),
-                        )
+                        if (logFile.exists()) {
+                            append("=== CURRENT SESSION ===\n")
+                            append(logFile.readText())
+                        }
+                        if (isEmpty()) append("(no log file found)")
                     }
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, content)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    settingsContext.startActivity(
+                        Intent.createChooser(
+                            shareIntent,
+                            settingsContext.getString(R.string.debug_log_chooser_title),
+                        ),
+                    )
                 },
                 onBack = { navController.popBackStack() },
             )
