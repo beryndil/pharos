@@ -126,6 +126,7 @@ sealed interface DrugReferenceUiState {
         val precautionsText: String?,
         val contraindicationsText: String?,
         val boxedWarningText: String?,
+        val foodEffectText: String?,
         val source: String,
         val fetchedAtEpochMs: Long,
     ) : DrugReferenceUiState
@@ -144,6 +145,7 @@ private fun LabelCacheEntity.toLoaded(medName: String) =
         precautionsText = precautionsText,
         contraindicationsText = contraindicationsText,
         boxedWarningText = boxedWarningText,
+        foodEffectText = foodEffectText,
         source = source,
         fetchedAtEpochMs = fetchedAtEpochMs,
     )

@@ -41,10 +41,14 @@ class OpenFdaDrugLabelService : DrugLabelService {
                 if (byRxcui != null) return@withContext byRxcui
             }
 
-            // Name-based search: fallback for RxCUI misses, and primary for free-text meds.
+            // Name-based search: try generic_name then substance_name sequentially.
+            // Sequential (not combined) avoids Lucene operator ambiguity in the openFDA endpoint.
             if (!medicationName.isNullOrBlank()) {
-                val byName = fetchUrl(nameUrl(medicationName))
-                if (byName != null) return@withContext byName
+                val clean = cleanDrugName(medicationName)
+                val byGenericName = fetchUrl(fieldNameUrl("openfda.generic_name", clean))
+                if (byGenericName != null) return@withContext byGenericName
+                val bySubstanceName = fetchUrl(fieldNameUrl("openfda.substance_name", clean))
+                if (bySubstanceName != null) return@withContext bySubstanceName
             }
 
             null
@@ -55,11 +59,15 @@ class OpenFdaDrugLabelService : DrugLabelService {
         return "https://api.fda.gov/drug/label.json?search=openfda.rxcui:%22${encoded}%22&limit=1"
     }
 
-    private fun nameUrl(name: String): String {
-        val clean = name.trim().replace(Regex("\\s+\\d.*"), "").trim() // strip "500 mg" suffix
-        val encoded = URLEncoder.encode(clean, "UTF-8")
-        return "https://api.fda.gov/drug/label.json" +
-            "?search=(openfda.generic_name:%22${encoded}%22+openfda.substance_name:%22${encoded}%22)&limit=1"
+    private fun cleanDrugName(name: String): String =
+        name.trim()
+            .replace(Regex("\\s+\\d.*"), "")  // strip dose suffix "500 mg", "25 MG"
+            .replace(Regex("(?i)\\s+(ER|XR|SR|CR|XL|LA|DR|IR)\\b.*"), "")  // strip release suffix
+            .trim()
+
+    private fun fieldNameUrl(field: String, cleanName: String): String {
+        val encoded = URLEncoder.encode(cleanName, "UTF-8")
+        return "https://api.fda.gov/drug/label.json?search=$field:%22${encoded}%22&limit=1"
     }
 
     private fun fetchUrl(urlString: String): FetchedLabel? {
@@ -107,6 +115,7 @@ class OpenFdaDrugLabelService : DrugLabelService {
             precautionsText = field("precautions"),
             contraindicationsText = field("contraindications"),
             boxedWarningText = field("boxed_warning"),
+            foodEffectText = field("food_effect"),
             source = SOURCE,
         )
     }

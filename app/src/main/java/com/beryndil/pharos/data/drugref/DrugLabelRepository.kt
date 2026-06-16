@@ -77,6 +77,7 @@ class DrugLabelRepository(
                 precautionsText = fetched.precautionsText,
                 contraindicationsText = fetched.contraindicationsText,
                 boxedWarningText = fetched.boxedWarningText,
+                foodEffectText = fetched.foodEffectText,
                 source = fetched.source,
                 fetchedAtEpochMs = System.currentTimeMillis(),
             )

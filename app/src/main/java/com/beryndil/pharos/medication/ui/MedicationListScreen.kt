@@ -159,6 +159,8 @@ fun MedicationListScreen(
                         medication = med,
                         substituteForMedName = med.substituteForDrugName,
                         hasSubstituteName = null,
+                        interactionWarnings = uiState.interactionAlerts[med.id] ?: emptyList(),
+                        hasFoodNote = med.id in uiState.foodNoteMedIds,
                         onClick = { onMedicationClicked(med.id) },
                         onRefillClicked = { onRefillClicked(med.id) },
                         onDrugReferenceClicked = { onDrugReferenceClicked(med.id) },
@@ -209,6 +211,8 @@ private fun MedicationListItem(
     substituteForMedName: String?,
     /** Name of a med that has declared this one as its substitute — for back-reference (V1.3-F2). */
     hasSubstituteName: String?,
+    interactionWarnings: List<String>,
+    hasFoodNote: Boolean,
     onClick: () -> Unit,
     onRefillClicked: () -> Unit,
     onDrugReferenceClicked: () -> Unit,
@@ -267,6 +271,23 @@ private fun MedicationListItem(
                         text = stringResource(R.string.med_has_substitute, hasSubstituteName),
                         style = MaterialTheme.typography.bodySmall,
                         color = dimmedVariantColor,
+                    )
+                }
+                if (interactionWarnings.isNotEmpty()) {
+                    Text(
+                        text = stringResource(
+                            R.string.med_list_interaction_warning,
+                            interactionWarnings.joinToString(", "),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error.copy(alpha = contentAlpha),
+                    )
+                }
+                if (hasFoodNote) {
+                    Text(
+                        text = stringResource(R.string.med_list_food_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary.copy(alpha = contentAlpha),
                     )
                 }
             }

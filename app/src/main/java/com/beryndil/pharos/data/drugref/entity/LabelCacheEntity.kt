@@ -22,6 +22,7 @@ data class LabelCacheEntity(
     val precautionsText: String?,
     val contraindicationsText: String?,
     val boxedWarningText: String?,
+    val foodEffectText: String? = null,
 
     /**
      * Human-readable source identifier, e.g., "openFDA".

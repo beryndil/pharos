@@ -155,6 +155,7 @@ fun PharosNavGraph(
                 factory = MedicationListViewModel.factory(
                     medicationRepository = medicationRepository,
                     scheduleRepository = scheduleRepository,
+                    drugLabelRepository = drugLabelRepository,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()

@@ -13,6 +13,7 @@ data class FetchedLabel(
     val precautionsText: String?,
     val contraindicationsText: String?,
     val boxedWarningText: String?,
+    val foodEffectText: String?,
     /** Human-readable source identifier shown in the UI (Law 9). Example: "openFDA". */
     val source: String,
 )

@@ -189,7 +189,8 @@ private fun OfflineState(modifier: Modifier = Modifier) {
 private fun LoadedState(state: DrugReferenceUiState.Loaded, modifier: Modifier = Modifier) {
     val hasAnyData = state.boxedWarningText != null || state.sideEffectsText != null ||
         state.interactionsText != null || state.warningsText != null ||
-        state.precautionsText != null || state.contraindicationsText != null
+        state.precautionsText != null || state.contraindicationsText != null ||
+        state.foodEffectText != null
 
     Column(
         modifier = modifier
@@ -222,6 +223,9 @@ private fun LoadedState(state: DrugReferenceUiState.Loaded, modifier: Modifier =
             }
             state.contraindicationsText?.let {
                 LabelSection(title = stringResource(R.string.drug_reference_section_contraindications), body = it)
+            }
+            state.foodEffectText?.let {
+                LabelSection(title = stringResource(R.string.drug_reference_section_food_effect), body = it)
             }
         }
 

@@ -517,6 +517,12 @@
     <string name="drug_reference_section_precautions">Precautions</string>
     <string name="drug_reference_section_contraindications">Contraindications</string>
     <string name="drug_reference_section_boxed_warning">Black Box Warning</string>
+    <string name="drug_reference_section_food_effect">Food interactions</string>
+
+    <!-- Medication list: inline drug alerts (spec §2.10, Law 3) -->
+    <!-- %1$s = comma-separated list of interacting med names -->
+    <string name="med_list_interaction_warning">May interact with %1$s — discuss with your doctor or pharmacist.</string>
+    <string name="med_list_food_note">Food interactions noted — see Drug Reference for details.</string>
     <string name="drug_reference_no_data">No reference data is available for this medication in the source database.</string>
     <string name="drug_reference_action_refresh">Refresh</string>
     <string name="cd_drug_reference_refresh">Refresh drug reference data</string>
