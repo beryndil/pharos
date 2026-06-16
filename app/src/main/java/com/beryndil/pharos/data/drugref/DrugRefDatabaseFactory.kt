@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import androidx.room.Room
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
@@ -34,10 +35,21 @@ object DrugRefDatabaseFactory {
      * an old-schema file (e.g., v1 on first upgrade from the pre-pipeline build) is wiped and
      * reseeded from the bundled asset rather than attempting a migration.
      */
+    /**
+     * Migration 3→4: adds the nullable [foodEffectText] column to [label_cache].
+     * [drug_search], [ingredient_map], and [db_meta] are unchanged — no re-seeding needed.
+     */
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE label_cache ADD COLUMN foodEffectText TEXT")
+        }
+    }
+
     fun build(context: Context): DrugRefDatabase {
         handleNewerSchema(context)
         handleEmptyDatabase(context)
         return Room.databaseBuilder(context, DrugRefDatabase::class.java, DATABASE_NAME)
+            .addMigrations(MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .addCallback(SeedCallback(context))
             .build()
