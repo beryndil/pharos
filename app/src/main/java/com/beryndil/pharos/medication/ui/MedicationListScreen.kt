@@ -286,16 +286,14 @@ private fun MedicationListItem(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
                 ) {
-                    // Drug reference — available for all non-free-text medications regardless of status.
-                    if (!medication.isFreeText) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_drug_reference)) },
-                            onClick = {
-                                menuExpanded = false
-                                onDrugReferenceClicked()
-                            },
-                        )
-                    }
+                    // Drug reference — available for all medications; free-text meds search by name.
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_drug_reference)) },
+                        onClick = {
+                            menuExpanded = false
+                            onDrugReferenceClicked()
+                        },
+                    )
                     // Track refill — available for all non-ended medications
                     if (status != MedicationStatus.ENDED) {
                         DropdownMenuItem(

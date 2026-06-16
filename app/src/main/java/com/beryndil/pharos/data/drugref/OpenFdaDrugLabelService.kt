@@ -34,11 +34,14 @@ class OpenFdaDrugLabelService : DrugLabelService {
 
     override suspend fun fetchLabel(productRxcui: String, medicationName: String?): FetchedLabel? =
         withContext(Dispatchers.IO) {
-            // Primary: search by RxCUI
-            val byRxcui = fetchUrl(rxcuiUrl(productRxcui))
-            if (byRxcui != null) return@withContext byRxcui
+            // Skip RxCUI search for synthetic name-based keys (free-text meds).
+            val skipRxcui = productRxcui.startsWith("name:")
+            if (!skipRxcui) {
+                val byRxcui = fetchUrl(rxcuiUrl(productRxcui))
+                if (byRxcui != null) return@withContext byRxcui
+            }
 
-            // Fallback: search by drug name when RxCUI returns nothing
+            // Name-based search: fallback for RxCUI misses, and primary for free-text meds.
             if (!medicationName.isNullOrBlank()) {
                 val byName = fetchUrl(nameUrl(medicationName))
                 if (byName != null) return@withContext byName

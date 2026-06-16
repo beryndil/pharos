@@ -63,16 +63,15 @@ class DrugReferenceViewModel(
                 _uiState.value = DrugReferenceUiState.NotAvailableOffline("")
                 return@launch
             }
-            if (med.isFreeText || med.rxcui == null) {
-                _uiState.value = DrugReferenceUiState.FreeTextMed(medName = med.name)
-                return@launch
-            }
 
-            cachedRxcui = med.rxcui
+            // Use the RxCUI when available; for free-text meds use a synthetic name-based key
+            // so openFDA name search still runs and results can be cached.
+            val lookupKey = med.rxcui ?: "name:${med.name.trim().lowercase()}"
+            cachedRxcui = lookupKey
             cachedMedName = med.name
 
             val cached = withContext(Dispatchers.IO) {
-                drugLabelRepository.getCachedLabel(med.rxcui)
+                drugLabelRepository.getCachedLabel(lookupKey)
             }
             if (cached != null) {
                 _uiState.value = cached.toLoaded(med.name)
@@ -82,7 +81,7 @@ class DrugReferenceViewModel(
             _uiState.value = DrugReferenceUiState.Loading
 
             val fetched = withContext(Dispatchers.IO) {
-                drugLabelRepository.getOrFetchLabel(med.rxcui, med.name)
+                drugLabelRepository.getOrFetchLabel(lookupKey, med.name)
             }
             _uiState.value = if (fetched != null) {
                 fetched.toLoaded(med.name)
