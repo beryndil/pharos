@@ -58,35 +58,39 @@ class DrugReferenceViewModel(
 
     private fun loadReference() {
         viewModelScope.launch {
-            val med = withContext(Dispatchers.IO) { medicationDao.getById(medicationId) }
-            if (med == null) {
-                _uiState.value = DrugReferenceUiState.NotAvailableOffline("")
-                return@launch
-            }
+            try {
+                val med = withContext(Dispatchers.IO) { medicationDao.getById(medicationId) }
+                if (med == null) {
+                    _uiState.value = DrugReferenceUiState.NotAvailableOffline("")
+                    return@launch
+                }
 
-            // Use the RxCUI when available; for free-text meds use a synthetic name-based key
-            // so openFDA name search still runs and results can be cached.
-            val lookupKey = med.rxcui ?: "name:${med.name.trim().lowercase()}"
-            cachedRxcui = lookupKey
-            cachedMedName = med.name
+                // Use the RxCUI when available; for free-text meds use a synthetic name-based key
+                // so openFDA name search still runs and results can be cached.
+                val lookupKey = med.rxcui ?: "name:${med.name.trim().lowercase()}"
+                cachedRxcui = lookupKey
+                cachedMedName = med.name
 
-            val cached = withContext(Dispatchers.IO) {
-                drugLabelRepository.getCachedLabel(lookupKey)
-            }
-            if (cached != null) {
-                _uiState.value = cached.toLoaded(med.name)
-                return@launch
-            }
+                val cached = withContext(Dispatchers.IO) {
+                    drugLabelRepository.getCachedLabel(lookupKey)
+                }
+                if (cached != null) {
+                    _uiState.value = cached.toLoaded(med.name)
+                    return@launch
+                }
 
-            _uiState.value = DrugReferenceUiState.Loading
+                _uiState.value = DrugReferenceUiState.Loading
 
-            val fetched = withContext(Dispatchers.IO) {
-                drugLabelRepository.getOrFetchLabel(lookupKey, med.name)
-            }
-            _uiState.value = if (fetched != null) {
-                fetched.toLoaded(med.name)
-            } else {
-                DrugReferenceUiState.NotAvailableOffline(medName = med.name)
+                val fetched = withContext(Dispatchers.IO) {
+                    drugLabelRepository.getOrFetchLabel(lookupKey, med.name)
+                }
+                _uiState.value = if (fetched != null) {
+                    fetched.toLoaded(med.name)
+                } else {
+                    DrugReferenceUiState.NotAvailableOffline(medName = med.name)
+                }
+            } catch (e: Exception) {
+                _uiState.value = DrugReferenceUiState.NotAvailableOffline(medName = cachedMedName ?: "")
             }
         }
     }

@@ -234,6 +234,8 @@ class AddEditMedicationViewModel(
      */
     private val fetchCriticalMeds: suspend () -> List<com.beryndil.pharos.data.regimen.entity.MedicationEntity> =
         repository::getCriticalActiveMedications,
+    /** Explicitly supplied med ID for edit mode (belt-and-suspenders over SavedStateHandle auto-wiring). */
+    private val initialEditMedId: String? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditMedicationUiState())
@@ -250,7 +252,7 @@ class AddEditMedicationViewModel(
     private val _allPharmacies = MutableStateFlow<List<PharmacyEntity>>(emptyList())
 
     init {
-        val editMedId: String? = savedStateHandle["medId"]
+        val editMedId: String? = initialEditMedId ?: savedStateHandle["medId"]
         if (editMedId != null) {
             _uiState.update { it.copy(editMedId = editMedId) }
             loadExistingMedication(editMedId)
@@ -388,6 +390,7 @@ class AddEditMedicationViewModel(
 
     private fun loadExistingMedication(medId: String) {
         viewModelScope.launch {
+            try {
             val med = withContext(ioDispatcher) { repository.getMedication(medId) }
                 ?: return@launch
             val ingredientRxcuis = repository.parseIngredientRxcuis(med.ingredientsJson)
@@ -438,6 +441,9 @@ class AddEditMedicationViewModel(
                     originalCreatedAtMs = med.createdAtEpochMs,
                     scheduleInput = scheduleInput,
                 )
+            }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(saveError = SaveError.GENERAL) }
             }
         }
     }
@@ -752,6 +758,7 @@ class AddEditMedicationViewModel(
             contactRepository: ContactRepository? = null,
             drugLabelRepository: DrugLabelRepository? = null,
             isDndAccessGranted: () -> Boolean = { true },
+            editMedId: String? = null,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -762,6 +769,7 @@ class AddEditMedicationViewModel(
                         savedStateHandle = createSavedStateHandle(),
                         drugLabelRepository = drugLabelRepository,
                         isDndAccessGranted = isDndAccessGranted,
+                        initialEditMedId = editMedId,
                     )
                 }
             }

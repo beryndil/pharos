@@ -80,7 +80,11 @@ class DrugLabelRepository(
                 source = fetched.source,
                 fetchedAtEpochMs = System.currentTimeMillis(),
             )
-            labelCacheDao.upsert(entity)
+            try {
+                labelCacheDao.upsert(entity)
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) Log.w(TAG, "Label cache upsert failed: ${e.javaClass.simpleName}")
+            }
             return entity
         }
         return null

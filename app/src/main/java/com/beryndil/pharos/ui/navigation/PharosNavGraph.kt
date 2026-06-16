@@ -211,9 +211,8 @@ fun PharosNavGraph(
                     type = NavType.StringType
                 },
             ),
-        ) {
-            // SavedStateHandle in AddEditMedicationViewModel picks up medId automatically
-            // because navigation-compose wires nav args into CreationExtras.
+        ) { backStackEntry ->
+            val medId = backStackEntry.arguments?.getString(NavRoute.EditMedication.ARG_MED_ID)
             val viewModel: AddEditMedicationViewModel = viewModel(
                 factory = AddEditMedicationViewModel.factory(
                     repository = medicationRepository,
@@ -221,6 +220,7 @@ fun PharosNavGraph(
                     contactRepository = contactRepository,
                     drugLabelRepository = drugLabelRepository,
                     isDndAccessGranted = { nm.isNotificationPolicyAccessGranted },
+                    editMedId = medId,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
