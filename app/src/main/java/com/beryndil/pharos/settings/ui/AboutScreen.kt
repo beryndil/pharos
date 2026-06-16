@@ -100,20 +100,15 @@ fun AboutScreen(
                         .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    // painterResource(R.mipmap.ic_launcher) crashes on API 26+ because the
-                    // resource system resolves to the adaptive-icon XML. ImageView handles
-                    // adaptive icons natively via AndroidView.
-                    AndroidView(
-                        factory = { ctx ->
-                            android.widget.ImageView(ctx).apply {
-                                setImageResource(R.mipmap.ic_launcher)
-                            }
-                        },
+                    Image(
+                        painter = painterResource(R.drawable.about_beryndil),
+                        contentDescription = stringResource(R.string.about_author_name),
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(160.dp)
                             .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         text = stringResource(R.string.about_app_name),
                         style = MaterialTheme.typography.headlineMedium,
@@ -141,13 +136,18 @@ fun AboutScreen(
                         },
                     )
                     Spacer(Modifier.height(12.dp))
-                    Image(
-                        painter = painterResource(R.drawable.about_beryndil),
-                        contentDescription = stringResource(R.string.about_author_name),
+                    // painterResource(R.mipmap.ic_launcher) crashes on API 26+ because the
+                    // resource system resolves to the adaptive-icon XML. ImageView handles
+                    // adaptive icons natively via AndroidView.
+                    AndroidView(
+                        factory = { ctx ->
+                            android.widget.ImageView(ctx).apply {
+                                setImageResource(R.mipmap.ic_launcher)
+                            }
+                        },
                         modifier = Modifier
-                            .size(160.dp)
+                            .size(72.dp)
                             .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Crop,
                     )
                     Spacer(Modifier.height(12.dp))
                     Column(
