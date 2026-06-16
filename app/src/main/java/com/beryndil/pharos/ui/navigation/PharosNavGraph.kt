@@ -13,6 +13,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
+import com.beryndil.pharos.core.debug.DebugLogger
+import com.beryndil.pharos.R
 import com.beryndil.pharos.PharosApplication
 import com.beryndil.pharos.appContainer
 import com.beryndil.pharos.dose.ui.DoseHistoryScreen
@@ -313,6 +317,7 @@ fun PharosNavGraph(
 
         // ── Settings (A5-S1 — theme, text size, about, legal) ───────────
         composable(NavRoute.Settings.route) {
+            val settingsContext = LocalContext.current
             val viewModel: SettingsViewModel = viewModel(
                 factory = SettingsViewModel.factory(
                     appearanceRepository = app.appContainer.appearanceRepository,
@@ -326,6 +331,28 @@ fun PharosNavGraph(
                 onOpenLegal        = { navController.navigate(NavRoute.Legal.route) },
                 onOpenProfile      = { navController.navigate(NavRoute.UserProfile.route) },
                 onOpenReliability  = { navController.navigate(NavRoute.ReliabilityDashboard.route) },
+                onShareDebugLog = {
+                    val logFile = DebugLogger.getLogFile(settingsContext)
+                    if (logFile.exists()) {
+                        val uri = FileProvider.getUriForFile(
+                            settingsContext,
+                            "${settingsContext.packageName}.fileprovider",
+                            logFile,
+                        )
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        settingsContext.startActivity(
+                            Intent.createChooser(
+                                shareIntent,
+                                settingsContext.getString(R.string.debug_log_chooser_title),
+                            ),
+                        )
+                    }
+                },
                 onBack = { navController.popBackStack() },
             )
         }

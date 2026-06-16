@@ -728,6 +728,10 @@
     <string name="settings_action_reliability">Reminder reliability</string>
     <string name="cd_navigate_reliability">Open reminder reliability and permissions</string>
     <string name="settings_section_about_legal">About &amp; legal</string>
+    <string name="settings_section_support">Support</string>
+    <string name="settings_action_share_debug_log">Share debug log</string>
+    <string name="cd_share_debug_log">Share diagnostic log with developer</string>
+    <string name="debug_log_chooser_title">Share debug log</string>
 
     <!-- Theme mode options -->
     <string name="settings_theme_label">Theme</string>

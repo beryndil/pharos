@@ -5,6 +5,7 @@ import android.os.StrictMode
 import android.util.Log
 import com.beryndil.pharos.backup.AutoBackupWorker
 import com.beryndil.pharos.core.db.AppContainer
+import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.data.drugref.DrugDbUpdateWorker
 import com.beryndil.pharos.refill.LowSupplyCheckWorker
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +26,7 @@ class PharosApplication : Application() {
         super.onCreate()
 
         installCrashLogger()
+        DebugLogger.init(applicationContext)
 
         appContainer = AppContainer(applicationContext)
 

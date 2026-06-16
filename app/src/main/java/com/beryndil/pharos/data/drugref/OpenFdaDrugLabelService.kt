@@ -2,6 +2,7 @@ package com.beryndil.pharos.data.drugref
 
 import android.util.Log
 import com.beryndil.pharos.BuildConfig
+import com.beryndil.pharos.core.debug.DebugLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONException
@@ -71,6 +72,8 @@ class OpenFdaDrugLabelService : DrugLabelService {
     }
 
     private fun fetchUrl(urlString: String): FetchedLabel? {
+        val shortUrl = urlString.substringAfter("search=").take(80)
+        DebugLogger.log("OpenFDA", "GET $shortUrl")
         return try {
             val conn = (URL(urlString).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
@@ -81,15 +84,20 @@ class OpenFdaDrugLabelService : DrugLabelService {
             val code = conn.responseCode
             if (code != HttpURLConnection.HTTP_OK) {
                 if (BuildConfig.DEBUG) Log.d(TAG, "openFDA HTTP $code for $urlString")
+                DebugLogger.log("OpenFDA", "HTTP $code for $shortUrl")
                 return null
             }
             val body = conn.inputStream.bufferedReader().use { it.readText() }
-            parseResponse(body)
+            val result = parseResponse(body)
+            DebugLogger.log("OpenFDA", "HTTP 200 for $shortUrl — ${if (result != null) "parsed OK" else "no results in response"}")
+            result
         } catch (e: IOException) {
             if (BuildConfig.DEBUG) Log.d(TAG, "openFDA fetch failed (likely offline): ${e.javaClass.simpleName}")
+            DebugLogger.log("OpenFDA", "fetch failed (offline?) for $shortUrl — ${e.javaClass.simpleName}")
             null
         } catch (e: JSONException) {
             if (BuildConfig.DEBUG) Log.w(TAG, "openFDA JSON parse error: ${e.javaClass.simpleName}")
+            DebugLogger.logError("OpenFDA", "JSON parse error for $shortUrl", e)
             null
         }
     }

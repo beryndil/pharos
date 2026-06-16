@@ -1,5 +1,6 @@
 package com.beryndil.pharos.data.medication
 
+import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.data.drugref.dao.DrugSearchDao
 import com.beryndil.pharos.data.drugref.dao.IngredientMapDao
 import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
@@ -53,7 +54,9 @@ class MedicationRepository(
         if (query.length < 2) return emptyList()
         return try {
             val q = query.lowercase().trim()
+            DebugLogger.log("DrugSearch", "query=\"$q\"")
             val results = drugSearchDao.searchByName(q)
+            DebugLogger.log("DrugSearch", "query=\"$q\" — ${results.size} DB rows")
             if (results.isEmpty()) return emptyList()
 
             // Batch-fetch all ingredient edges for all results in one query (avoids N+1).
@@ -73,6 +76,7 @@ class MedicationRepository(
             }
         } catch (e: Exception) {
             android.util.Log.w(TAG, "Drug search failed; degrading to free-text. ${e.javaClass.simpleName}")
+            DebugLogger.logError("DrugSearch", "searchDrugs FAILED for \"$query\"", e)
             emptyList()
         }
     }

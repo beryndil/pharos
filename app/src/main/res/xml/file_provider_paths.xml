@@ -11,4 +11,5 @@
 -->
 <paths>
     <cache-path name="exports" path="exports/" />
+    <files-path name="logs" path="." />
 </paths>

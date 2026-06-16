@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.beryndil.pharos.core.debug.DebugLogger
 
 /**
  * Factory and newer-schema guard for [DrugRefDatabase].
@@ -46,6 +47,7 @@ object DrugRefDatabaseFactory {
     }
 
     fun build(context: Context): DrugRefDatabase {
+        DebugLogger.log("DrugRefDB", "build() — CURRENT_VERSION=$CURRENT_VERSION")
         handleNewerSchema(context)
         handleEmptyDatabase(context)
         return Room.databaseBuilder(context, DrugRefDatabase::class.java, DATABASE_NAME)
@@ -67,21 +69,23 @@ object DrugRefDatabaseFactory {
         val dbFile = context.getDatabasePath(DATABASE_NAME)
         if (!dbFile.exists()) return
         try {
-            val empty = SQLiteDatabase.openDatabase(
+            val count = SQLiteDatabase.openDatabase(
                 dbFile.path,
                 null,
                 SQLiteDatabase.OPEN_READONLY,
             ).use { db ->
                 db.rawQuery("SELECT COUNT(*) FROM drug_search", null).use { cursor ->
-                    cursor.moveToFirst() && cursor.getInt(0) == 0
+                    if (cursor.moveToFirst()) cursor.getInt(0) else 0
                 }
             }
-            if (empty) {
+            DebugLogger.log("DrugRefDB", "handleEmptyDatabase: drug_search row count=$count")
+            if (count == 0) {
                 Log.w(TAG, "DrugRef DB is empty (seeding missed on prior migration). Deleting to force reseed.")
+                DebugLogger.log("DrugRefDB", "handleEmptyDatabase: deleting empty DB file to force reseed")
                 dbFile.delete()
             }
-        } catch (_: Exception) {
-            // Unreadable or missing table — let Room handle it.
+        } catch (e: Exception) {
+            DebugLogger.logError("DrugRefDB", "handleEmptyDatabase failed", e)
         }
     }
 
@@ -92,7 +96,10 @@ object DrugRefDatabaseFactory {
      */
     fun handleNewerSchema(context: Context) {
         val dbFile = context.getDatabasePath(DATABASE_NAME)
-        if (!dbFile.exists()) return
+        if (!dbFile.exists()) {
+            DebugLogger.log("DrugRefDB", "handleNewerSchema: no existing DB file — fresh install")
+            return
+        }
         val storedVersion = try {
             SQLiteDatabase.openDatabase(
                 dbFile.path,
@@ -100,14 +107,13 @@ object DrugRefDatabaseFactory {
                 SQLiteDatabase.OPEN_READONLY,
             ).use { it.version }
         } catch (e: Exception) {
-            return // unreadable; let Room handle it
+            DebugLogger.logError("DrugRefDB", "handleNewerSchema: unreadable DB file", e)
+            return
         }
+        DebugLogger.log("DrugRefDB", "handleNewerSchema: on-disk version=$storedVersion, CURRENT=$CURRENT_VERSION")
         if (storedVersion > CURRENT_VERSION) {
-            Log.w(
-                TAG,
-                "DrugRef DB schema v$storedVersion > supported v$CURRENT_VERSION. " +
-                    "Deleting; will reseed from bundled asset.",
-            )
+            Log.w(TAG, "DrugRef DB schema v$storedVersion > supported v$CURRENT_VERSION. Deleting; will reseed.")
+            DebugLogger.log("DrugRefDB", "handleNewerSchema: deleting future-schema DB (v$storedVersion > $CURRENT_VERSION)")
             dbFile.delete()
         }
     }
@@ -168,15 +174,24 @@ object DrugRefDatabaseFactory {
      */
     private class SeedCallback(private val context: Context) :
         androidx.room.RoomDatabase.Callback() {
-        override fun onDestructiveMigration(db: SupportSQLiteDatabase) = onCreate(db)
+        override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
+            DebugLogger.log("DrugRefDB", "SeedCallback.onDestructiveMigration — delegating to onCreate")
+            onCreate(db)
+        }
 
         override fun onCreate(db: SupportSQLiteDatabase) {
+            DebugLogger.log("DrugRefDB", "SeedCallback.onCreate — loading bundled asset")
             val data = try {
-                BundledDrugRefLoader(context).load() ?: return
+                BundledDrugRefLoader(context).load() ?: run {
+                    DebugLogger.log("DrugRefDB", "SeedCallback.onCreate: asset load returned null — DB left empty")
+                    return
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Drug-ref asset load failed; reference DB left empty.", e)
+                DebugLogger.logError("DrugRefDB", "SeedCallback.onCreate: asset load threw", e)
                 return
             }
+            DebugLogger.log("DrugRefDB", "SeedCallback.onCreate: loaded ${data.drugs.size} drugs, ${data.ingredientEdges.size} edges — beginning seed transaction")
             db.beginTransaction()
             try {
                 for (drug in data.drugs) {
@@ -200,8 +215,10 @@ object DrugRefDatabaseFactory {
                     )
                 }
                 db.setTransactionSuccessful()
+                DebugLogger.log("DrugRefDB", "SeedCallback.onCreate: seed transaction committed OK")
             } catch (e: Exception) {
                 Log.e(TAG, "Drug-ref seeding failed; reference DB left empty.", e)
+                DebugLogger.logError("DrugRefDB", "SeedCallback.onCreate: seed transaction FAILED", e)
             } finally {
                 db.endTransaction()
             }

@@ -2,6 +2,7 @@ package com.beryndil.pharos.data.drugref
 
 import android.util.Log
 import com.beryndil.pharos.BuildConfig
+import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.data.drugref.dao.LabelCacheDao
 import com.beryndil.pharos.data.drugref.entity.LabelCacheEntity
 
@@ -27,7 +28,11 @@ class DrugLabelRepository(
      */
     suspend fun getOrFetchLabel(productRxcui: String, medicationName: String? = null): LabelCacheEntity? {
         val cached = labelCacheDao.getByProduct(productRxcui)
-        if (cached != null) return cached
+        if (cached != null) {
+            DebugLogger.log("LabelRepo", "cache HIT for $productRxcui")
+            return cached
+        }
+        DebugLogger.log("LabelRepo", "cache MISS for $productRxcui — fetching network")
         return fetchAndCache(productRxcui, medicationName)
     }
 
@@ -66,7 +71,13 @@ class DrugLabelRepository(
             drugLabelService.fetchLabel(productRxcui, medicationName)
         } catch (e: Exception) {
             Log.w(TAG, "Label fetch failed unexpectedly: ${e.javaClass.simpleName}")
+            DebugLogger.logError("LabelRepo", "fetchLabel threw for $productRxcui", e)
             null
+        }
+        if (fetched != null) {
+            DebugLogger.log("LabelRepo", "fetched label for $productRxcui from ${fetched.source}")
+        } else {
+            DebugLogger.log("LabelRepo", "fetch returned null for $productRxcui (offline or no data)")
         }
         if (fetched != null) {
             val entity = LabelCacheEntity(
