@@ -83,4 +83,6 @@ private class InMemorySettingDao : SettingDao {
 
     override fun observeByKey(key: String): Flow<SettingEntity?> =
         MutableStateFlow(store[key])
+
+    override suspend fun deleteByKey(key: String) {}
 }

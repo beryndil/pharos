@@ -4,26 +4,27 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Cached drug label text fetched from openFDA/DailyMed for a specific product (spec §2.10).
+ * Cached drug label text fetched from openFDA for a specific product (spec §2.10).
  *
- * Label text is cached locally forever after first fetch. The [source] and [fetchedAtEpochMs]
- * fields are displayed alongside the reference text (Law 9: every record shows source +
- * freshness date). A null text field means the section was not available in the source data;
- * the UI says "reference not available" rather than nothing.
+ * Label text is cached locally; a refresh wipes the entry so the next screen open re-fetches.
+ * The [source] and [fetchedAtEpochMs] fields are displayed alongside the reference text
+ * (Law 9: every record shows source + freshness date). Null text fields mean the section was
+ * not present in the source; those sections are hidden in the UI.
  */
 @Entity(tableName = "label_cache")
 data class LabelCacheEntity(
     /** RxCUI of the drug concept this label belongs to (same as [MedicationEntity.rxcui]). */
     @PrimaryKey val productRxcui: String,
 
-    /** Adverse reactions / side effects section text, or null if unavailable. */
     val sideEffectsText: String?,
-
-    /** Drug interactions section text, or null if unavailable. */
     val interactionsText: String?,
+    val warningsText: String?,
+    val precautionsText: String?,
+    val contraindicationsText: String?,
+    val boxedWarningText: String?,
 
     /**
-     * Human-readable source identifier, e.g., "openFDA" or "DailyMed".
+     * Human-readable source identifier, e.g., "openFDA".
      * Displayed to the user (Law 9).
      */
     val source: String,

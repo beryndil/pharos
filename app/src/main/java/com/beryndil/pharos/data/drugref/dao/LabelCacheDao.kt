@@ -14,4 +14,7 @@ interface LabelCacheDao {
 
     @Query("SELECT * FROM label_cache WHERE productRxcui = :productRxcui")
     suspend fun getByProduct(productRxcui: String): LabelCacheEntity?
+
+    @Query("DELETE FROM label_cache WHERE productRxcui = :productRxcui")
+    suspend fun deleteByProduct(productRxcui: String)
 }

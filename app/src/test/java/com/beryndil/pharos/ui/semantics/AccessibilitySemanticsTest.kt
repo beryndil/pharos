@@ -233,6 +233,7 @@ class AccessibilitySemanticsTest {
             PharosTheme {
                 DrugReferenceScreen(
                     uiState = DrugReferenceUiState.Loading,
+                    onRefresh = {},
                     onBack = {},
                 )
             }
@@ -253,6 +254,7 @@ class AccessibilitySemanticsTest {
             PharosTheme {
                 DrugReferenceScreen(
                     uiState = DrugReferenceUiState.FreeTextMed(medName = "Custom med"),
+                    onRefresh = {},
                     onBack = {},
                 )
             }

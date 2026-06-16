@@ -1,5 +1,6 @@
 package com.beryndil.pharos.reference.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,10 +10,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,25 +42,27 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * Drug reference screen — shows cached openFDA label sections (side effects + drug interactions)
- * with source and freshness date (spec §2.10, Law 3, Law 9, DESIGN.md).
+ * Drug reference screen — shows cached openFDA label sections with source and freshness date
+ * (spec §2.10, Law 3, Law 9, DESIGN.md).
  *
- * Design (DESIGN.md):
- *  - Content-first; no decoration. Large title, clear hierarchy.
- *  - Label text is reference only — never advice. Disclaimer present on every state.
- *  - Offline / free-text / loading states handled plainly with icon + text (Law 10).
- *  - ≥48dp touch targets; TalkBack labels on every control; sp text.
+ * Sections shown only when the source has data: black box warning, side effects, interactions,
+ * warnings, precautions, contraindications. A single "no data" message is shown when the
+ * fetch succeeded but all fields are empty.
+ *
+ * The user can force a refresh via the top-bar button to clear the cache and re-fetch.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DrugReferenceScreen(
     uiState: DrugReferenceUiState,
+    onRefresh: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     com.beryndil.pharos.core.ui.SecureWindow()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val backCd = stringResource(R.string.cd_back_button)
+    val refreshCd = stringResource(R.string.cd_drug_reference_refresh)
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -75,6 +80,19 @@ fun DrugReferenceScreen(
                         )
                     }
                 },
+                actions = {
+                    if (uiState is DrugReferenceUiState.Loaded || uiState is DrugReferenceUiState.NotAvailableOffline) {
+                        IconButton(
+                            onClick = onRefresh,
+                            modifier = Modifier.semantics { contentDescription = refreshCd },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Refresh,
+                                contentDescription = null,
+                            )
+                        }
+                    }
+                },
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -86,13 +104,11 @@ fun DrugReferenceScreen(
                     .padding(innerPadding),
             )
             is DrugReferenceUiState.FreeTextMed -> FreeTextState(
-                medName = uiState.medName,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
             )
             is DrugReferenceUiState.NotAvailableOffline -> OfflineState(
-                medName = uiState.medName,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
@@ -111,7 +127,6 @@ fun DrugReferenceScreen(
 
 @Composable
 private fun LoadingState(modifier: Modifier = Modifier) {
-    // Hoist stringResource out of the semantics {} lambda (not a composable scope).
     val loadingCd = stringResource(R.string.cd_loading_drug_reference)
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
@@ -121,7 +136,7 @@ private fun LoadingState(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun FreeTextState(medName: String, modifier: Modifier = Modifier) {
+private fun FreeTextState(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -145,7 +160,7 @@ private fun FreeTextState(medName: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun OfflineState(medName: String, modifier: Modifier = Modifier) {
+private fun OfflineState(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -172,33 +187,72 @@ private fun OfflineState(medName: String, modifier: Modifier = Modifier) {
 
 @Composable
 private fun LoadedState(state: DrugReferenceUiState.Loaded, modifier: Modifier = Modifier) {
+    val hasAnyData = state.boxedWarningText != null || state.sideEffectsText != null ||
+        state.interactionsText != null || state.warningsText != null ||
+        state.precautionsText != null || state.contraindicationsText != null
+
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .padding(bottom = 24.dp),
     ) {
-        // Source + freshness metadata (Law 9).
         MetadataRow(source = state.source, fetchedAtEpochMs = state.fetchedAtEpochMs)
-
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-        // Side effects / adverse reactions section.
-        LabelSection(
-            title = stringResource(R.string.drug_reference_section_side_effects),
-            body = state.sideEffectsText,
-        )
+        if (!hasAnyData) {
+            Text(
+                text = stringResource(R.string.drug_reference_no_data),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        } else {
+            state.boxedWarningText?.let { BoxedWarningSection(it) }
+            state.sideEffectsText?.let {
+                LabelSection(title = stringResource(R.string.drug_reference_section_side_effects), body = it)
+            }
+            state.interactionsText?.let {
+                LabelSection(title = stringResource(R.string.drug_reference_section_interactions), body = it)
+            }
+            state.warningsText?.let {
+                LabelSection(title = stringResource(R.string.drug_reference_section_warnings), body = it)
+            }
+            state.precautionsText?.let {
+                LabelSection(title = stringResource(R.string.drug_reference_section_precautions), body = it)
+            }
+            state.contraindicationsText?.let {
+                LabelSection(title = stringResource(R.string.drug_reference_section_contraindications), body = it)
+            }
+        }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-        // Drug interactions reference section (reference text only — not a pairwise engine).
-        LabelSection(
-            title = stringResource(R.string.drug_reference_section_interactions),
-            body = state.interactionsText,
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
         Disclaimer(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+    }
+}
+
+@Composable
+private fun BoxedWarningSection(body: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .background(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .padding(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.drug_reference_section_boxed_warning),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
     }
 }
 
@@ -241,7 +295,7 @@ private fun MetadataRow(
 @Composable
 private fun LabelSection(
     title: String,
-    body: String?,
+    body: String,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -254,22 +308,13 @@ private fun LabelSection(
             style = MaterialTheme.typography.titleSmall,
         )
         Spacer(modifier = Modifier.height(8.dp))
-        if (body.isNullOrBlank()) {
-            Text(
-                text = stringResource(R.string.drug_reference_section_none),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
-/** Reference disclaimer (§4.2 — required wherever label text appears). */
 @Composable
 private fun Disclaimer(modifier: Modifier = Modifier) {
     Text(

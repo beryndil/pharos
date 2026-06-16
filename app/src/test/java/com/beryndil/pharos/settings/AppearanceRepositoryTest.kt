@@ -207,4 +207,6 @@ private class ReactiveSettingDao : SettingDao {
 
     override fun observeByKey(key: String): Flow<SettingEntity?> =
         keyFlows.getOrPut(key) { MutableStateFlow(store[key]) }.asStateFlow()
+
+    override suspend fun deleteByKey(key: String) {}
 }

@@ -21,7 +21,7 @@ object DrugRefDatabaseFactory {
      * Version 2 aligns to the RxNorm pipeline schema (drug_search / ingredient_map / db_meta).
      * CDN manifest guard: the app refuses to swap a CDN DB whose `db_schema_version` > this value.
      */
-    const val CURRENT_VERSION = 2
+    const val CURRENT_VERSION = 3
 
     /**
      * Builds [DrugRefDatabase], running the newer-schema guard before Room opens the file.

@@ -149,6 +149,8 @@ private class FakeSettingDao2 : SettingDao {
     override fun observeAll(): Flow<List<SettingEntity>> = _all.asStateFlow()
     override suspend fun getAll(): List<SettingEntity> = emptyList()
     override fun observeByKey(key: String): Flow<SettingEntity?> = MutableStateFlow(null)
+
+    override suspend fun deleteByKey(key: String) {}
 }
 
 private class FakeMedicationDao(private val meds: List<MedicationEntity>) : MedicationDao {
@@ -163,4 +165,6 @@ private class FakeMedicationDao(private val meds: List<MedicationEntity>) : Medi
     override suspend fun getCriticalActive(): List<MedicationEntity> =
         meds.filter { it.isCritical && it.status != "ENDED" }
     override suspend fun countNonEnded(): Int = meds.count { it.status != "ENDED" }
+
+    override suspend fun deleteById(id: String) {}
 }

@@ -271,6 +271,7 @@ fun PharosNavGraph(
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             DrugReferenceScreen(
                 uiState = uiState,
+                onRefresh = viewModel::refresh,
                 onBack = { navController.popBackStack() },
             )
         }

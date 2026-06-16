@@ -404,6 +404,8 @@ private class FakeSettingDao : SettingDao {
 
     override fun observeByKey(key: String): Flow<SettingEntity?> =
         MutableStateFlow(_all.value.find { it.key == key })
+
+    override suspend fun deleteByKey(key: String) {}
 }
 
 /** Empty [MedicationDao] stub for existing tests that don't test critical-med logic. */
@@ -418,4 +420,6 @@ private class FakeMedicationDaoEmpty : MedicationDao {
     override suspend fun getAll(): List<MedicationEntity> = emptyList()
     override suspend fun getCriticalActive(): List<MedicationEntity> = emptyList()
     override suspend fun countNonEnded(): Int = 0
+
+    override suspend fun deleteById(id: String) {}
 }

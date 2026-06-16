@@ -3,7 +3,7 @@ package com.beryndil.pharos.data.drugref
 /**
  * Network service that fetches drug label sections from a remote source (openFDA / DailyMed).
  *
- * Returns null on network failure or when the source has no record for the given RxCUI.
+ * Returns null on network failure or when the source has no record for the given drug.
  * Never throws — callers treat null as "not available right now."
  *
  * Production implementation: [OpenFdaDrugLabelService].
@@ -12,11 +12,10 @@ package com.beryndil.pharos.data.drugref
 interface DrugLabelService {
 
     /**
-     * Fetches the adverse-reactions (side effects) and drug-interactions label sections for
-     * the drug identified by [productRxcui].
+     * Fetches label sections for the drug identified by [productRxcui].
+     * [medicationName] is used as a fallback search when the RxCUI returns no results.
      *
-     * @param productRxcui RxNorm RxCUI of the product (as stored in [MedicationEntity.rxcui]).
      * @return [FetchedLabel] on success; null if the request fails or no data found.
      */
-    suspend fun fetchLabel(productRxcui: String): FetchedLabel?
+    suspend fun fetchLabel(productRxcui: String, medicationName: String? = null): FetchedLabel?
 }

@@ -513,7 +513,13 @@
     <!-- Label sections -->
     <string name="drug_reference_section_side_effects">Side effects and adverse reactions</string>
     <string name="drug_reference_section_interactions">Drug interactions</string>
-    <string name="drug_reference_section_none">No data available for this section in the source database.</string>
+    <string name="drug_reference_section_warnings">Warnings</string>
+    <string name="drug_reference_section_precautions">Precautions</string>
+    <string name="drug_reference_section_contraindications">Contraindications</string>
+    <string name="drug_reference_section_boxed_warning">Black Box Warning</string>
+    <string name="drug_reference_no_data">No reference data is available for this medication in the source database.</string>
+    <string name="drug_reference_action_refresh">Refresh</string>
+    <string name="cd_drug_reference_refresh">Refresh drug reference data</string>
 
     <!-- Source + freshness (Law 9) -->
     <string name="drug_reference_source_label">Source</string>

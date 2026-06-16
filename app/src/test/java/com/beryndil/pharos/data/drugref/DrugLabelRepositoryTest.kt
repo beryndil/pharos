@@ -18,7 +18,7 @@ import org.robolectric.RobolectricTestRunner
  * Tests for [DrugLabelRepository] (spec §2.10, Law 9).
  *
  * Uses a fake [DrugLabelService] — no real network in unit tests (PIPELINE.md requirement).
- * Covers: cache-aside hit/miss, offline fallback, free-text-med short-circuit.
+ * Covers: cache-aside hit/miss, offline fallback, invalidate-and-refetch.
  */
 @RunWith(RobolectricTestRunner::class)
 class DrugLabelRepositoryTest {
@@ -31,6 +31,10 @@ class DrugLabelRepositoryTest {
     private val testLabel = FetchedLabel(
         sideEffectsText = "Nausea, headache",
         interactionsText = "Avoid alcohol",
+        warningsText = null,
+        precautionsText = null,
+        contraindicationsText = null,
+        boxedWarningText = null,
         source = "openFDA",
     )
 
@@ -62,7 +66,6 @@ class DrugLabelRepositoryTest {
         assertEquals("Nausea, headache", result.sideEffectsText)
         assertEquals("Avoid alcohol", result.interactionsText)
         assertEquals("openFDA", result.source)
-        // Timestamp must be a plausible epoch-ms (after 2020-01-01 = 1577836800000)
         assert(result.fetchedAtEpochMs > 1_577_836_800_000L) {
             "fetchedAtEpochMs should be a real timestamp, got ${result.fetchedAtEpochMs}"
         }
@@ -74,7 +77,6 @@ class DrugLabelRepositoryTest {
 
         repo.getOrFetchLabel(testRxcui)
 
-        // Check that it's actually in Room (not just returned in-memory).
         val fromDb = db.labelCacheDao().getByProduct(testRxcui)
         assertNotNull(fromDb)
         assertEquals("openFDA", fromDb!!.source)
@@ -84,24 +86,25 @@ class DrugLabelRepositoryTest {
 
     @Test
     fun cachedLabel_returnedWithoutNetworkCall() = runTest {
-        // Pre-populate the cache.
         val cached = LabelCacheEntity(
             productRxcui = testRxcui,
             sideEffectsText = "Dizziness",
             interactionsText = null,
+            warningsText = null,
+            precautionsText = null,
+            contraindicationsText = null,
+            boxedWarningText = null,
             source = "openFDA",
             fetchedAtEpochMs = 1_700_000_000_000L,
         )
         db.labelCacheDao().upsert(cached)
-        fakeSvc.nextResult = testLabel // would overwrite if network were called
+        fakeSvc.nextResult = testLabel
 
         val result = repo.getOrFetchLabel(testRxcui)
 
-        // Must serve cached data, not the fake network response.
         assertNotNull(result)
         assertEquals("Dizziness", result!!.sideEffectsText)
         assertNull(result.interactionsText)
-        // Network must NOT have been called.
         assertEquals(0, fakeSvc.callCount)
     }
 
@@ -117,6 +120,10 @@ class DrugLabelRepositoryTest {
             productRxcui = testRxcui,
             sideEffectsText = "Test",
             interactionsText = null,
+            warningsText = null,
+            precautionsText = null,
+            contraindicationsText = null,
+            boxedWarningText = null,
             source = "openFDA",
             fetchedAtEpochMs = 1_700_000_000_000L,
         )
@@ -132,7 +139,7 @@ class DrugLabelRepositoryTest {
 
     @Test
     fun notCachedAndNetworkFails_returnsNull() = runTest {
-        fakeSvc.nextResult = null // simulate offline / no data
+        fakeSvc.nextResult = null
 
         val result = repo.getOrFetchLabel(testRxcui)
 
@@ -147,6 +154,10 @@ class DrugLabelRepositoryTest {
             productRxcui = testRxcui,
             sideEffectsText = "Already cached",
             interactionsText = null,
+            warningsText = null,
+            precautionsText = null,
+            contraindicationsText = null,
+            boxedWarningText = null,
             source = "openFDA",
             fetchedAtEpochMs = 1_700_000_000_000L,
         )
@@ -167,6 +178,31 @@ class DrugLabelRepositoryTest {
         assertNotNull(fromDb)
         assertEquals("Nausea, headache", fromDb!!.sideEffectsText)
     }
+
+    // ── invalidateAndRefetch ──────────────────────────────────────────────────
+
+    @Test
+    fun invalidateAndRefetch_clearsOldCacheAndFetchesNew() = runTest {
+        val oldCached = LabelCacheEntity(
+            productRxcui = testRxcui,
+            sideEffectsText = "Old data",
+            interactionsText = null,
+            warningsText = null,
+            precautionsText = null,
+            contraindicationsText = null,
+            boxedWarningText = null,
+            source = "openFDA",
+            fetchedAtEpochMs = 1_700_000_000_000L,
+        )
+        db.labelCacheDao().upsert(oldCached)
+        fakeSvc.nextResult = testLabel
+
+        val result = repo.invalidateAndRefetch(testRxcui)
+
+        assertNotNull(result)
+        assertEquals("Nausea, headache", result!!.sideEffectsText)
+        assertEquals(1, fakeSvc.callCount)
+    }
 }
 
 /** Fake [DrugLabelService] for unit tests — no real network. */
@@ -174,7 +210,7 @@ class FakeDrugLabelService : DrugLabelService {
     var nextResult: FetchedLabel? = null
     var callCount = 0
 
-    override suspend fun fetchLabel(productRxcui: String): FetchedLabel? {
+    override suspend fun fetchLabel(productRxcui: String, medicationName: String?): FetchedLabel? {
         callCount++
         return nextResult
     }

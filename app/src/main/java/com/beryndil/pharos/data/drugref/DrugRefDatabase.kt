@@ -35,7 +35,7 @@ import com.beryndil.pharos.data.drugref.entity.LabelCacheEntity
         DbMetaEntity::class,
         LabelCacheEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class DrugRefDatabase : RoomDatabase() {

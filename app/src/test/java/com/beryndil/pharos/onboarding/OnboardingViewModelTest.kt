@@ -268,4 +268,6 @@ private class FakeSettingDaoForOnboarding : com.beryndil.pharos.data.regimen.dao
 
     override fun observeByKey(key: String): kotlinx.coroutines.flow.Flow<com.beryndil.pharos.data.regimen.entity.SettingEntity?> =
         kotlinx.coroutines.flow.MutableStateFlow(map[key])
+
+    override suspend fun deleteByKey(key: String) {}
 }
