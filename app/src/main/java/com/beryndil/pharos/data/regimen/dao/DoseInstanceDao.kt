@@ -117,17 +117,19 @@ interface DoseInstanceDao {
     suspend fun getNextScheduledAfter(medicationId: String, afterEpochMs: Long): DoseInstanceEntity?
 
     /**
-     * Doses the user can still act on (DUE or SNOOZED) plus near-term SCHEDULED, for the
-     * today/upcoming surface. Ordered by due time.
+     * All doses for the today surface, ordered by due time.
      *
-     * DUE/SNOOZED: all instances due before [beforeEpochMs] (always need attention).
-     * SCHEDULED: only instances from [scheduledFromEpochMs] onwards (today's upcoming doses only —
-     * past SCHEDULED rows are stale and handled by the startup sweep in AlarmCoordinator).
+     * DUE/SNOOZED: any instance due before [beforeEpochMs], including carryover from prior days
+     * that still need the user's attention.
+     * Today's window: every instance whose due time falls within [scheduledFromEpochMs, beforeEpochMs),
+     * regardless of state — covers SCHEDULED (upcoming), MISSED/SKIPPED/TAKEN (completed today).
+     * Without the second clause, doses swept to MISSED by the startup sweep would disappear from
+     * the Today screen entirely even though the user never saw them.
      */
     @Query(
         "SELECT * FROM dose_instances " +
             "WHERE (state IN ('DUE', 'SNOOZED') AND dueEpochMs < :beforeEpochMs) " +
-            "OR (state = 'SCHEDULED' AND dueEpochMs >= :scheduledFromEpochMs AND dueEpochMs < :beforeEpochMs) " +
+            "OR (dueEpochMs >= :scheduledFromEpochMs AND dueEpochMs < :beforeEpochMs) " +
             "ORDER BY dueEpochMs ASC",
     )
     fun observeActionable(scheduledFromEpochMs: Long, beforeEpochMs: Long): Flow<List<DoseInstanceEntity>>
