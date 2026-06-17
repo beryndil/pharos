@@ -591,6 +591,7 @@ class AddEditMedicationViewModel(
         if (drug.tty != "BN" && drug.ingredientRxcuis.isNotEmpty()) {
             viewModelScope.launch {
                 val brands = withContext(ioDispatcher) { repository.findAllBrandSuggestions(drug.ingredientRxcuis) }
+                    .filter { !it.name.equals(drug.name, ignoreCase = true) }
                 DebugLogger.log("AddEditMed", "localDB brands=${brands.map { it.name }} for ${drug.name} (tty=${drug.tty})")
                 if (brands.isNotEmpty()) {
                     _uiState.update { state ->

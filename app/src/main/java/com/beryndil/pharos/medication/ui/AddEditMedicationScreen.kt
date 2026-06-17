@@ -39,6 +39,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -1329,7 +1330,7 @@ private fun PharmacyAutocompleteField(
  *
  * Accessibility (§8): both fields meet ≥48dp via OutlinedTextField defaults.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun SubstituteSection(
     search: String,
@@ -1342,7 +1343,9 @@ private fun SubstituteSection(
     modifier: Modifier = Modifier,
 ) {
     val noteCd = stringResource(R.string.cd_substitute_note_field)
-    val dropdownExpanded = searchResults.isNotEmpty()
+    // Only expand the dropdown for user-typed searches; pre-populated brands use chips instead.
+    val dropdownExpanded = searchResults.isNotEmpty() && search.isNotEmpty()
+    val showBrandChips = searchResults.isNotEmpty() && search.isEmpty()
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ExposedDropdownMenuBox(
@@ -1396,6 +1399,24 @@ private fun SubstituteSection(
                         },
                         onClick = { onSelected(drug.name) },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                }
+            }
+        }
+
+        // Brand suggestions pre-populated from the local RxNorm DB — always visible as tappable
+        // chips so the user doesn't need to tap the field first to see them.
+        if (showBrandChips) {
+            Text(
+                text = stringResource(R.string.label_brand_suggestions),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                searchResults.forEach { drug ->
+                    SuggestionChip(
+                        onClick = { onSelected(drug.name) },
+                        label = { Text(drug.name) },
                     )
                 }
             }
