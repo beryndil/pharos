@@ -327,7 +327,7 @@
     <string name="substitute_for_placeholder">e.g. Flomax</string>
     <string name="label_substitute_note">Note (optional)</string>
     <string name="substitute_for_helper">Type the brand or generic name this was prescribed to replace.</string>
-    <string name="label_brand_suggestions">Suggested brand names — tap to select</string>
+    <string name="label_brand_suggestions">Suggested brand names</string>
     <string name="med_status_paused">Paused</string>
     <string name="med_status_ended">Ended</string>
     <string name="med_substitute_for">Substitute for: %1$s</string>

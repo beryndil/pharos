@@ -39,7 +39,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -1330,7 +1329,7 @@ private fun PharmacyAutocompleteField(
  *
  * Accessibility (§8): both fields meet ≥48dp via OutlinedTextField defaults.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SubstituteSection(
     search: String,
@@ -1343,18 +1342,32 @@ private fun SubstituteSection(
     modifier: Modifier = Modifier,
 ) {
     val noteCd = stringResource(R.string.cd_substitute_note_field)
-    // Only expand the dropdown for user-typed searches; pre-populated brands use chips instead.
-    val dropdownExpanded = searchResults.isNotEmpty() && search.isNotEmpty()
-    val showBrandChips = searchResults.isNotEmpty() && search.isEmpty()
+    // Local expanded state — the user opens the dropdown by tapping the field.
+    var menuExpanded by remember { mutableStateOf(false) }
+    val showMenu = menuExpanded && searchResults.isNotEmpty()
+    // Show a dropdown arrow when there are pre-populated brand options ready to pick.
+    val hasBrandSuggestions = searchResults.isNotEmpty() && search.isEmpty()
+
+    fun commitAndClose(name: String?) {
+        menuExpanded = false
+        onSelected(name)
+    }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ExposedDropdownMenuBox(
-            expanded = dropdownExpanded,
-            onExpandedChange = { if (!it) onSelected(search.trim().ifEmpty { null }) },
+            expanded = showMenu,
+            onExpandedChange = { newExpanded ->
+                menuExpanded = newExpanded
+                // Auto-commit typed free-text when user collapses the menu (e.g. back press).
+                if (!newExpanded && search.isNotBlank()) onSelected(search.trim())
+            },
         ) {
             OutlinedTextField(
                 value = search,
-                onValueChange = onSearchChanged,
+                onValueChange = { newValue ->
+                    menuExpanded = true
+                    onSearchChanged(newValue)
+                },
                 label = { Text(stringResource(R.string.label_substitute_for)) },
                 placeholder = { Text(stringResource(R.string.substitute_for_placeholder)) },
                 supportingText = {
@@ -1365,13 +1378,15 @@ private fun SubstituteSection(
                         overflow = TextOverflow.Clip,
                     )
                 },
-                trailingIcon = if (search.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { onSelected(null) }) {
-                            Icon(Icons.Outlined.Close, contentDescription = null)
-                        }
+                trailingIcon = when {
+                    search.isNotEmpty() -> {
+                        { IconButton(onClick = { commitAndClose(null) }) { Icon(Icons.Outlined.Close, null) } }
                     }
-                } else null,
+                    hasBrandSuggestions -> {
+                        { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) }
+                    }
+                    else -> null
+                },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words,
@@ -1382,41 +1397,47 @@ private fun SubstituteSection(
                     .menuAnchor(MenuAnchorType.PrimaryEditable),
             )
             ExposedDropdownMenu(
-                expanded = dropdownExpanded,
-                onDismissRequest = { onSelected(search.trim().ifEmpty { null }) },
+                expanded = showMenu,
+                onDismissRequest = {
+                    menuExpanded = false
+                    // Auto-commit typed free-text on outside-tap dismiss.
+                    if (search.isNotBlank()) onSelected(search.trim())
+                },
             ) {
+                // Header shown only for pre-populated brand suggestions (search field is blank).
+                if (hasBrandSuggestions) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.label_brand_suggestions),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        onClick = {},
+                        enabled = false,
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                    )
+                    HorizontalDivider()
+                }
                 searchResults.forEach { drug ->
                     DropdownMenuItem(
                         text = {
-                            Column {
+                            if (hasBrandSuggestions) {
                                 Text(drug.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(
-                                    text = drug.tty,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            } else {
+                                Column {
+                                    Text(drug.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(
+                                        text = drug.tty,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         },
-                        onClick = { onSelected(drug.name) },
+                        onClick = { commitAndClose(drug.name) },
                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-                    )
-                }
-            }
-        }
-
-        // Brand suggestions pre-populated from the local RxNorm DB — always visible as tappable
-        // chips so the user doesn't need to tap the field first to see them.
-        if (showBrandChips) {
-            Text(
-                text = stringResource(R.string.label_brand_suggestions),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                searchResults.forEach { drug ->
-                    SuggestionChip(
-                        onClick = { onSelected(drug.name) },
-                        label = { Text(drug.name) },
                     )
                 }
             }
