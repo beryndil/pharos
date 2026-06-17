@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,6 +97,8 @@ fun SavedContactsScreen(
                         name = prescriber.name,
                         phone = prescriber.phone,
                         practice = prescriber.practice,
+                        isDefault = prescriber.id == uiState.defaultPrescriberId,
+                        onDefaultToggled = { onEvent(ContactsEvent.SetDefaultPrescriber(prescriber.id)) },
                         onEdit = { onEvent(ContactsEvent.EditPrescriberRequested(prescriber)) },
                         onDelete = { onEvent(ContactsEvent.DeleteRequested(prescriber.id, isPharmacy = false)) },
                     )
@@ -121,6 +124,8 @@ fun SavedContactsScreen(
                     ContactRow(
                         name = pharmacy.name,
                         phone = pharmacy.phone,
+                        isDefault = pharmacy.id == uiState.defaultPharmacyId,
+                        onDefaultToggled = { onEvent(ContactsEvent.SetDefaultPharmacy(pharmacy.id)) },
                         onEdit = { onEvent(ContactsEvent.EditPharmacyRequested(pharmacy)) },
                         onDelete = { onEvent(ContactsEvent.DeleteRequested(pharmacy.id, isPharmacy = true)) },
                     )
@@ -229,16 +234,30 @@ private fun ContactRow(
     name: String,
     phone: String?,
     practice: String? = null,
+    isDefault: Boolean,
+    onDefaultToggled: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val supportingParts = listOfNotNull(practice?.takeIf { it.isNotBlank() }, phone?.takeIf { it.isNotBlank() })
+    val checkboxCd = if (isDefault) {
+        stringResource(R.string.saved_contacts_unset_default_cd, name)
+    } else {
+        stringResource(R.string.saved_contacts_set_default_cd, name)
+    }
     ListItem(
         headlineContent = { Text(name) },
         supportingContent = if (supportingParts.isNotEmpty()) {
             { Text(supportingParts.joinToString(" · "), style = MaterialTheme.typography.bodySmall) }
         } else {
             null
+        },
+        leadingContent = {
+            Checkbox(
+                checked = isDefault,
+                onCheckedChange = { onDefaultToggled() },
+                modifier = Modifier.semantics { contentDescription = checkboxCd },
+            )
         },
         trailingContent = {
             androidx.compose.foundation.layout.Row {

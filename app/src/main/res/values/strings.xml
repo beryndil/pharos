@@ -730,6 +730,8 @@
     <string name="saved_contacts_field_name">Name</string>
     <string name="saved_contacts_field_phone">Phone (optional)</string>
     <string name="saved_contacts_field_practice">Practice / Clinic</string>
+    <string name="saved_contacts_set_default_cd">Set %1$s as default</string>
+    <string name="saved_contacts_unset_default_cd">%1$s is default. Tap to remove default.</string>
     <string name="label_prescriber_practice">Practice / Clinic (optional)</string>
     <string name="refill_pharmacy_dial_cd">Call pharmacy: %1$s</string>
 
