@@ -546,6 +546,7 @@ private fun DetailsStep(
                 search = uiState.substituteSearch,
                 committedName = uiState.substituteForDrugName,
                 searchResults = uiState.substituteSearchResults,
+                brandSuggestionsAvailable = uiState.brandSuggestionsAvailable,
                 note = uiState.substituteNote,
                 onSearchChanged = { onEvent(AddEditMedEvent.SubstituteSearchChanged(it)) },
                 onSelected = { onEvent(AddEditMedEvent.SubstituteSelected(it)) },
@@ -1335,6 +1336,7 @@ private fun SubstituteSection(
     search: String,
     committedName: String?,
     searchResults: List<DrugSearchResult>,
+    brandSuggestionsAvailable: Boolean,
     note: String,
     onSearchChanged: (String) -> Unit,
     onSelected: (String?) -> Unit,
@@ -1346,7 +1348,9 @@ private fun SubstituteSection(
     var menuExpanded by remember { mutableStateOf(false) }
     val showMenu = menuExpanded && searchResults.isNotEmpty()
     // Show a dropdown arrow when there are pre-populated brand options ready to pick.
-    val hasBrandSuggestions = searchResults.isNotEmpty() && search.isEmpty()
+    // brandSuggestionsAvailable stays true even when the field is pre-filled (openFDA race),
+    // so the user can still open the dropdown to pick a different brand.
+    val hasBrandSuggestions = searchResults.isNotEmpty() && (search.isEmpty() || brandSuggestionsAvailable)
 
     fun commitAndClose(name: String?) {
         menuExpanded = false

@@ -152,6 +152,8 @@ data class AddEditMedicationUiState(
     val substituteForDrugName: String? = null,
     /** Current text in the substitute-for search field. */
     val substituteSearch: String = "",
+    /** True when substituteSearchResults holds pre-populated brand suggestions (not user-typed search). */
+    val brandSuggestionsAvailable: Boolean = false,
     /** Drug DB results for the substitute-for search field. */
     val substituteSearchResults: List<DrugSearchResult> = emptyList(),
     /** Optional free-text note attached to the substitution link. */
@@ -558,7 +560,7 @@ class AddEditMedicationViewModel(
     }
 
     private fun onSubstituteSearchChanged(query: String) {
-        _uiState.update { it.copy(substituteSearch = query, substituteForDrugName = null, substituteSearchResults = emptyList()) }
+        _uiState.update { it.copy(substituteSearch = query, substituteForDrugName = null, brandSuggestionsAvailable = false, substituteSearchResults = emptyList()) }
         if (query.length >= 2) {
             viewModelScope.launch {
                 val results = withContext(ioDispatcher) { repository.searchDrugs(query) }
@@ -572,6 +574,7 @@ class AddEditMedicationViewModel(
             it.copy(
                 substituteForDrugName = name,
                 substituteSearch = name ?: "",
+                brandSuggestionsAvailable = false,
                 substituteSearchResults = emptyList(),
             )
         }
@@ -615,12 +618,16 @@ class AddEditMedicationViewModel(
                 DebugLogger.log("AddEditMed", "localDB brands=${brands.map { it.name }} for ${drug.name} (tty=${drug.tty})")
                 if (brands.isNotEmpty()) {
                     _uiState.update { state ->
-                        if (state.editMedId != null || state.substituteForDrugName != null) return@update state
-                        if (brands.size == 1) {
-                            val name = brands.first().name
-                            state.copy(substituteForDrugName = name, substituteSearch = name)
+                        if (state.editMedId != null) return@update state
+                        if (brands.size == 1 && state.substituteForDrugName == null) {
+                            state.copy(
+                                substituteForDrugName = brands.first().name,
+                                substituteSearch = brands.first().name,
+                            )
                         } else {
-                            state.copy(substituteSearchResults = brands)
+                            // Multiple brands (or single when openFDA already auto-filled):
+                            // populate results so the user can pick even if the field is pre-filled.
+                            state.copy(substituteSearchResults = brands, brandSuggestionsAvailable = true)
                         }
                     }
                 }

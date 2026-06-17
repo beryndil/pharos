@@ -61,6 +61,8 @@ sealed interface ContactEditDialog {
 data class SavedContactsUiState(
     val prescribers: List<PrescriberEntity> = emptyList(),
     val pharmacies: List<PharmacyEntity> = emptyList(),
+    val defaultPrescriberId: String? = null,
+    val defaultPharmacyId: String? = null,
     val dialog: ContactEditDialog = ContactEditDialog.None,
 )
 
@@ -77,6 +79,10 @@ sealed interface ContactsEvent {
     data class DeleteRequested(val id: String, val isPharmacy: Boolean) : ContactsEvent
     data object DeleteConfirmed : ContactsEvent
     data object DialogDismissed : ContactsEvent
+    /** Toggle the default prescriber: sets this id if not already default, clears if already default. */
+    data class SetDefaultPrescriber(val id: String) : ContactsEvent
+    /** Toggle the default pharmacy: sets this id if not already default, clears if already default. */
+    data class SetDefaultPharmacy(val id: String) : ContactsEvent
 }
 
 /**
@@ -98,9 +104,18 @@ class SavedContactsViewModel(
             combine(
                 repository.observePrescribers(),
                 repository.observePharmacies(),
-            ) { p, ph -> Pair(p, ph) }.collect { (prescribers, pharmacies) ->
-                _uiState.update { it.copy(prescribers = prescribers, pharmacies = pharmacies) }
-            }
+                repository.observeDefaultPrescriberId(),
+                repository.observeDefaultPharmacyId(),
+            ) { prescribers, pharmacies, defaultPId, defaultPhId ->
+                _uiState.update {
+                    it.copy(
+                        prescribers = prescribers,
+                        pharmacies = pharmacies,
+                        defaultPrescriberId = defaultPId,
+                        defaultPharmacyId = defaultPhId,
+                    )
+                }
+            }.collect {}
         }
     }
 
@@ -173,6 +188,18 @@ class SavedContactsViewModel(
             is ContactsEvent.DeleteConfirmed -> onDeleteConfirmed()
             is ContactsEvent.DialogDismissed ->
                 _uiState.update { it.copy(dialog = ContactEditDialog.None) }
+            is ContactsEvent.SetDefaultPrescriber -> viewModelScope.launch {
+                val current = _uiState.value.defaultPrescriberId
+                withContext(ioDispatcher) {
+                    repository.setDefaultPrescriberId(if (event.id == current) null else event.id)
+                }
+            }
+            is ContactsEvent.SetDefaultPharmacy -> viewModelScope.launch {
+                val current = _uiState.value.defaultPharmacyId
+                withContext(ioDispatcher) {
+                    repository.setDefaultPharmacyId(if (event.id == current) null else event.id)
+                }
+            }
         }
     }
 
@@ -223,8 +250,18 @@ class SavedContactsViewModel(
         val dialog = _uiState.value.dialog as? ContactEditDialog.ConfirmDelete ?: return
         viewModelScope.launch {
             withContext(ioDispatcher) {
-                if (dialog.isPharmacy) repository.deletePharmacy(dialog.contactId)
-                else repository.deletePrescriber(dialog.contactId)
+                if (dialog.isPharmacy) {
+                    repository.deletePharmacy(dialog.contactId)
+                    // Clear default if the deleted contact was the default.
+                    if (_uiState.value.defaultPharmacyId == dialog.contactId) {
+                        repository.setDefaultPharmacyId(null)
+                    }
+                } else {
+                    repository.deletePrescriber(dialog.contactId)
+                    if (_uiState.value.defaultPrescriberId == dialog.contactId) {
+                        repository.setDefaultPrescriberId(null)
+                    }
+                }
             }
             _uiState.update { it.copy(dialog = ContactEditDialog.None) }
         }
