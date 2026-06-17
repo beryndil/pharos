@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
 import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
 import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
+import com.beryndil.pharos.ui.util.PhoneVisualTransformation
 
 /**
  * Manage screen for saved prescribers and pharmacies (spec V1.3-F1).
@@ -316,10 +317,11 @@ private fun ContactDialog(
                 }
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = onPhoneChange,
+                    onValueChange = { onPhoneChange(it.filter { c -> c.isDigit() }.take(10)) },
                     label = { Text(stringResource(R.string.saved_contacts_field_phone)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    visualTransformation = PhoneVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

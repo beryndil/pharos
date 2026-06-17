@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.util.Locale
 
 // ── Step enum ────────────────────────────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ data class OnboardingUiState(
     val isComplete: Boolean = false,
     // Profile fields (PROFILE step)
     val profileName: String = "",
-    val profileDob: String = "",
+    val profileDob: LocalDate? = null,
     val profilePhone: String = "",
     val profileAllergies: String = "",
     // Prescriber fields (CONTACTS step)
@@ -90,7 +91,7 @@ sealed class OnboardingEvent {
 
     // Profile field events
     data class ProfileNameChanged(val value: String) : OnboardingEvent()
-    data class ProfileDobChanged(val value: String) : OnboardingEvent()
+    data class ProfileDobChanged(val date: LocalDate?) : OnboardingEvent()
     data class ProfilePhoneChanged(val value: String) : OnboardingEvent()
     data class ProfileAllergiesChanged(val value: String) : OnboardingEvent()
 
@@ -147,7 +148,7 @@ class OnboardingViewModel(
             is OnboardingEvent.SendTestReminder -> sendTestReminder()
             is OnboardingEvent.CompleteOnboarding -> completeOnboarding()
             is OnboardingEvent.ProfileNameChanged -> _uiState.update { it.copy(profileName = event.value) }
-            is OnboardingEvent.ProfileDobChanged -> _uiState.update { it.copy(profileDob = event.value) }
+            is OnboardingEvent.ProfileDobChanged -> _uiState.update { it.copy(profileDob = event.date) }
             is OnboardingEvent.ProfilePhoneChanged -> _uiState.update { it.copy(profilePhone = event.value) }
             is OnboardingEvent.ProfileAllergiesChanged -> _uiState.update { it.copy(profileAllergies = event.value) }
             is OnboardingEvent.PrescriberNameChanged -> _uiState.update { it.copy(prescriberName = event.value) }
@@ -166,7 +167,7 @@ class OnboardingViewModel(
                 userProfileRepository?.saveProfile(
                     UserProfile(
                         name = state.profileName.trim().ifEmpty { null },
-                        dateOfBirth = state.profileDob.trim().ifEmpty { null },
+                        dateOfBirth = state.profileDob?.toString(),
                         phone = state.profilePhone.trim().ifEmpty { null },
                         allergies = state.profileAllergies.trim().ifEmpty { null },
                     ),

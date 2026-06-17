@@ -8,23 +8,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 data class UserProfileUiState(
     val name: String = "",
-    val dateOfBirth: String = "",
-    val phone: String = "",
+    val dateOfBirth: String = "",       // ISO 8601 storage (YYYY-MM-DD)
+    val dateOfBirthDate: LocalDate? = null, // derived view for the date picker
+    val phone: String = "",             // digits only
     val address: String = "",
     val allergies: String = "",
     val insuranceProvider: String = "",
     val insuranceMemberId: String = "",
     val emergencyContactName: String = "",
-    val emergencyContactPhone: String = "",
+    val emergencyContactPhone: String = "",  // digits only
     val saved: Boolean = false,
 )
 
 sealed interface UserProfileEvent {
     data class NameChanged(val value: String) : UserProfileEvent
-    data class DobChanged(val value: String) : UserProfileEvent
+    data class DobDateChanged(val date: LocalDate?) : UserProfileEvent
     data class PhoneChanged(val value: String) : UserProfileEvent
     data class AddressChanged(val value: String) : UserProfileEvent
     data class AllergiesChanged(val value: String) : UserProfileEvent
@@ -46,17 +48,20 @@ class UserProfileViewModel(
     init {
         viewModelScope.launch {
             val profile = repository.getProfile()
+            val storedDob = profile.dateOfBirth
+            val dobDate = storedDob?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
             _uiState.update {
                 it.copy(
                     name = profile.name ?: "",
-                    dateOfBirth = profile.dateOfBirth ?: "",
-                    phone = profile.phone ?: "",
+                    dateOfBirth = dobDate?.toString() ?: "",
+                    dateOfBirthDate = dobDate,
+                    phone = (profile.phone ?: "").filter { c -> c.isDigit() }.take(10),
                     address = profile.address ?: "",
                     allergies = profile.allergies ?: "",
                     insuranceProvider = profile.insuranceProvider ?: "",
                     insuranceMemberId = profile.insuranceMemberId ?: "",
                     emergencyContactName = profile.emergencyContactName ?: "",
-                    emergencyContactPhone = profile.emergencyContactPhone ?: "",
+                    emergencyContactPhone = (profile.emergencyContactPhone ?: "").filter { c -> c.isDigit() }.take(10),
                 )
             }
         }
@@ -65,7 +70,9 @@ class UserProfileViewModel(
     fun onEvent(event: UserProfileEvent) {
         when (event) {
             is UserProfileEvent.NameChanged -> _uiState.update { it.copy(name = event.value) }
-            is UserProfileEvent.DobChanged -> _uiState.update { it.copy(dateOfBirth = event.value) }
+            is UserProfileEvent.DobDateChanged -> _uiState.update {
+                it.copy(dateOfBirth = event.date?.toString() ?: "", dateOfBirthDate = event.date)
+            }
             is UserProfileEvent.PhoneChanged -> _uiState.update { it.copy(phone = event.value) }
             is UserProfileEvent.AddressChanged -> _uiState.update { it.copy(address = event.value) }
             is UserProfileEvent.AllergiesChanged -> _uiState.update { it.copy(allergies = event.value) }

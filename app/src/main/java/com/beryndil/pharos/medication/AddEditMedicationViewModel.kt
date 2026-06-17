@@ -357,7 +357,7 @@ class AddEditMedicationViewModel(
                 _uiState.update {
                     it.copy(
                         prescriber = event.prescriber.name,
-                        prescriberPhone = event.prescriber.phone ?: it.prescriberPhone,
+                        prescriberPhone = (event.prescriber.phone ?: it.prescriberPhone).filter { c -> c.isDigit() }.take(10),
                         prescriberPractice = event.prescriber.practice ?: it.prescriberPractice,
                     )
                 }
@@ -374,7 +374,7 @@ class AddEditMedicationViewModel(
                 _uiState.update {
                     it.copy(
                         pharmacy = event.pharmacy.name,
-                        pharmacyPhone = event.pharmacy.phone ?: it.pharmacyPhone,
+                        pharmacyPhone = (event.pharmacy.phone ?: it.pharmacyPhone).filter { c -> c.isDigit() }.take(10),
                     )
                 }
             is AddEditMedEvent.PurposeChanged ->
@@ -473,10 +473,10 @@ class AddEditMedicationViewModel(
                         Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
                     },
                     prescriber = med.prescriber ?: "",
-                    prescriberPhone = med.prescriberPhone ?: "",
+                    prescriberPhone = (med.prescriberPhone ?: "").filter { it.isDigit() }.take(10),
                     prescriberPractice = med.prescriberPractice ?: "",
                     pharmacy = med.pharmacy ?: "",
-                    pharmacyPhone = med.pharmacyPhone ?: "",
+                    pharmacyPhone = (med.pharmacyPhone ?: "").filter { it.isDigit() }.take(10),
                     purpose = med.purpose ?: "",
                     notes = med.notes ?: "",
                     substituteForDrugName = med.substituteForDrugName,

@@ -131,7 +131,7 @@ class SavedContactsViewModel(
                         dialog = ContactEditDialog.EditPrescriber(
                             prescriber = event.prescriber,
                             currentName = event.prescriber.name,
-                            currentPhone = event.prescriber.phone ?: "",
+                            currentPhone = (event.prescriber.phone ?: "").filter { it.isDigit() }.take(10),
                             currentPractice = event.prescriber.practice ?: "",
                         ),
                     )
@@ -142,7 +142,7 @@ class SavedContactsViewModel(
                         dialog = ContactEditDialog.EditPharmacy(
                             pharmacy = event.pharmacy,
                             currentName = event.pharmacy.name,
-                            currentPhone = event.pharmacy.phone ?: "",
+                            currentPhone = (event.pharmacy.phone ?: "").filter { it.isDigit() }.take(10),
                         ),
                     )
                 }

@@ -39,8 +39,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -56,6 +65,13 @@ import com.beryndil.pharos.R
 import com.beryndil.pharos.onboarding.OnboardingEvent
 import com.beryndil.pharos.onboarding.OnboardingStep
 import com.beryndil.pharos.onboarding.OnboardingUiState
+import com.beryndil.pharos.ui.util.PhoneVisualTransformation
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 
 /**
  * The first-launch permission priming flow (spec §2.14, Standards §3,§4,§8, DESIGN.md).
@@ -152,7 +168,7 @@ fun OnboardingScreen(
                     allergies = uiState.profileAllergies,
                     onNameChanged = { onEvent(OnboardingEvent.ProfileNameChanged(it)) },
                     onDobChanged = { onEvent(OnboardingEvent.ProfileDobChanged(it)) },
-                    onPhoneChanged = { onEvent(OnboardingEvent.ProfilePhoneChanged(it)) },
+                    onPhoneChanged = { onEvent(OnboardingEvent.ProfilePhoneChanged(it.filter { c -> c.isDigit() }.take(10))) },
                     onAllergiesChanged = { onEvent(OnboardingEvent.ProfileAllergiesChanged(it)) },
                     onContinue = { onEvent(OnboardingEvent.NextStep) },
                 )
@@ -457,18 +473,24 @@ private fun TestReminderStep(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileStep(
     name: String,
-    dob: String,
+    dob: LocalDate?,
     phone: String,
     allergies: String,
     onNameChanged: (String) -> Unit,
-    onDobChanged: (String) -> Unit,
+    onDobChanged: (LocalDate?) -> Unit,
     onPhoneChanged: (String) -> Unit,
     onAllergiesChanged: (String) -> Unit,
     onContinue: () -> Unit,
 ) {
+    var showDobPicker by rememberSaveable { mutableStateOf(false) }
+    val dobFormatter = remember {
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+    }
+
     StepContent(
         icon = Icons.Outlined.AccountCircle,
         headline = stringResource(R.string.onboarding_profile_title),
@@ -487,10 +509,16 @@ private fun ProfileStep(
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
-                value = dob,
-                onValueChange = onDobChanged,
+                value = dob?.format(dobFormatter) ?: "",
+                onValueChange = {},
                 label = { Text(stringResource(R.string.profile_field_dob)) },
                 singleLine = true,
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { showDobPicker = true }) {
+                        Icon(Icons.Outlined.CalendarToday, contentDescription = stringResource(R.string.profile_field_dob))
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
@@ -499,6 +527,7 @@ private fun ProfileStep(
                 label = { Text(stringResource(R.string.profile_field_phone)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                visualTransformation = PhoneVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
@@ -536,6 +565,31 @@ private fun ProfileStep(
                 .height(48.dp),
         ) {
             Text(stringResource(R.string.onboarding_btn_skip))
+        }
+    }
+
+    if (showDobPicker) {
+        val initialMs = dob?.atStartOfDay(ZoneId.of("UTC"))?.toInstant()?.toEpochMilli()
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = initialMs)
+        DatePickerDialog(
+            onDismissRequest = { showDobPicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val ms = pickerState.selectedDateMillis
+                        if (ms != null) {
+                            onDobChanged(Instant.ofEpochMilli(ms).atZone(ZoneId.of("UTC")).toLocalDate())
+                        }
+                        showDobPicker = false
+                    },
+                    enabled = pickerState.selectedDateMillis != null,
+                ) { Text(stringResource(R.string.btn_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDobPicker = false }) { Text(stringResource(R.string.btn_cancel)) }
+            },
+        ) {
+            DatePicker(state = pickerState)
         }
     }
 }
@@ -589,10 +643,11 @@ private fun ContactsStep(
             )
             OutlinedTextField(
                 value = prescriberPhone,
-                onValueChange = onPrescriberPhoneChanged,
+                onValueChange = { onPrescriberPhoneChanged(it.filter { c -> c.isDigit() }.take(10)) },
                 label = { Text(stringResource(R.string.saved_contacts_field_phone)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                visualTransformation = PhoneVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -623,10 +678,11 @@ private fun ContactsStep(
             )
             OutlinedTextField(
                 value = pharmacyPhone,
-                onValueChange = onPharmacyPhoneChanged,
+                onValueChange = { onPharmacyPhoneChanged(it.filter { c -> c.isDigit() }.take(10)) },
                 label = { Text(stringResource(R.string.saved_contacts_field_phone)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                visualTransformation = PhoneVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
         }

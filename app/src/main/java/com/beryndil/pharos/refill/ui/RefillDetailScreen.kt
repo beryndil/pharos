@@ -68,6 +68,8 @@ import com.beryndil.pharos.refill.RefillDialogState
 import com.beryndil.pharos.refill.RefillEvent
 import com.beryndil.pharos.refill.RefillSummary
 import com.beryndil.pharos.refill.RefillUiState
+import com.beryndil.pharos.ui.util.PhoneVisualTransformation
+import com.beryndil.pharos.ui.util.formatPhoneDisplay
 import java.text.DateFormat
 import java.util.Date
 
@@ -328,7 +330,7 @@ private fun SupplyStatusCard(
                     val dialCd = stringResource(R.string.refill_pharmacy_dial_cd, phone)
                     LabelValueRow(
                         label = stringResource(R.string.refill_pharmacy_label),
-                        value = phone,
+                        value = formatPhoneDisplay(phone),
                         onClick = {
                             val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
                             context.startActivity(intent)
@@ -564,9 +566,10 @@ private fun SetCountDialog(
                 )
                 OutlinedTextField(
                     value = phoneText,
-                    onValueChange = { phoneText = it },
+                    onValueChange = { phoneText = it.filter { c -> c.isDigit() }.take(10) },
                     label = { Text(stringResource(R.string.refill_dialog_pharmacy_phone_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    visualTransformation = PhoneVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -577,7 +580,7 @@ private fun SetCountDialog(
                 onClick = {
                     val qty = quantityText.trim().toIntOrNull() ?: return@TextButton
                     val unit = unitText.trim().ifBlank { "tablets" }
-                    val phone = phoneText.trim().ifBlank { null }
+                    val phone = phoneText.ifBlank { null }
                     onConfirm(qty, unit, phone)
                 },
             ) {
@@ -623,9 +626,10 @@ private fun PickupDialog(
                 )
                 OutlinedTextField(
                     value = phoneText,
-                    onValueChange = { phoneText = it },
+                    onValueChange = { phoneText = it.filter { c -> c.isDigit() }.take(10) },
                     label = { Text(stringResource(R.string.refill_dialog_pharmacy_phone_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    visualTransformation = PhoneVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -643,7 +647,7 @@ private fun PickupDialog(
                 onClick = {
                     val qty = quantityText.trim().toIntOrNull() ?: return@TextButton
                     val unit = unitText.trim().ifBlank { "tablets" }
-                    val phone = phoneText.trim().ifBlank { null }
+                    val phone = phoneText.ifBlank { null }
                     val notes = notesText.trim().ifBlank { null }
                     onConfirm(qty, unit, phone, notes)
                 },

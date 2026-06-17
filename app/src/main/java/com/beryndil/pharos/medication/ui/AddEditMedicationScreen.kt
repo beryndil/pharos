@@ -91,6 +91,8 @@ import com.beryndil.pharos.medication.SaveError
 import com.beryndil.pharos.medication.model.DrugSearchResult
 import com.beryndil.pharos.medication.model.DuplicateWarning
 import com.beryndil.pharos.schedule.ui.ScheduleSection
+import com.beryndil.pharos.ui.util.PhoneVisualTransformation
+import com.beryndil.pharos.ui.util.formatPhoneDisplay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -1204,7 +1206,7 @@ private fun ContactAutocompleteField(
                                 }
                                 if (!suggestion.phone.isNullOrBlank()) {
                                     Text(
-                                        suggestion.phone,
+                                        formatPhoneDisplay(suggestion.phone),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -1230,10 +1232,11 @@ private fun ContactAutocompleteField(
         }
         OutlinedTextField(
             value = phoneValue,
-            onValueChange = onPhoneChange,
+            onValueChange = { onPhoneChange(it.filter { c -> c.isDigit() }.take(10)) },
             label = { Text(phoneLabel) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            visualTransformation = PhoneVisualTransformation(),
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { contentDescription = phoneLabel },
@@ -1292,7 +1295,7 @@ private fun PharmacyAutocompleteField(
                                 Text(suggestion.name, style = MaterialTheme.typography.bodyMedium)
                                 if (!suggestion.phone.isNullOrBlank()) {
                                     Text(
-                                        suggestion.phone,
+                                        formatPhoneDisplay(suggestion.phone),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -1307,10 +1310,11 @@ private fun PharmacyAutocompleteField(
         }
         OutlinedTextField(
             value = phoneValue,
-            onValueChange = onPhoneChange,
+            onValueChange = { onPhoneChange(it.filter { c -> c.isDigit() }.take(10)) },
             label = { Text(phoneLabel) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            visualTransformation = PhoneVisualTransformation(),
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { contentDescription = phoneLabel },
