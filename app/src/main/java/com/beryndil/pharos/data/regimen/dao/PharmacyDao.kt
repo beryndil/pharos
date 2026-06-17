@@ -26,6 +26,9 @@ interface PharmacyDao {
     @Query("SELECT * FROM pharmacies WHERE lower(name) = lower(:name) LIMIT 1")
     suspend fun getByName(name: String): PharmacyEntity?
 
+    @Query("SELECT * FROM pharmacies WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): PharmacyEntity?
+
     @Query("DELETE FROM pharmacies WHERE id = :id")
     suspend fun deleteById(id: String)
 }

@@ -320,6 +320,7 @@ fun PharosNavGraph(
             val viewModel: SettingsViewModel = viewModel(
                 factory = SettingsViewModel.factory(
                     appearanceRepository = app.appContainer.appearanceRepository,
+                    contactRepository = app.appContainer.contactRepository,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()

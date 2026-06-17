@@ -279,10 +279,30 @@ class AddEditMedicationViewModel(
         if (editMedId != null) {
             _uiState.update { it.copy(editMedId = editMedId) }
             loadExistingMedication(editMedId)
+        } else {
+            loadDefaultContacts()
         }
         startSearchDebounce()
         startSuggestionCollection()
         loadActiveMedsForPicker(editMedId)
+    }
+
+    private fun loadDefaultContacts() {
+        if (contactRepository == null) return
+        viewModelScope.launch {
+            val prescriber = withContext(ioDispatcher) { contactRepository.getDefaultPrescriber() }
+            val pharmacy = withContext(ioDispatcher) { contactRepository.getDefaultPharmacy() }
+            if (prescriber == null && pharmacy == null) return@launch
+            _uiState.update { state ->
+                state.copy(
+                    prescriber = prescriber?.name ?: state.prescriber,
+                    prescriberPhone = prescriber?.phone ?: state.prescriberPhone,
+                    prescriberPractice = prescriber?.practice ?: state.prescriberPractice,
+                    pharmacy = pharmacy?.name ?: state.pharmacy,
+                    pharmacyPhone = pharmacy?.phone ?: state.pharmacyPhone,
+                )
+            }
+        }
     }
 
     private fun loadActiveMedsForPicker(excludeId: String?) {

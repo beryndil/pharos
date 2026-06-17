@@ -2,9 +2,12 @@ package com.beryndil.pharos.contacts
 
 import com.beryndil.pharos.data.regimen.dao.PharmacyDao
 import com.beryndil.pharos.data.regimen.dao.PrescriberDao
+import com.beryndil.pharos.data.regimen.dao.SettingDao
 import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
 import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
+import com.beryndil.pharos.data.regimen.entity.SettingEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 /**
@@ -20,7 +23,38 @@ import java.util.UUID
 class ContactRepository(
     private val prescriberDao: PrescriberDao,
     private val pharmacyDao: PharmacyDao,
+    private val settingDao: SettingDao,
 ) {
+
+    // ── Defaults ──────────────────────────────────────────────────────────
+
+    fun observeDefaultPrescriberId(): Flow<String?> =
+        settingDao.observeByKey(KEY_DEFAULT_PRESCRIBER).map { it?.value }
+
+    fun observeDefaultPharmacyId(): Flow<String?> =
+        settingDao.observeByKey(KEY_DEFAULT_PHARMACY).map { it?.value }
+
+    suspend fun getDefaultPrescriber(): PrescriberEntity? {
+        val id = settingDao.get(KEY_DEFAULT_PRESCRIBER)?.value ?: return null
+        return prescriberDao.getById(id)
+    }
+
+    suspend fun getDefaultPharmacy(): PharmacyEntity? {
+        val id = settingDao.get(KEY_DEFAULT_PHARMACY)?.value ?: return null
+        return pharmacyDao.getById(id)
+    }
+
+    suspend fun setDefaultPrescriberId(id: String?) {
+        val nowMs = System.currentTimeMillis()
+        if (id == null) settingDao.deleteByKey(KEY_DEFAULT_PRESCRIBER)
+        else settingDao.upsert(SettingEntity(KEY_DEFAULT_PRESCRIBER, id, nowMs))
+    }
+
+    suspend fun setDefaultPharmacyId(id: String?) {
+        val nowMs = System.currentTimeMillis()
+        if (id == null) settingDao.deleteByKey(KEY_DEFAULT_PHARMACY)
+        else settingDao.upsert(SettingEntity(KEY_DEFAULT_PHARMACY, id, nowMs))
+    }
 
     // ── Observe ───────────────────────────────────────────────────────────
 
@@ -90,4 +124,9 @@ class ContactRepository(
     suspend fun deletePrescriber(id: String) = prescriberDao.deleteById(id)
 
     suspend fun deletePharmacy(id: String) = pharmacyDao.deleteById(id)
+
+    companion object {
+        const val KEY_DEFAULT_PRESCRIBER = "contacts.default_prescriber_id"
+        const val KEY_DEFAULT_PHARMACY = "contacts.default_pharmacy_id"
+    }
 }

@@ -109,6 +109,7 @@ class AppContainer(private val applicationContext: Context) {
         ContactRepository(
             prescriberDao = regimenDatabase.prescriberDao(),
             pharmacyDao = regimenDatabase.pharmacyDao(),
+            settingDao = regimenDatabase.settingDao(),
         )
     }
 

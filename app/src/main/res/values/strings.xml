@@ -328,6 +328,10 @@
     <string name="label_substitute_note">Note (optional)</string>
     <string name="substitute_for_helper">Type the brand or generic name this was prescribed to replace.</string>
     <string name="label_brand_suggestions">Suggested brand names</string>
+    <string name="settings_section_default_contacts">Default contacts</string>
+    <string name="settings_label_default_provider">Default provider</string>
+    <string name="settings_label_default_pharmacy">Default pharmacy</string>
+    <string name="settings_default_contact_none">None</string>
     <string name="med_status_paused">Paused</string>
     <string name="med_status_ended">Ended</string>
     <string name="med_substitute_for">Substitute for: %1$s</string>

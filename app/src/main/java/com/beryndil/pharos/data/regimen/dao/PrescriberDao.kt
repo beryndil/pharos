@@ -26,6 +26,9 @@ interface PrescriberDao {
     @Query("SELECT * FROM prescribers WHERE lower(name) = lower(:name) LIMIT 1")
     suspend fun getByName(name: String): PrescriberEntity?
 
+    @Query("SELECT * FROM prescribers WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): PrescriberEntity?
+
     @Query("DELETE FROM prescribers WHERE id = :id")
     suspend fun deleteById(id: String)
 }
