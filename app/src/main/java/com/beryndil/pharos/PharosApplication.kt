@@ -142,6 +142,11 @@ class PharosApplication : Application() {
             runCatching {
                 appContainer.doseNotifier.ensureChannels()
                 appContainer.alarmCoordinator.sweepStaleDoses()
+                // Top up before rearming: medications with historical start dates only have
+                // instances from the initial 90-day generation window. If the daily rollover
+                // hasn't fired yet (fresh install, first day), those instances end years ago
+                // and nothing appears on Today. topUpGeneration extends to now+90 days.
+                appContainer.alarmCoordinator.topUpGeneration()
                 appContainer.alarmCoordinator.rearmNextDoseAlarm()
                 appContainer.alarmCoordinator.scheduleDailyRollover()
                 // Diagnostic snapshot (logged to pharos_debug.log for support sharing).

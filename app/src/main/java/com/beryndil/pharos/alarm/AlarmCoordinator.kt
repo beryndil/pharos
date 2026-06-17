@@ -94,9 +94,12 @@ class AlarmCoordinator(
     /**
      * Handle a system re-registration trigger (boot, time/timezone change, package replace,
      * exact-alarm permission change). Recompute the pending dose alarm and re-anchor the rollover.
+     * Includes a top-up pass so medications with historical start dates always have current
+     * instances — the daily rollover may not have fired yet since the last install/restore.
      */
     suspend fun onReRegistration(trigger: String) {
         reliabilityLog.recordReRegistration(trigger, now())
+        topUpGeneration()
         rearmNextDoseAlarm()
         scheduleDailyRollover()
     }
@@ -185,7 +188,7 @@ class AlarmCoordinator(
         reliabilityLog.recordAlarmScheduled(AlarmKind.DAILY_ROLLOVER, mode, nextMidnight)
     }
 
-    private suspend fun topUpGeneration() {
+    suspend fun topUpGeneration() {
         val from = Instant.ofEpochMilli(now())
         val to = from.plusMillis(GENERATION_HORIZON_DAYS * MS_PER_DAY)
         for (med in medicationDao.getActiveOnce()) {
