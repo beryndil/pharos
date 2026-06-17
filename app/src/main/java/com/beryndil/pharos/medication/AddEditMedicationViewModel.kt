@@ -597,12 +597,14 @@ class AddEditMedicationViewModel(
                         brandName = label.brandName,
                         source = label.source,
                     ) else LabelPreviewState.NotAvailable
-                    // Auto-fill brand name into the display name field while still in CONFIRM step.
-                    val autoName = if (label?.brandName != null && state.editMedId == null
+                    // Auto-fill brand name into display name and "in place of" while still in CONFIRM step.
+                    val autoBrandName = if (label?.brandName != null && state.editMedId == null
                             && state.step == FormStep.CONFIRM) label.brandName else null
                     state.copy(
                         labelPreview = preview,
-                        displayName = autoName ?: state.displayName,
+                        displayName = autoBrandName ?: state.displayName,
+                        substituteForDrugName = autoBrandName ?: state.substituteForDrugName,
+                        substituteSearch = autoBrandName ?: state.substituteSearch,
                     )
                 }
             }
