@@ -120,6 +120,7 @@ class OpenFdaDrugLabelService : DrugLabelService {
             ?.optJSONArray("brand_name")
             ?.optString(0)
             ?.takeIf { it.isNotBlank() }
+        DebugLogger.log("OpenFDA", "parsed brandName=$brandName")
 
         return FetchedLabel(
             sideEffectsText = field("adverse_reactions"),

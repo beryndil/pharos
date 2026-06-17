@@ -8,6 +8,7 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.contacts.ContactRepository
 import com.beryndil.pharos.data.drugref.DrugLabelRepository
 import com.beryndil.pharos.data.medication.MedicationRepository
@@ -597,14 +598,21 @@ class AddEditMedicationViewModel(
                         brandName = label.brandName,
                         source = label.source,
                     ) else LabelPreviewState.NotAvailable
-                    // Auto-fill brand name into display name and "in place of" while still in CONFIRM step.
-                    val autoBrandName = if (label?.brandName != null && state.editMedId == null
-                            && state.step == FormStep.CONFIRM) label.brandName else null
+                    // Auto-fill display name only while still in CONFIRM (avoid overwriting user edits in DETAILS).
+                    // Auto-fill "in place of" regardless of step — onConfirmDrug() never touches it,
+                    // so it's safe to set even after the user confirms, as long as they haven't picked one.
+                    val isNewAdd = state.editMedId == null
+                    val brandName = label?.brandName
+                    DebugLogger.log("AddEditMed", "label loaded: brandName=$brandName step=${state.step} isNewAdd=$isNewAdd substituteAlready=${state.substituteForDrugName}")
+                    val autoDisplayName = if (brandName != null && isNewAdd
+                            && state.step == FormStep.CONFIRM) brandName else null
+                    val autoSubstitute = if (brandName != null && isNewAdd
+                            && state.substituteForDrugName == null) brandName else null
                     state.copy(
                         labelPreview = preview,
-                        displayName = autoBrandName ?: state.displayName,
-                        substituteForDrugName = autoBrandName ?: state.substituteForDrugName,
-                        substituteSearch = autoBrandName ?: state.substituteSearch,
+                        displayName = autoDisplayName ?: state.displayName,
+                        substituteForDrugName = autoSubstitute ?: state.substituteForDrugName,
+                        substituteSearch = autoSubstitute ?: state.substituteSearch,
                     )
                 }
             }
