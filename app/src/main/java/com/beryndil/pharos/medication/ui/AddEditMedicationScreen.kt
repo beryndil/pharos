@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -676,6 +677,7 @@ private fun DrugInfoPreviewSections(preview: LabelPreviewState.Available, modifi
         preview.precautionsText != null || preview.foodEffectText != null
     if (!hasAnyData) return
 
+    SelectionContainer {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader(stringResource(R.string.section_drug_info))
         preview.boxedWarningText?.let { DrugInfoBoxedWarning(it) }
@@ -699,6 +701,7 @@ private fun DrugInfoPreviewSections(preview: LabelPreviewState.Available, modifi
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
     }
 }
 
