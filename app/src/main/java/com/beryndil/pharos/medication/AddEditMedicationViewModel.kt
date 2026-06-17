@@ -602,7 +602,7 @@ class AddEditMedicationViewModel(
 
     private fun onDrugSelected(drug: DrugSearchResult) {
         val rxcui = drug.rxcui
-        val initialPreview = if (rxcui != null && drugLabelRepository != null)
+        val initialPreview = if (drugLabelRepository != null)
             LabelPreviewState.Loading else LabelPreviewState.NotAvailable
         _uiState.update { it.copy(pendingDrug = drug, step = FormStep.CONFIRM, labelPreview = initialPreview) }
 
@@ -634,7 +634,7 @@ class AddEditMedicationViewModel(
             }
         }
 
-        if (rxcui != null && drugLabelRepository != null) {
+        if (drugLabelRepository != null) {
             viewModelScope.launch {
                 val label = withContext(ioDispatcher) {
                     try { drugLabelRepository.getOrFetchLabel(rxcui, drug.name) } catch (e: Exception) { null }
