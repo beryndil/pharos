@@ -156,9 +156,6 @@ data class AddEditMedicationUiState(
     val brandSuggestionsAvailable: Boolean = false,
     /** Drug DB results for the substitute-for search field. */
     val substituteSearchResults: List<DrugSearchResult> = emptyList(),
-    /** Optional free-text note attached to the substitution link. */
-    val substituteNote: String = "",
-
     // ── Combined prescription (split prescription) ────────────────────────
     /** ID of the other medication in the regimen this is prescribed together with. Null = standalone. */
     val combinedWithMedId: String? = null,
@@ -217,8 +214,6 @@ sealed interface AddEditMedEvent {
     data class SubstituteSearchChanged(val query: String) : AddEditMedEvent
     /** User picked a drug from search results, or null to clear the substitute link. */
     data class SubstituteSelected(val name: String?) : AddEditMedEvent
-    /** User typed in the optional substitution note field. */
-    data class SubstituteNoteChanged(val value: String) : AddEditMedEvent
     /** User selected (or cleared) the combined-with medication. Null clears the link. */
     data class CombinedWithMedChanged(val medId: String?) : AddEditMedEvent
     /** User typed the combined display strength (e.g. "90 mg"). */
@@ -396,8 +391,7 @@ class AddEditMedicationViewModel(
                 _uiState.update { it.copy(showDndPermissionRationale = false) }
             is AddEditMedEvent.SubstituteSearchChanged -> onSubstituteSearchChanged(event.query)
             is AddEditMedEvent.SubstituteSelected -> onSubstituteSelected(event.name)
-            is AddEditMedEvent.SubstituteNoteChanged ->
-                _uiState.update { it.copy(substituteNote = event.value) }
+
             is AddEditMedEvent.CombinedWithMedChanged ->
                 _uiState.update { it.copy(combinedWithMedId = event.medId) }
             is AddEditMedEvent.CombinedDisplayStrengthChanged ->
@@ -481,7 +475,7 @@ class AddEditMedicationViewModel(
                     notes = med.notes ?: "",
                     substituteForDrugName = med.substituteForDrugName,
                     substituteSearch = med.substituteForDrugName ?: "",
-                    substituteNote = med.substituteNote ?: "",
+
                     combinedWithMedId = med.combinedWithMedId,
                     combinedDisplayStrength = med.combinedDisplayStrength ?: "",
                     isCritical = med.isCritical,
@@ -790,7 +784,7 @@ class AddEditMedicationViewModel(
             pharmacy = state.pharmacy.trim().ifEmpty { null },
             pharmacyPhone = state.pharmacyPhone.trim().ifEmpty { null },
             substituteForDrugName = state.substituteForDrugName?.trim()?.ifEmpty { null },
-            substituteNote = state.substituteNote.trim().ifEmpty { null },
+
             combinedWithMedId = state.combinedWithMedId?.ifEmpty { null },
             combinedDisplayStrength = state.combinedDisplayStrength.trim().ifEmpty { null },
             purpose = state.purpose.trim().ifEmpty { null },

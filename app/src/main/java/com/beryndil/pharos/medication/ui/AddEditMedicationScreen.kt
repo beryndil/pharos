@@ -549,10 +549,8 @@ private fun DetailsStep(
                 committedName = uiState.substituteForDrugName,
                 searchResults = uiState.substituteSearchResults,
                 brandSuggestionsAvailable = uiState.brandSuggestionsAvailable,
-                note = uiState.substituteNote,
                 onSearchChanged = { onEvent(AddEditMedEvent.SubstituteSearchChanged(it)) },
                 onSelected = { onEvent(AddEditMedEvent.SubstituteSelected(it)) },
-                onNoteChanged = { onEvent(AddEditMedEvent.SubstituteNoteChanged(it)) },
             )
 
             CombinedPrescriptionSection(
@@ -1341,13 +1339,10 @@ private fun SubstituteSection(
     committedName: String?,
     searchResults: List<DrugSearchResult>,
     brandSuggestionsAvailable: Boolean,
-    note: String,
     onSearchChanged: (String) -> Unit,
     onSelected: (String?) -> Unit,
-    onNoteChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val noteCd = stringResource(R.string.cd_substitute_note_field)
     // Local expanded state — the user opens the dropdown by tapping the field.
     var menuExpanded by remember { mutableStateOf(false) }
     val showMenu = menuExpanded && searchResults.isNotEmpty()
@@ -1451,21 +1446,6 @@ private fun SubstituteSection(
             }
         }
 
-        if (committedName != null) {
-            OutlinedTextField(
-                value = note,
-                onValueChange = onNoteChanged,
-                label = { Text(stringResource(R.string.label_substitute_note)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = ImeAction.Next,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { contentDescription = noteCd },
-            )
-        }
     }
 }
 
