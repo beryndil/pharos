@@ -2,6 +2,11 @@ package com.beryndil.pharos.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.core.content.FileProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -319,6 +324,7 @@ fun PharosNavGraph(
         // ── Settings (A5-S1 — theme, text size, about, legal) ───────────
         composable(NavRoute.Settings.route) {
             val settingsContext = LocalContext.current
+            val scope = rememberCoroutineScope()
             val viewModel: SettingsViewModel = viewModel(
                 factory = SettingsViewModel.factory(
                     appearanceRepository = app.appContainer.appearanceRepository,
@@ -333,43 +339,58 @@ fun PharosNavGraph(
                 onOpenProfile      = { navController.navigate(NavRoute.UserProfile.route) },
                 onOpenReliability  = { navController.navigate(NavRoute.ReliabilityDashboard.route) },
                 onShareDebugLog = {
-                    val logFile = DebugLogger.getLogFile(settingsContext)
-                    val oldLogFile = DebugLogger.getOldLogFile(settingsContext)
-                    // Android's Binder transaction limit (~1 MB) caps what EXTRA_TEXT can carry.
-                    // Cap each file at 200 KB and take only the tail so the most recent entries
-                    // (which are what matters for debugging) are always included.
-                    val cap = 200_000
-                    val content = buildString {
-                        if (oldLogFile.exists()) {
-                            append("=== PREVIOUS SESSION ===\n")
-                            append(oldLogFile.readText().takeLast(cap))
-                            append("\n")
+                    scope.launch(Dispatchers.IO) {
+                        runCatching {
+                            // Assemble a single temp file from the tail of both log files so
+                            // the share is a file URI (no Binder size limit) rather than
+                            // EXTRA_TEXT (limited to ~1 MB through Binder IPC).
+                            val cap = 100_000
+                            val logFile = DebugLogger.getLogFile(settingsContext)
+                            val oldLogFile = DebugLogger.getOldLogFile(settingsContext)
+                            val content = buildString {
+                                if (oldLogFile.exists()) {
+                                    append("=== PREVIOUS SESSION ===\n")
+                                    append(oldLogFile.readText().takeLast(cap))
+                                    append("\n")
+                                }
+                                if (logFile.exists()) {
+                                    append("=== CURRENT SESSION ===\n")
+                                    append(logFile.readText().takeLast(cap))
+                                }
+                                if (isEmpty()) append("(no log file found)")
+                            }
+                            val exportDir = java.io.File(settingsContext.cacheDir, "exports")
+                            exportDir.mkdirs()
+                            val tmpLog = java.io.File(exportDir, "pharos-debug-log.txt")
+                            tmpLog.writeText(content)
+                            val uri = FileProvider.getUriForFile(
+                                settingsContext,
+                                "${settingsContext.packageName}.fileprovider",
+                                tmpLog,
+                            )
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            withContext(Dispatchers.Main) {
+                                settingsContext.startActivity(
+                                    Intent.createChooser(
+                                        shareIntent,
+                                        settingsContext.getString(R.string.debug_log_chooser_title),
+                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        }.onFailure { e ->
+                            DebugLogger.logError("DebugShare", "share failed", e)
+                            withContext(Dispatchers.Main) {
+                                android.widget.Toast.makeText(
+                                    settingsContext,
+                                    "Share failed: ${e.javaClass.simpleName}",
+                                    android.widget.Toast.LENGTH_LONG,
+                                ).show()
+                            }
                         }
-                        if (logFile.exists()) {
-                            append("=== CURRENT SESSION ===\n")
-                            append(logFile.readText().takeLast(cap))
-                        }
-                        if (isEmpty()) append("(no log file found)")
-                    }
-                    runCatching {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, content)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        settingsContext.startActivity(
-                            Intent.createChooser(
-                                shareIntent,
-                                settingsContext.getString(R.string.debug_log_chooser_title),
-                            ),
-                        )
-                    }.onFailure { e ->
-                        DebugLogger.logError("DebugShare", "share intent failed", e)
-                        android.widget.Toast.makeText(
-                            settingsContext,
-                            "Share failed: ${e.javaClass.simpleName}",
-                            android.widget.Toast.LENGTH_LONG,
-                        ).show()
                     }
                 },
                 onBack = { navController.popBackStack() },
