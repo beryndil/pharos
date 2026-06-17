@@ -57,6 +57,20 @@ class DoseRepository(
             if (rows.size != doses.size) {
                 DebugLogger.log("TodayDiag", "  WARNING: ${doses.size - rows.size} instances had no matching medication in DB")
             }
+            // Per-row breakdown so duplicates (same med in multiple states/times) are visible.
+            val nowMs = now()
+            rows.forEach { r ->
+                val minsFromNow = (r.dueEpochMs - nowMs) / 60_000L
+                val offset = if (minsFromNow >= 0) "+${minsFromNow}min" else "${minsFromNow}min"
+                DebugLogger.log("TodayDiag", "  row medId=${r.medicationId.take(8)} doseId=${r.doseId.take(8)} state=${r.state} due=$offset")
+            }
+            // Flag if the same medication appears more than once (expected for multi-dose/day; logged for clarity).
+            rows.groupBy { it.medicationId }.forEach { (medId, medRows) ->
+                if (medRows.size > 1) {
+                    val states = medRows.joinToString { it.state.name }
+                    DebugLogger.log("TodayDiag", "  MULTI-ROW medId=${medId.take(8)}: ${medRows.size} rows [$states]")
+                }
+            }
             rows
         }
     }
