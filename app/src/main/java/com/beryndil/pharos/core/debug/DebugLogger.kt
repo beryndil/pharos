@@ -26,6 +26,7 @@ object DebugLogger {
 
     private val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
     private var logFile: File? = null
+    private var writesSinceRotateCheck = 0
 
     fun init(context: Context) {
         logFile = File(context.filesDir, LOG_FILE)
@@ -39,6 +40,12 @@ object DebugLogger {
         synchronized(this) {
             try {
                 logFile?.appendText(line)
+                // Rotate mid-session every 100 writes so verbose logging can't grow the file
+                // beyond MAX_SIZE_BYTES indefinitely (init() only runs at app start).
+                if (++writesSinceRotateCheck >= 100) {
+                    writesSinceRotateCheck = 0
+                    rotate()
+                }
             } catch (_: Exception) {}
         }
         Log.d("PharosDebug", "$tag: $message")

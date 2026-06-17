@@ -335,29 +335,42 @@ fun PharosNavGraph(
                 onShareDebugLog = {
                     val logFile = DebugLogger.getLogFile(settingsContext)
                     val oldLogFile = DebugLogger.getOldLogFile(settingsContext)
+                    // Android's Binder transaction limit (~1 MB) caps what EXTRA_TEXT can carry.
+                    // Cap each file at 200 KB and take only the tail so the most recent entries
+                    // (which are what matters for debugging) are always included.
+                    val cap = 200_000
                     val content = buildString {
                         if (oldLogFile.exists()) {
                             append("=== PREVIOUS SESSION ===\n")
-                            append(oldLogFile.readText())
+                            append(oldLogFile.readText().takeLast(cap))
                             append("\n")
                         }
                         if (logFile.exists()) {
                             append("=== CURRENT SESSION ===\n")
-                            append(logFile.readText())
+                            append(logFile.readText().takeLast(cap))
                         }
                         if (isEmpty()) append("(no log file found)")
                     }
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, content)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    runCatching {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, content)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        settingsContext.startActivity(
+                            Intent.createChooser(
+                                shareIntent,
+                                settingsContext.getString(R.string.debug_log_chooser_title),
+                            ),
+                        )
+                    }.onFailure { e ->
+                        DebugLogger.logError("DebugShare", "share intent failed", e)
+                        android.widget.Toast.makeText(
+                            settingsContext,
+                            "Share failed: ${e.javaClass.simpleName}",
+                            android.widget.Toast.LENGTH_LONG,
+                        ).show()
                     }
-                    settingsContext.startActivity(
-                        Intent.createChooser(
-                            shareIntent,
-                            settingsContext.getString(R.string.debug_log_chooser_title),
-                        ),
-                    )
                 },
                 onBack = { navController.popBackStack() },
             )
