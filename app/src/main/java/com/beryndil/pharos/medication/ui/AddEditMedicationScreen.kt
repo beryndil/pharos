@@ -434,6 +434,18 @@ private fun DetailsStep(
 
             if (uiState.isFreeText) FreeTextNotice()
 
+            OutlinedTextField(
+                value = uiState.displayName,
+                onValueChange = { onEvent(AddEditMedEvent.DisplayNameChanged(it)) },
+                label = { Text(stringResource(R.string.medication_name_label)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next,
+                ),
+            )
+
             SectionHeader(stringResource(R.string.section_required))
 
             OutlinedTextField(

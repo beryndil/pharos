@@ -1,0 +1,235 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 5,
+    "identityHash": "a3c20d48b1815659f857a4a992c26f2c",
+    "entities": [
+      {
+        "tableName": "drug_search",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `rxcui` TEXT NOT NULL, `name` TEXT NOT NULL, `name_lower` TEXT NOT NULL, `tty` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rxcui",
+            "columnName": "rxcui",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nameLower",
+            "columnName": "name_lower",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tty",
+            "columnName": "tty",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "idx_name_lower",
+            "unique": false,
+            "columnNames": [
+              "name_lower"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `idx_name_lower` ON `${TABLE_NAME}` (`name_lower`)"
+          },
+          {
+            "name": "idx_rxcui",
+            "unique": false,
+            "columnNames": [
+              "rxcui"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `idx_rxcui` ON `${TABLE_NAME}` (`rxcui`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "ingredient_map",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`drug_rxcui` TEXT NOT NULL, `ingredient_rxcui` TEXT NOT NULL, `ingredient_name` TEXT NOT NULL, PRIMARY KEY(`drug_rxcui`, `ingredient_rxcui`))",
+        "fields": [
+          {
+            "fieldPath": "drugRxcui",
+            "columnName": "drug_rxcui",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ingredientRxcui",
+            "columnName": "ingredient_rxcui",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ingredientName",
+            "columnName": "ingredient_name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "drug_rxcui",
+            "ingredient_rxcui"
+          ]
+        },
+        "indices": [
+          {
+            "name": "idx_drug",
+            "unique": false,
+            "columnNames": [
+              "drug_rxcui"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `idx_drug` ON `${TABLE_NAME}` (`drug_rxcui`)"
+          },
+          {
+            "name": "idx_ing",
+            "unique": false,
+            "columnNames": [
+              "ingredient_rxcui"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `idx_ing` ON `${TABLE_NAME}` (`ingredient_rxcui`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "db_meta",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`key` TEXT NOT NULL, `value` TEXT NOT NULL, PRIMARY KEY(`key`))",
+        "fields": [
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "key"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "label_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`productRxcui` TEXT NOT NULL, `sideEffectsText` TEXT, `interactionsText` TEXT, `warningsText` TEXT, `precautionsText` TEXT, `contraindicationsText` TEXT, `boxedWarningText` TEXT, `foodEffectText` TEXT, `brandName` TEXT, `source` TEXT NOT NULL, `fetchedAtEpochMs` INTEGER NOT NULL, PRIMARY KEY(`productRxcui`))",
+        "fields": [
+          {
+            "fieldPath": "productRxcui",
+            "columnName": "productRxcui",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sideEffectsText",
+            "columnName": "sideEffectsText",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "interactionsText",
+            "columnName": "interactionsText",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "warningsText",
+            "columnName": "warningsText",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "precautionsText",
+            "columnName": "precautionsText",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contraindicationsText",
+            "columnName": "contraindicationsText",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "boxedWarningText",
+            "columnName": "boxedWarningText",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "foodEffectText",
+            "columnName": "foodEffectText",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "brandName",
+            "columnName": "brandName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fetchedAtEpochMs",
+            "columnName": "fetchedAtEpochMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "productRxcui"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a3c20d48b1815659f857a4a992c26f2c')"
+    ]
+  }
+}

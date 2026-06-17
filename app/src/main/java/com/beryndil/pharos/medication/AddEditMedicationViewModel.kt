@@ -59,6 +59,7 @@ sealed interface LabelPreviewState {
         val warningsText: String?,
         val precautionsText: String?,
         val foodEffectText: String?,
+        val brandName: String?,
         val source: String,
     ) : LabelPreviewState
     data object NotAvailable : LabelPreviewState
@@ -219,6 +220,7 @@ sealed interface AddEditMedEvent {
     data class CombinedWithMedChanged(val medId: String?) : AddEditMedEvent
     /** User typed the combined display strength (e.g. "90 mg"). */
     data class CombinedDisplayStrengthChanged(val value: String) : AddEditMedEvent
+    data class DisplayNameChanged(val value: String) : AddEditMedEvent
     data object SaveRequested : AddEditMedEvent
     data object DuplicateWarningConfirmed : AddEditMedEvent
     data object DuplicateWarningDismissed : AddEditMedEvent
@@ -376,6 +378,8 @@ class AddEditMedicationViewModel(
                 _uiState.update { it.copy(combinedWithMedId = event.medId) }
             is AddEditMedEvent.CombinedDisplayStrengthChanged ->
                 _uiState.update { it.copy(combinedDisplayStrength = event.value) }
+            is AddEditMedEvent.DisplayNameChanged ->
+                _uiState.update { it.copy(displayName = event.value) }
             is AddEditMedEvent.SaveRequested -> onSaveRequested()
             is AddEditMedEvent.DuplicateWarningConfirmed -> performSave()
             is AddEditMedEvent.DuplicateWarningDismissed ->
@@ -477,6 +481,7 @@ class AddEditMedicationViewModel(
                                 warningsText = label.warningsText,
                                 precautionsText = label.precautionsText,
                                 foodEffectText = label.foodEffectText,
+                                brandName = label.brandName,
                                 source = label.source,
                             ),
                         )
@@ -581,17 +586,23 @@ class AddEditMedicationViewModel(
                 val label = withContext(ioDispatcher) {
                     try { drugLabelRepository.getOrFetchLabel(rxcui, drug.name) } catch (e: Exception) { null }
                 }
-                _uiState.update {
-                    it.copy(
-                        labelPreview = if (label != null) LabelPreviewState.Available(
-                            boxedWarningText = label.boxedWarningText,
-                            sideEffectsText = label.sideEffectsText,
-                            interactionsText = label.interactionsText,
-                            warningsText = label.warningsText,
-                            precautionsText = label.precautionsText,
-                            foodEffectText = label.foodEffectText,
-                            source = label.source,
-                        ) else LabelPreviewState.NotAvailable,
+                _uiState.update { state ->
+                    val preview = if (label != null) LabelPreviewState.Available(
+                        boxedWarningText = label.boxedWarningText,
+                        sideEffectsText = label.sideEffectsText,
+                        interactionsText = label.interactionsText,
+                        warningsText = label.warningsText,
+                        precautionsText = label.precautionsText,
+                        foodEffectText = label.foodEffectText,
+                        brandName = label.brandName,
+                        source = label.source,
+                    ) else LabelPreviewState.NotAvailable
+                    // Auto-fill brand name into the display name field while still in CONFIRM step.
+                    val autoName = if (label?.brandName != null && state.editMedId == null
+                            && state.step == FormStep.CONFIRM) label.brandName else null
+                    state.copy(
+                        labelPreview = preview,
+                        displayName = autoName ?: state.displayName,
                     )
                 }
             }
@@ -615,14 +626,16 @@ class AddEditMedicationViewModel(
 
     private fun onConfirmDrug() {
         val drug = _uiState.value.pendingDrug ?: return
+        val currentDisplayName = _uiState.value.displayName
         // The RxNorm pipeline schema (v2) does not expose strength or form as separate columns —
         // they are encoded in the drug name for clinical types (DECISIONS.md G2b). The user
         // enters strength and form in the DETAILS step. Do not pre-fill them here.
+        // Preserve auto-filled brand name if the label loaded before the user tapped Confirm.
         _uiState.update {
             it.copy(
                 step = FormStep.DETAILS,
                 isFreeText = false,
-                displayName = drug.name,
+                displayName = currentDisplayName.ifBlank { drug.name },
                 ingredientNames = drug.ingredientNames,
                 ingredientRxcuis = drug.ingredientRxcuis,
             )

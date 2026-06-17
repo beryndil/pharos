@@ -14,6 +14,8 @@ data class FetchedLabel(
     val contraindicationsText: String?,
     val boxedWarningText: String?,
     val foodEffectText: String?,
+    /** Brand name from openfda.brand_name[0], e.g. "ZESTORETIC". Null if not present. */
+    val brandName: String?,
     /** Human-readable source identifier shown in the UI (Law 9). Example: "openFDA". */
     val source: String,
 )

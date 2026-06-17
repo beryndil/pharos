@@ -116,6 +116,11 @@ class OpenFdaDrugLabelService : DrugLabelService {
             return null
         }
 
+        val brandName = r.optJSONObject("openfda")
+            ?.optJSONArray("brand_name")
+            ?.optString(0)
+            ?.takeIf { it.isNotBlank() }
+
         return FetchedLabel(
             sideEffectsText = field("adverse_reactions"),
             interactionsText = field("drug_interactions"),
@@ -124,6 +129,7 @@ class OpenFdaDrugLabelService : DrugLabelService {
             contraindicationsText = field("contraindications"),
             boxedWarningText = field("boxed_warning")?.let { deduplicateBoxedWarning(it) },
             foodEffectText = field("food_effect"),
+            brandName = brandName,
             source = SOURCE,
         )
     }

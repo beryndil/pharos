@@ -23,7 +23,7 @@ object DrugRefDatabaseFactory {
      * Version 2 aligns to the RxNorm pipeline schema (drug_search / ingredient_map / db_meta).
      * CDN manifest guard: the app refuses to swap a CDN DB whose `db_schema_version` > this value.
      */
-    const val CURRENT_VERSION = 4
+    const val CURRENT_VERSION = 5
 
     /**
      * Builds [DrugRefDatabase], running the newer-schema guard before Room opens the file.
@@ -46,12 +46,18 @@ object DrugRefDatabaseFactory {
         }
     }
 
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE label_cache ADD COLUMN brandName TEXT")
+        }
+    }
+
     fun build(context: Context): DrugRefDatabase {
         DebugLogger.log("DrugRefDB", "build() — CURRENT_VERSION=$CURRENT_VERSION")
         handleNewerSchema(context)
         handleEmptyDatabase(context)
         return Room.databaseBuilder(context, DrugRefDatabase::class.java, DATABASE_NAME)
-            .addMigrations(MIGRATION_3_4)
+            .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
             .fallbackToDestructiveMigration()
             .addCallback(SeedCallback(context))
             .build()
