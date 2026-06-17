@@ -47,6 +47,23 @@ enum class FormStep { SEARCH, CONFIRM, DETAILS }
  */
 enum class SaveError { GENERAL }
 
+/** State of drug label data loaded for preview in the add/edit flow (spec §2.10). */
+@Immutable
+sealed interface LabelPreviewState {
+    data object None : LabelPreviewState
+    data object Loading : LabelPreviewState
+    data class Available(
+        val boxedWarningText: String?,
+        val sideEffectsText: String?,
+        val interactionsText: String?,
+        val warningsText: String?,
+        val precautionsText: String?,
+        val foodEffectText: String?,
+        val source: String,
+    ) : LabelPreviewState
+    data object NotAvailable : LabelPreviewState
+}
+
 @Immutable
 data class AddEditMedicationUiState(
     /** Null when adding a new medication. Non-null when editing. */
@@ -154,6 +171,9 @@ data class AddEditMedicationUiState(
     // ── Duplicate warning (spec §2.4) ─────────────────────────────────────
     val pendingDuplicateWarnings: List<DuplicateWarning> = emptyList(),
     val showDuplicateWarning: Boolean = false,
+
+    // ── Drug label preview (spec §2.10 — shown in CONFIRM step and edit mode) ──
+    val labelPreview: LabelPreviewState = LabelPreviewState.None,
 
     // ── Save result ───────────────────────────────────────────────────────
     val isSaving: Boolean = false,
@@ -442,6 +462,27 @@ class AddEditMedicationViewModel(
                     scheduleInput = scheduleInput,
                 )
             }
+            if (!med.isFreeText && drugLabelRepository != null) {
+                val lookupKey = med.rxcui ?: "name:${med.name.trim().lowercase()}"
+                val label = withContext(ioDispatcher) {
+                    try { drugLabelRepository.getCachedLabel(lookupKey) } catch (e: Exception) { null }
+                }
+                if (label != null) {
+                    _uiState.update {
+                        it.copy(
+                            labelPreview = LabelPreviewState.Available(
+                                boxedWarningText = label.boxedWarningText,
+                                sideEffectsText = label.sideEffectsText,
+                                interactionsText = label.interactionsText,
+                                warningsText = label.warningsText,
+                                precautionsText = label.precautionsText,
+                                foodEffectText = label.foodEffectText,
+                                source = label.source,
+                            ),
+                        )
+                    }
+                }
+            }
             } catch (e: Exception) {
                 _uiState.update { it.copy(saveError = SaveError.GENERAL) }
             }
@@ -531,7 +572,30 @@ class AddEditMedicationViewModel(
     }
 
     private fun onDrugSelected(drug: DrugSearchResult) {
-        _uiState.update { it.copy(pendingDrug = drug, step = FormStep.CONFIRM) }
+        val rxcui = drug.rxcui
+        val initialPreview = if (rxcui != null && drugLabelRepository != null)
+            LabelPreviewState.Loading else LabelPreviewState.NotAvailable
+        _uiState.update { it.copy(pendingDrug = drug, step = FormStep.CONFIRM, labelPreview = initialPreview) }
+        if (rxcui != null && drugLabelRepository != null) {
+            viewModelScope.launch {
+                val label = withContext(ioDispatcher) {
+                    try { drugLabelRepository.getOrFetchLabel(rxcui, drug.name) } catch (e: Exception) { null }
+                }
+                _uiState.update {
+                    it.copy(
+                        labelPreview = if (label != null) LabelPreviewState.Available(
+                            boxedWarningText = label.boxedWarningText,
+                            sideEffectsText = label.sideEffectsText,
+                            interactionsText = label.interactionsText,
+                            warningsText = label.warningsText,
+                            precautionsText = label.precautionsText,
+                            foodEffectText = label.foodEffectText,
+                            source = label.source,
+                        ) else LabelPreviewState.NotAvailable,
+                    )
+                }
+            }
+        }
     }
 
     private fun onContinueAsCustom() {

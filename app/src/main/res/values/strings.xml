@@ -504,6 +504,12 @@
     <string name="channel_refill_name">Refill reminders</string>
     <string name="channel_refill_desc">Low-supply and refill alerts. Can be silenced without affecting dose reminders.</string>
 
+    <!-- ── Drug info inline (add/edit flow, spec §2.10) ────────────────────── -->
+    <string name="section_drug_info">Drug info</string>
+    <string name="drug_info_loading">Loading drug information…</string>
+    <string name="cd_drug_info_expand">Expand drug info</string>
+    <string name="cd_drug_info_collapse">Collapse drug info</string>
+
     <!-- ── Drug reference (Slice 8, spec §2.10) ─────────────────────────────── -->
     <string name="screen_drug_reference">Drug reference</string>
     <string name="action_drug_reference">Drug reference</string>

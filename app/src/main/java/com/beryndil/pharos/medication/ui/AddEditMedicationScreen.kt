@@ -1,5 +1,6 @@
 package com.beryndil.pharos.medication.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,11 +20,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Switch
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -81,6 +85,7 @@ import com.beryndil.pharos.medication.AddEditMedEvent
 import com.beryndil.pharos.medication.AddEditMedicationUiState
 import androidx.compose.ui.text.style.TextOverflow
 import com.beryndil.pharos.medication.FormStep
+import com.beryndil.pharos.medication.LabelPreviewState
 import com.beryndil.pharos.medication.SaveError
 import com.beryndil.pharos.medication.model.DrugSearchResult
 import com.beryndil.pharos.medication.model.DuplicateWarning
@@ -167,6 +172,7 @@ fun AddEditMedicationScreen(
             )
             FormStep.CONFIRM -> ConfirmStep(
                 drug = uiState.pendingDrug,
+                labelPreview = uiState.labelPreview,
                 onEvent = onEvent,
                 modifier = Modifier
                     .fillMaxSize()
@@ -318,6 +324,7 @@ private fun NoMatchSection(onAddAsCustom: () -> Unit) {
 @Composable
 private fun ConfirmStep(
     drug: DrugSearchResult?,
+    labelPreview: LabelPreviewState,
     onEvent: (AddEditMedEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -364,6 +371,12 @@ private fun ConfirmStep(
                     value = drug.tty,
                 )
             }
+        }
+
+        when (val preview = labelPreview) {
+            is LabelPreviewState.Loading -> DrugInfoLoadingRow()
+            is LabelPreviewState.Available -> DrugInfoPreviewSections(preview)
+            else -> {}
         }
 
         Button(
@@ -552,6 +565,11 @@ private fun DetailsStep(
                 onInputChanged = { onEvent(AddEditMedEvent.ScheduleInputChanged(it)) },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (uiState.editMedId != null && !uiState.isFreeText) {
+                DrugInfoCard(labelPreview = uiState.labelPreview)
+            }
+
             Spacer(Modifier.height(16.dp))
         }
 
@@ -629,6 +647,144 @@ private fun SectionHeader(title: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 8.dp),
     )
+}
+
+// ── Drug info preview (shown in CONFIRM step and edit mode) ───────────────
+
+@Composable
+private fun DrugInfoLoadingRow(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+        Text(
+            text = stringResource(R.string.drug_info_loading),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun DrugInfoPreviewSections(preview: LabelPreviewState.Available, modifier: Modifier = Modifier) {
+    val hasAnyData = preview.boxedWarningText != null || preview.sideEffectsText != null ||
+        preview.interactionsText != null || preview.warningsText != null ||
+        preview.precautionsText != null || preview.foodEffectText != null
+    if (!hasAnyData) return
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader(stringResource(R.string.section_drug_info))
+        preview.boxedWarningText?.let { DrugInfoBoxedWarning(it) }
+        preview.sideEffectsText?.let {
+            DrugInfoSection(stringResource(R.string.drug_reference_section_side_effects), it)
+        }
+        preview.interactionsText?.let {
+            DrugInfoSection(stringResource(R.string.drug_reference_section_interactions), it)
+        }
+        preview.warningsText?.let {
+            DrugInfoSection(stringResource(R.string.drug_reference_section_warnings), it)
+        }
+        preview.precautionsText?.let {
+            DrugInfoSection(stringResource(R.string.drug_reference_section_precautions), it)
+        }
+        preview.foodEffectText?.let {
+            DrugInfoSection(stringResource(R.string.drug_reference_section_food_effect), it)
+        }
+        Text(
+            text = stringResource(R.string.drug_reference_disclaimer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun DrugInfoBoxedWarning(body: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.drug_reference_section_boxed_warning),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
+    }
+}
+
+@Composable
+private fun DrugInfoSection(title: String, body: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(text = title, style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun DrugInfoCard(labelPreview: LabelPreviewState, modifier: Modifier = Modifier) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    when (labelPreview) {
+        is LabelPreviewState.Loading -> DrugInfoLoadingRow(modifier)
+        is LabelPreviewState.Available -> {
+            val hasAnyData = labelPreview.boxedWarningText != null ||
+                labelPreview.sideEffectsText != null ||
+                labelPreview.interactionsText != null ||
+                labelPreview.warningsText != null ||
+                labelPreview.precautionsText != null ||
+                labelPreview.foodEffectText != null
+            if (!hasAnyData) return
+            val expandLabel = if (expanded)
+                stringResource(R.string.cd_drug_info_collapse)
+            else
+                stringResource(R.string.cd_drug_info_expand)
+            OutlinedCard(modifier = modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClickLabel = expandLabel) { expanded = !expanded },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.section_drug_info),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Icon(
+                            imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (expanded) {
+                        Spacer(Modifier.height(8.dp))
+                        DrugInfoPreviewSections(preview = labelPreview)
+                    }
+                }
+            }
+        }
+        else -> {}
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
