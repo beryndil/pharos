@@ -282,6 +282,7 @@ class AddEditMedicationViewModel(
             _uiState.update { it.copy(editMedId = editMedId) }
             loadExistingMedication(editMedId)
         } else {
+            _uiState.update { it.copy(startDate = LocalDate.now()) }
             loadDefaultContacts()
         }
         startSearchDebounce()
