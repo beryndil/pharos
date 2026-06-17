@@ -85,7 +85,8 @@ class MedicationRepository(
 
     /**
      * Returns the first BN (brand name) concept in the local RxNorm DB that contains any of
-     * [ingredientRxcuis] as an active ingredient. Used to auto-fill the "in place of" field.
+     * [ingredientRxcuis] as an active ingredient. Ordered by RxCUI ascending so the
+     * oldest/most-established brand is returned (e.g., Zestril before Qbrelis).
      *
      * Returns null if no brand name is found or on any drug-ref DB error.
      */
@@ -98,6 +99,19 @@ class MedicationRepository(
             }
             null
         } catch (_: Exception) { null }
+    }
+
+    /**
+     * Returns all BN entries whose ingredient set includes any of [ingredientRxcuis].
+     * Used to pre-populate the "in place of" suggestions dropdown.
+     */
+    suspend fun findAllBrandSuggestions(ingredientRxcuis: List<String>): List<DrugSearchResult> {
+        if (ingredientRxcuis.isEmpty()) return emptyList()
+        return try {
+            drugSearchDao.allBrandNamesForIngredients(ingredientRxcuis).map { name ->
+                DrugSearchResult(rxcui = "", name = name, tty = "BN", ingredientRxcuis = emptyList(), ingredientNames = emptyList())
+            }
+        } catch (_: Exception) { emptyList() }
     }
 
     // ── Duplicate-ingredient detection ───────────────────────────────────
