@@ -584,9 +584,10 @@ class AddEditMedicationViewModel(
         _uiState.update { it.copy(pendingDrug = drug, step = FormStep.CONFIRM, labelPreview = initialPreview) }
 
         // Local RxNorm brand name lookup: only for non-brand picks (user adding a generic/ingredient).
-        // BN = brand name entry; user picking a brand directly doesn't need "in place of" auto-fill.
-        // Ordered by RxCUI ascending so the oldest/most-established brand is auto-filled first
-        // (e.g., Zestril ~35208 before Qbrelis ~2121695 for lisinopril).
+        // If exactly one brand exists → auto-commit it (unambiguous).
+        // If multiple brands exist → populate the dropdown so the user can tap the right one;
+        //   don't auto-commit because the wrong brand is worse than no brand
+        //   (e.g., metoprolol has Lopressor/tartrate AND Toprol XL/succinate — we can't know which).
         if (drug.tty != "BN" && drug.ingredientRxcuis.isNotEmpty()) {
             viewModelScope.launch {
                 val brands = withContext(ioDispatcher) { repository.findAllBrandSuggestions(drug.ingredientRxcuis) }
@@ -594,8 +595,12 @@ class AddEditMedicationViewModel(
                 if (brands.isNotEmpty()) {
                     _uiState.update { state ->
                         if (state.editMedId != null || state.substituteForDrugName != null) return@update state
-                        val best = brands.first().name
-                        state.copy(substituteForDrugName = best, substituteSearch = best)
+                        if (brands.size == 1) {
+                            val name = brands.first().name
+                            state.copy(substituteForDrugName = name, substituteSearch = name)
+                        } else {
+                            state.copy(substituteSearchResults = brands)
+                        }
                     }
                 }
             }
