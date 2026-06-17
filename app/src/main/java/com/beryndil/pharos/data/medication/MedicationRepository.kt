@@ -81,6 +81,25 @@ class MedicationRepository(
         }
     }
 
+    // ── Brand name lookup (local RxNorm DB) ──────────────────────────────
+
+    /**
+     * Returns the first BN (brand name) concept in the local RxNorm DB that contains any of
+     * [ingredientRxcuis] as an active ingredient. Used to auto-fill the "in place of" field.
+     *
+     * Returns null if no brand name is found or on any drug-ref DB error.
+     */
+    suspend fun findBrandName(ingredientRxcuis: List<String>): String? {
+        if (ingredientRxcuis.isEmpty()) return null
+        return try {
+            for (rxcui in ingredientRxcuis) {
+                val name = drugSearchDao.firstBrandNameForIngredient(rxcui)
+                if (!name.isNullOrBlank()) return name
+            }
+            null
+        } catch (_: Exception) { null }
+    }
+
     // ── Duplicate-ingredient detection ───────────────────────────────────
 
     /**

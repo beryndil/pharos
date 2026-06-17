@@ -582,6 +582,22 @@ class AddEditMedicationViewModel(
         val initialPreview = if (rxcui != null && drugLabelRepository != null)
             LabelPreviewState.Loading else LabelPreviewState.NotAvailable
         _uiState.update { it.copy(pendingDrug = drug, step = FormStep.CONFIRM, labelPreview = initialPreview) }
+
+        // Local RxNorm brand name lookup: only for non-brand picks (user adding a generic/ingredient).
+        // BN = brand name entry; user picking a brand directly doesn't need "in place of" auto-fill.
+        if (drug.tty != "BN" && drug.ingredientRxcuis.isNotEmpty()) {
+            viewModelScope.launch {
+                val brandName = withContext(ioDispatcher) { repository.findBrandName(drug.ingredientRxcuis) }
+                DebugLogger.log("AddEditMed", "localDB brandName=$brandName for ${drug.name} (tty=${drug.tty})")
+                if (brandName != null) {
+                    _uiState.update { state ->
+                        if (state.editMedId != null || state.substituteForDrugName != null) return@update state
+                        state.copy(substituteForDrugName = brandName, substituteSearch = brandName)
+                    }
+                }
+            }
+        }
+
         if (rxcui != null && drugLabelRepository != null) {
             viewModelScope.launch {
                 val label = withContext(ioDispatcher) {

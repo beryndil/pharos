@@ -38,6 +38,23 @@ interface DrugSearchDao {
     @Query("SELECT * FROM drug_search WHERE rxcui = :rxcui LIMIT 1")
     suspend fun getByRxcui(rxcui: String): DrugSearchEntity?
 
+    /**
+     * Returns the name of the first BN (brand name) concept in the local RxNorm DB whose
+     * ingredient set includes [ingredientRxcui]. Used to auto-fill the "in place of" field
+     * when the user adds a generic drug and a known brand name exists locally.
+     *
+     * The JOIN walks ingredient_map in the reverse direction (ingredient → brands that contain
+     * it), filtered to TTY = 'BN'. Shortest name first (e.g., "Zestril" before "Zestril Oral").
+     */
+    @Query("""
+        SELECT ds.name FROM drug_search ds
+        INNER JOIN ingredient_map im ON ds.rxcui = im.drug_rxcui
+        WHERE im.ingredient_rxcui = :ingredientRxcui AND ds.tty = 'BN'
+        ORDER BY length(ds.name) ASC
+        LIMIT 1
+    """)
+    suspend fun firstBrandNameForIngredient(ingredientRxcui: String): String?
+
     @Query("SELECT COUNT(*) FROM drug_search")
     suspend fun count(): Int
 }
