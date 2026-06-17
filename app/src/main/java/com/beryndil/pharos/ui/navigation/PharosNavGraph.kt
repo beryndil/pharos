@@ -87,6 +87,8 @@ fun PharosNavGraph(
                 factory = OnboardingViewModel.factory(
                     repository = app.appContainer.onboardingRepository,
                     alarmCoordinator = app.appContainer.alarmCoordinator,
+                    userProfileRepository = app.appContainer.userProfileRepository,
+                    contactRepository = app.appContainer.contactRepository,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()

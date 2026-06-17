@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.beryndil.pharos.alarm.AlarmCoordinator
+import com.beryndil.pharos.contacts.ContactRepository
+import com.beryndil.pharos.settings.UserProfile
+import com.beryndil.pharos.settings.UserProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +23,7 @@ import java.util.Locale
  *
  * [NOTIFICATION_PERMISSION] is only inserted on API 33+ (runtime POST_NOTIFICATIONS).
  * [AUTO_START] is only inserted for Xiaomi, OPPO, vivo, and Honor (D5 — OEM killer detection).
+ * [PROFILE] and [CONTACTS] are always appended after [TEST_REMINDER].
  * The ordering in this enum is informational; the actual sequence is built by [buildSteps].
  */
 enum class OnboardingStep {
@@ -29,6 +33,8 @@ enum class OnboardingStep {
     BATTERY_OPTIMIZATION,
     AUTO_START,
     TEST_REMINDER,
+    PROFILE,
+    CONTACTS,
 }
 
 // ── UI state ─────────────────────────────────────────────────────────────────────────────────
@@ -42,6 +48,9 @@ enum class OnboardingStep {
  * [testReminderSent] flips to true after the test alarm is scheduled — composable shows confirmation.
  * [isComplete] flips to true after [OnboardingEvent.CompleteOnboarding] persists the flag — the
  * composable observes this to navigate away via its [onDone] callback.
+ *
+ * Profile and contact fields are collected from the PROFILE and CONTACTS steps; they are saved
+ * to their respective repositories when the user advances past each step.
  */
 data class OnboardingUiState(
     val currentStep: OnboardingStep = OnboardingStep.WELCOME,
@@ -50,6 +59,18 @@ data class OnboardingUiState(
     val oemName: String = "",
     val testReminderSent: Boolean = false,
     val isComplete: Boolean = false,
+    // Profile fields (PROFILE step)
+    val profileName: String = "",
+    val profileDob: String = "",
+    val profilePhone: String = "",
+    val profileAllergies: String = "",
+    // Prescriber fields (CONTACTS step)
+    val prescriberName: String = "",
+    val prescriberPhone: String = "",
+    val prescriberPractice: String = "",
+    // Pharmacy fields (CONTACTS step)
+    val pharmacyName: String = "",
+    val pharmacyPhone: String = "",
 )
 
 // ── Events ───────────────────────────────────────────────────────────────────────────────────
@@ -64,8 +85,23 @@ sealed class OnboardingEvent {
     /** Schedule the test alarm (Law 6). Best-effort: failure marks [OnboardingUiState.testReminderSent] true anyway. */
     object SendTestReminder : OnboardingEvent()
 
-    /** Persist completion and signal [OnboardingUiState.isComplete]. Called from the last step. */
+    /** Persist completion and signal [OnboardingUiState.isComplete]. Called from the CONTACTS step. */
     object CompleteOnboarding : OnboardingEvent()
+
+    // Profile field events
+    data class ProfileNameChanged(val value: String) : OnboardingEvent()
+    data class ProfileDobChanged(val value: String) : OnboardingEvent()
+    data class ProfilePhoneChanged(val value: String) : OnboardingEvent()
+    data class ProfileAllergiesChanged(val value: String) : OnboardingEvent()
+
+    // Prescriber field events
+    data class PrescriberNameChanged(val value: String) : OnboardingEvent()
+    data class PrescriberPhoneChanged(val value: String) : OnboardingEvent()
+    data class PrescriberPracticeChanged(val value: String) : OnboardingEvent()
+
+    // Pharmacy field events
+    data class PharmacyNameChanged(val value: String) : OnboardingEvent()
+    data class PharmacyPhoneChanged(val value: String) : OnboardingEvent()
 }
 
 // ── ViewModel ────────────────────────────────────────────────────────────────────────────────
@@ -78,12 +114,17 @@ sealed class OnboardingEvent {
  *
  * The test-reminder trigger is a suspend lambda ([scheduleTestReminder]) rather than the full
  * [AlarmCoordinator] so tests can verify it is called without constructing the alarm engine.
+ *
+ * [userProfileRepository] and [contactRepository] are optional — null in legacy tests that
+ * pre-date the PROFILE/CONTACTS steps; production always supplies both.
  */
 class OnboardingViewModel(
     private val repository: OnboardingRepository,
     private val oemName: String = Build.MANUFACTURER,
     private val sdkVersion: Int = Build.VERSION.SDK_INT,
     private val scheduleTestReminder: suspend () -> Unit,
+    private val userProfileRepository: UserProfileRepository? = null,
+    private val contactRepository: ContactRepository? = null,
 ) : ViewModel() {
 
     /** Ordered list of steps computed once at construction (OEM + API-level dependent). */
@@ -105,17 +146,37 @@ class OnboardingViewModel(
             is OnboardingEvent.PreviousStep -> goBackStep()
             is OnboardingEvent.SendTestReminder -> sendTestReminder()
             is OnboardingEvent.CompleteOnboarding -> completeOnboarding()
+            is OnboardingEvent.ProfileNameChanged -> _uiState.update { it.copy(profileName = event.value) }
+            is OnboardingEvent.ProfileDobChanged -> _uiState.update { it.copy(profileDob = event.value) }
+            is OnboardingEvent.ProfilePhoneChanged -> _uiState.update { it.copy(profilePhone = event.value) }
+            is OnboardingEvent.ProfileAllergiesChanged -> _uiState.update { it.copy(profileAllergies = event.value) }
+            is OnboardingEvent.PrescriberNameChanged -> _uiState.update { it.copy(prescriberName = event.value) }
+            is OnboardingEvent.PrescriberPhoneChanged -> _uiState.update { it.copy(prescriberPhone = event.value) }
+            is OnboardingEvent.PrescriberPracticeChanged -> _uiState.update { it.copy(prescriberPractice = event.value) }
+            is OnboardingEvent.PharmacyNameChanged -> _uiState.update { it.copy(pharmacyName = event.value) }
+            is OnboardingEvent.PharmacyPhoneChanged -> _uiState.update { it.copy(pharmacyPhone = event.value) }
         }
     }
 
     private fun advanceStep() {
-        val nextIndex = _uiState.value.currentStepIndex + 1
-        if (nextIndex < steps.size) {
-            _uiState.update {
-                it.copy(
-                    currentStep = steps[nextIndex],
-                    currentStepIndex = nextIndex,
+        viewModelScope.launch {
+            val state = _uiState.value
+            // Persist profile when leaving the PROFILE step (blank fields are a no-op in the repo).
+            if (state.currentStep == OnboardingStep.PROFILE) {
+                userProfileRepository?.saveProfile(
+                    UserProfile(
+                        name = state.profileName.trim().ifEmpty { null },
+                        dateOfBirth = state.profileDob.trim().ifEmpty { null },
+                        phone = state.profilePhone.trim().ifEmpty { null },
+                        allergies = state.profileAllergies.trim().ifEmpty { null },
+                    ),
                 )
+            }
+            val nextIndex = state.currentStepIndex + 1
+            if (nextIndex < steps.size) {
+                _uiState.update {
+                    it.copy(currentStep = steps[nextIndex], currentStepIndex = nextIndex)
+                }
             }
         }
     }
@@ -153,6 +214,21 @@ class OnboardingViewModel(
 
     private fun completeOnboarding() {
         viewModelScope.launch {
+            val state = _uiState.value
+            // Persist prescriber if a name was entered.
+            val pName = state.prescriberName.trim()
+            if (pName.isNotEmpty()) {
+                contactRepository?.rememberPrescriber(
+                    pName,
+                    state.prescriberPhone.trim().ifEmpty { null },
+                    state.prescriberPractice.trim().ifEmpty { null },
+                )
+            }
+            // Persist pharmacy if a name was entered.
+            val phName = state.pharmacyName.trim()
+            if (phName.isNotEmpty()) {
+                contactRepository?.rememberPharmacy(phName, state.pharmacyPhone.trim().ifEmpty { null })
+            }
             repository.markComplete()
             _uiState.update { it.copy(isComplete = true) }
         }
@@ -176,6 +252,8 @@ class OnboardingViewModel(
                     add(OnboardingStep.AUTO_START)
                 }
                 add(OnboardingStep.TEST_REMINDER)
+                add(OnboardingStep.PROFILE)
+                add(OnboardingStep.CONTACTS)
             }
 
         /**
@@ -188,11 +266,15 @@ class OnboardingViewModel(
         fun factory(
             repository: OnboardingRepository,
             alarmCoordinator: AlarmCoordinator,
+            userProfileRepository: UserProfileRepository? = null,
+            contactRepository: ContactRepository? = null,
         ) = viewModelFactory {
             initializer {
                 OnboardingViewModel(
                     repository = repository,
                     scheduleTestReminder = { alarmCoordinator.scheduleTestReminder() },
+                    userProfileRepository = userProfileRepository,
+                    contactRepository = contactRepository,
                 )
             }
         }

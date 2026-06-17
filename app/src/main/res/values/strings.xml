@@ -305,6 +305,24 @@
     <string name="onboarding_btn_send_test">Send test reminder</string>
     <string name="onboarding_test_sent_confirmation">Test reminder sent. It should arrive within a few seconds.</string>
 
+    <!-- Profile step -->
+    <string name="onboarding_profile_title">Tell us about yourself</string>
+    <string name="onboarding_profile_body">This helps pre-fill your medication records. All fields are optional.</string>
+    <string name="onboarding_profile_note">Insurance and emergency contact details can be added later in your profile.</string>
+
+    <!-- Contacts step -->
+    <string name="onboarding_contacts_title">Your provider &amp; pharmacy</string>
+    <string name="onboarding_contacts_body">Add these once and they\'ll auto-fill every time you add a medication.</string>
+    <string name="onboarding_contacts_prescriber">Prescriber</string>
+    <string name="onboarding_contacts_pharmacy">Pharmacy</string>
+    <string name="onboarding_btn_all_set">All Set</string>
+
+    <!-- Profile field labels -->
+    <string name="profile_field_name">Name</string>
+    <string name="profile_field_dob">Date of birth</string>
+    <string name="profile_field_phone">Phone</string>
+    <string name="profile_field_allergies">Allergies</string>
+
     <!-- ── Add/edit medication — critical toggle (A1) ───────────────────── -->
     <string name="section_critical_alerts">Critical reminder</string>
     <string name="critical_toggle_label">Critical reminder</string>

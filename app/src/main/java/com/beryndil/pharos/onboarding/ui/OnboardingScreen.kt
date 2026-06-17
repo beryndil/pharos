@@ -7,6 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
@@ -16,19 +17,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.Battery3Bar
 import androidx.compose.material.icons.outlined.CheckCircleOutline
+import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,6 +48,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
@@ -135,7 +143,31 @@ fun OnboardingScreen(
                 OnboardingStep.TEST_REMINDER -> TestReminderStep(
                     testSent = uiState.testReminderSent,
                     onSendTest = { onEvent(OnboardingEvent.SendTestReminder) },
-                    onDone = { onEvent(OnboardingEvent.CompleteOnboarding) },
+                    onNext = { onEvent(OnboardingEvent.NextStep) },
+                )
+                OnboardingStep.PROFILE -> ProfileStep(
+                    name = uiState.profileName,
+                    dob = uiState.profileDob,
+                    phone = uiState.profilePhone,
+                    allergies = uiState.profileAllergies,
+                    onNameChanged = { onEvent(OnboardingEvent.ProfileNameChanged(it)) },
+                    onDobChanged = { onEvent(OnboardingEvent.ProfileDobChanged(it)) },
+                    onPhoneChanged = { onEvent(OnboardingEvent.ProfilePhoneChanged(it)) },
+                    onAllergiesChanged = { onEvent(OnboardingEvent.ProfileAllergiesChanged(it)) },
+                    onContinue = { onEvent(OnboardingEvent.NextStep) },
+                )
+                OnboardingStep.CONTACTS -> ContactsStep(
+                    prescriberName = uiState.prescriberName,
+                    prescriberPhone = uiState.prescriberPhone,
+                    prescriberPractice = uiState.prescriberPractice,
+                    pharmacyName = uiState.pharmacyName,
+                    pharmacyPhone = uiState.pharmacyPhone,
+                    onPrescriberNameChanged = { onEvent(OnboardingEvent.PrescriberNameChanged(it)) },
+                    onPrescriberPhoneChanged = { onEvent(OnboardingEvent.PrescriberPhoneChanged(it)) },
+                    onPrescriberPracticeChanged = { onEvent(OnboardingEvent.PrescriberPracticeChanged(it)) },
+                    onPharmacyNameChanged = { onEvent(OnboardingEvent.PharmacyNameChanged(it)) },
+                    onPharmacyPhoneChanged = { onEvent(OnboardingEvent.PharmacyPhoneChanged(it)) },
+                    onComplete = { onEvent(OnboardingEvent.CompleteOnboarding) },
                 )
             }
         }
@@ -180,7 +212,7 @@ private fun StepContent(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         content()
         Spacer(modifier = Modifier.height(32.dp))
     }
@@ -387,7 +419,7 @@ private fun AutoStartStep(oemName: String, onNext: () -> Unit) {
 private fun TestReminderStep(
     testSent: Boolean,
     onSendTest: () -> Unit,
-    onDone: () -> Unit,
+    onNext: () -> Unit,
 ) {
     StepContent(
         icon = Icons.Outlined.NotificationsNone,
@@ -415,12 +447,207 @@ private fun TestReminderStep(
             Spacer(modifier = Modifier.height(8.dp))
         }
         TextButton(
-            onClick = onDone,
+            onClick = onNext,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
         ) {
-            Text(stringResource(R.string.onboarding_btn_done))
+            Text(stringResource(R.string.onboarding_btn_next))
+        }
+    }
+}
+
+@Composable
+private fun ProfileStep(
+    name: String,
+    dob: String,
+    phone: String,
+    allergies: String,
+    onNameChanged: (String) -> Unit,
+    onDobChanged: (String) -> Unit,
+    onPhoneChanged: (String) -> Unit,
+    onAllergiesChanged: (String) -> Unit,
+    onContinue: () -> Unit,
+) {
+    StepContent(
+        icon = Icons.Outlined.AccountCircle,
+        headline = stringResource(R.string.onboarding_profile_title),
+        body = stringResource(R.string.onboarding_profile_body),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = onNameChanged,
+                label = { Text(stringResource(R.string.profile_field_name)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = dob,
+                onValueChange = onDobChanged,
+                label = { Text(stringResource(R.string.profile_field_dob)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = phone,
+                onValueChange = onPhoneChanged,
+                label = { Text(stringResource(R.string.profile_field_phone)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = allergies,
+                onValueChange = onAllergiesChanged,
+                label = { Text(stringResource(R.string.profile_field_allergies)) },
+                minLines = 2,
+                maxLines = 4,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.onboarding_profile_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = onContinue,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+        ) {
+            Text(stringResource(R.string.btn_continue))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(
+            onClick = onContinue,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+        ) {
+            Text(stringResource(R.string.onboarding_btn_skip))
+        }
+    }
+}
+
+@Composable
+private fun ContactsStep(
+    prescriberName: String,
+    prescriberPhone: String,
+    prescriberPractice: String,
+    pharmacyName: String,
+    pharmacyPhone: String,
+    onPrescriberNameChanged: (String) -> Unit,
+    onPrescriberPhoneChanged: (String) -> Unit,
+    onPrescriberPracticeChanged: (String) -> Unit,
+    onPharmacyNameChanged: (String) -> Unit,
+    onPharmacyPhoneChanged: (String) -> Unit,
+    onComplete: () -> Unit,
+) {
+    StepContent(
+        icon = Icons.Outlined.Contacts,
+        headline = stringResource(R.string.onboarding_contacts_title),
+        body = stringResource(R.string.onboarding_contacts_body),
+    ) {
+        // ── Prescriber ────────────────────────────────────────────────────────
+        Text(
+            text = stringResource(R.string.onboarding_contacts_prescriber),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedTextField(
+                value = prescriberName,
+                onValueChange = onPrescriberNameChanged,
+                label = { Text(stringResource(R.string.saved_contacts_field_name)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = prescriberPractice,
+                onValueChange = onPrescriberPracticeChanged,
+                label = { Text(stringResource(R.string.saved_contacts_field_practice)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = prescriberPhone,
+                onValueChange = onPrescriberPhoneChanged,
+                label = { Text(stringResource(R.string.saved_contacts_field_phone)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ── Pharmacy ──────────────────────────────────────────────────────────
+        Text(
+            text = stringResource(R.string.onboarding_contacts_pharmacy),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedTextField(
+                value = pharmacyName,
+                onValueChange = onPharmacyNameChanged,
+                label = { Text(stringResource(R.string.saved_contacts_field_name)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = pharmacyPhone,
+                onValueChange = onPharmacyPhoneChanged,
+                label = { Text(stringResource(R.string.saved_contacts_field_phone)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = onComplete,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+        ) {
+            Text(stringResource(R.string.onboarding_btn_all_set))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(
+            onClick = onComplete,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+        ) {
+            Text(stringResource(R.string.onboarding_btn_skip))
         }
     }
 }
