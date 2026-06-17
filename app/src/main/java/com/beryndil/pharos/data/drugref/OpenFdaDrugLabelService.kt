@@ -122,10 +122,20 @@ class OpenFdaDrugLabelService : DrugLabelService {
             warningsText = field("warnings", "warnings_and_cautions"),
             precautionsText = field("precautions"),
             contraindicationsText = field("contraindications"),
-            boxedWarningText = field("boxed_warning"),
+            boxedWarningText = field("boxed_warning")?.let { deduplicateBoxedWarning(it) },
             foodEffectText = field("food_effect"),
             source = SOURCE,
         )
+    }
+
+    private fun deduplicateBoxedWarning(text: String): String {
+        // openFDA's boxed_warning field concatenates the full warning text with a brief
+        // "See full prescribing information" summary that starts a second "WARNING" header.
+        // Keep only the first (full) version.
+        val firstIdx = text.indexOf("WARNING")
+        if (firstIdx < 0) return text
+        val secondIdx = text.indexOf("WARNING", firstIdx + 8)
+        return if (secondIdx > 0) text.substring(0, secondIdx).trim() else text
     }
 
     companion object {

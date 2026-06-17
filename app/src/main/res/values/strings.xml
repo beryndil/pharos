@@ -507,6 +507,8 @@
     <!-- ── Drug info inline (add/edit flow, spec §2.10) ────────────────────── -->
     <string name="section_drug_info">Drug info</string>
     <string name="drug_info_loading">Loading drug information…</string>
+    <string name="drug_info_read_more">Read more</string>
+    <string name="drug_info_show_less">Show less</string>
     <string name="cd_drug_info_expand">Expand drug info</string>
     <string name="cd_drug_info_collapse">Collapse drug info</string>
 

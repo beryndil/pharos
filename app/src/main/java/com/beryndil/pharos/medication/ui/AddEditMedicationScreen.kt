@@ -732,15 +732,31 @@ private fun DrugInfoBoxedWarning(body: String) {
 
 @Composable
 private fun DrugInfoSection(title: String, body: String) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val truncated = body.length > DRUG_INFO_PREVIEW_CHARS
+    val displayed = if (truncated && !expanded) body.take(DRUG_INFO_PREVIEW_CHARS).trimEnd() + "…" else body
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(text = title, style = MaterialTheme.typography.titleSmall)
         Text(
-            text = body,
+            text = displayed,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (truncated) {
+            Text(
+                text = if (expanded) stringResource(R.string.drug_info_show_less)
+                       else stringResource(R.string.drug_info_read_more),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = 4.dp),
+            )
+        }
     }
 }
+
+private const val DRUG_INFO_PREVIEW_CHARS = 400
 
 @Composable
 private fun DrugInfoCard(labelPreview: LabelPreviewState, modifier: Modifier = Modifier) {
