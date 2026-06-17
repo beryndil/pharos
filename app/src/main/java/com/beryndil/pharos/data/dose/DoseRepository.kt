@@ -1,6 +1,7 @@
 package com.beryndil.pharos.data.dose
 
 import androidx.compose.runtime.Immutable
+import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
 import com.beryndil.pharos.data.regimen.dao.DoseTransitionDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
@@ -32,12 +33,15 @@ class DoseRepository(
     fun observeTodayDoses(): Flow<List<DoseRow>> {
         val scheduledFrom = startOfDayEpochMs()
         val before = startOfTomorrowEpochMs()
+        DebugLogger.log("TodayDiag", "observeTodayDoses: window [${scheduledFrom}, ${before})")
         return combine(
             doseInstanceDao.observeActionable(scheduledFrom, before),
             medicationDao.observeAll(),
         ) { doses, meds ->
+            val byState = doses.groupBy { it.state }.mapValues { it.value.size }
+            DebugLogger.log("TodayDiag", "observeActionable emit: ${doses.size} instances $byState, ${meds.size} meds in DB")
             val byId = meds.associateBy { it.id }
-            doses.mapNotNull { d ->
+            val rows = doses.mapNotNull { d ->
                 byId[d.medicationId]?.let { m ->
                     DoseRow(
                         doseId = d.id,
@@ -50,6 +54,10 @@ class DoseRepository(
                     )
                 }
             }
+            if (rows.size != doses.size) {
+                DebugLogger.log("TodayDiag", "  WARNING: ${doses.size - rows.size} instances had no matching medication in DB")
+            }
+            rows
         }
     }
 

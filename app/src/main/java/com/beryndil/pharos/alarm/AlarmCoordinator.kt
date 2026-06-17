@@ -1,5 +1,6 @@
 package com.beryndil.pharos.alarm
 
+import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
 import com.beryndil.pharos.data.regimen.entity.DoseState
@@ -123,15 +124,39 @@ class AlarmCoordinator(
      */
     suspend fun sweepStaleDoses() {
         val nowMs = now()
-        // Cancel any SCHEDULED instances whose schedule was deactivated (e.g., after a schedule edit).
-        // This runs before the stale sweep so orphaned instances don't get incorrectly marked DUE.
-        doseInstanceDao.cancelOrphanedScheduled(nowMs)
+        val orphaned = doseInstanceDao.cancelOrphanedScheduled(nowMs)
+        DebugLogger.log("TodayDiag", "sweepStaleDoses: $orphaned orphaned SCHEDULED instances cancelled")
+
         val stale = doseInstanceDao.getAllScheduledBefore(nowMs)
+        DebugLogger.log("TodayDiag", "sweepStaleDoses: ${stale.size} stale SCHEDULED instances found (due before now)")
         for (dose in stale) {
             if (dose.state != com.beryndil.pharos.data.regimen.entity.DoseState.SCHEDULED.name) continue
+            val minsAgo = (nowMs - dose.dueEpochMs) / 60_000L
+            DebugLogger.log("TodayDiag", "  sweep ${dose.id.take(8)}: was due ${minsAgo}min ago → markDue + onEnteredDue")
             doseInstanceDao.markDue(dose.id)
             doseDueListener.onEnteredDue(dose.id, nowMs)
         }
+    }
+
+    /**
+     * Dump a diagnostic snapshot of today's dose instances to DebugLogger (for support logs).
+     * Call after [sweepStaleDoses] to capture the post-sweep state.
+     */
+    suspend fun logTodayDiagnostic(scheduledFromMs: Long, beforeMs: Long) {
+        val meds = medicationDao.getActiveOnce()
+        DebugLogger.log("TodayDiag", "--- startup snapshot ---")
+        DebugLogger.log("TodayDiag", "active medications: ${meds.size}")
+        val todayInstances = doseInstanceDao.getAllInWindow(scheduledFromMs, beforeMs)
+        val byState = todayInstances.groupBy { it.state }.mapValues { it.value.size }
+        DebugLogger.log("TodayDiag", "today window instances (${todayInstances.size} total): $byState")
+        if (todayInstances.isEmpty()) {
+            DebugLogger.log("TodayDiag", "  NO instances in today window — check schedule start dates and isActive flags")
+        }
+        for (inst in todayInstances) {
+            val minsFromNow = (inst.dueEpochMs - now()) / 60_000L
+            DebugLogger.log("TodayDiag", "  ${inst.id.take(8)}: state=${inst.state} schedId=${inst.scheduleId.take(8)} due=${if (minsFromNow >= 0) "+${minsFromNow}min" else "${minsFromNow}min"}")
+        }
+        DebugLogger.log("TodayDiag", "--- end snapshot ---")
     }
 
     /** Schedule a near-immediate test reminder through the SAME engine (Law 6). */

@@ -2,6 +2,7 @@ package com.beryndil.pharos.dose
 
 import com.beryndil.pharos.alarm.DoseActionHandler
 import com.beryndil.pharos.alarm.DoseDueListener
+import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.alarm.DoseNotifier
 import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
 import com.beryndil.pharos.data.regimen.dao.DoseTransitionDao
@@ -65,8 +66,11 @@ class DoseStateMachine(
         }
 
         val missClose = computeMissClose(dose)
-        if (now() >= missClose) {
-            transitionToMissed(dose, now())
+        val nowMs = now()
+        val minsUntilClose = (missClose - nowMs) / 60_000L
+        DebugLogger.log("TodayDiag", "onEnteredDue ${doseId.take(8)}: missClose in ${minsUntilClose}min, expired=${nowMs >= missClose}")
+        if (nowMs >= missClose) {
+            transitionToMissed(dose, nowMs)
             return
         }
         transitionScheduler.scheduleMissCheck(doseId, missClose)

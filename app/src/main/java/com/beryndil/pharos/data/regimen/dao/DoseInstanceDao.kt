@@ -72,14 +72,21 @@ interface DoseInstanceDao {
 
     /**
      * Startup cleanup: mark SCHEDULED instances belonging to deactivated schedules as MISSED.
-     * Fixes stale instances that were left behind when a medication's schedule was replaced.
+     * Returns the count of rows updated for diagnostic logging.
      */
     @Query(
         "UPDATE dose_instances SET state = 'MISSED', missedEpochMs = :nowMs " +
             "WHERE state = 'SCHEDULED' " +
             "AND scheduleId NOT IN (SELECT id FROM schedules WHERE isActive = 1)",
     )
-    suspend fun cancelOrphanedScheduled(nowMs: Long)
+    suspend fun cancelOrphanedScheduled(nowMs: Long): Int
+
+    /** Diagnostic: all dose instances whose due time falls in [from, to) — any state. */
+    @Query(
+        "SELECT * FROM dose_instances WHERE dueEpochMs >= :from AND dueEpochMs < :to " +
+            "ORDER BY dueEpochMs ASC",
+    )
+    suspend fun getAllInWindow(from: Long, to: Long): List<DoseInstanceEntity>
 
     // ── queries ───────────────────────────────────────────────────────────────
 

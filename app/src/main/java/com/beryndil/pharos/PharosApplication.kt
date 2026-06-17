@@ -144,10 +144,16 @@ class PharosApplication : Application() {
                 appContainer.alarmCoordinator.sweepStaleDoses()
                 appContainer.alarmCoordinator.rearmNextDoseAlarm()
                 appContainer.alarmCoordinator.scheduleDailyRollover()
+                // Diagnostic snapshot (logged to pharos_debug.log for support sharing).
+                val zone = java.time.ZoneId.systemDefault()
+                val todayStart = java.time.Instant.now().atZone(zone).toLocalDate()
+                    .atStartOfDay(zone).toInstant().toEpochMilli()
+                val tomorrow = java.time.Instant.now().atZone(zone).toLocalDate()
+                    .plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+                appContainer.alarmCoordinator.logTodayDiagnostic(todayStart, tomorrow)
             }.onFailure {
-                if (BuildConfig.DEBUG) {
-                    Log.w("PharosApplication", "startup alarm rearm failed: ${it.javaClass.simpleName}")
-                }
+                Log.w("PharosApplication", "startup alarm rearm failed: ${it.javaClass.simpleName}")
+                com.beryndil.pharos.core.debug.DebugLogger.logError("PharosApplication", "startup rearm failed", it)
             }
         }
     }
