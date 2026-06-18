@@ -789,10 +789,8 @@
     <string name="about_app_name">Pharos</string>
     <string name="about_companion">A private medication reminder.</string>
     <string name="about_version_label">Version</string>
-    <string name="about_author">Beryndil</string>
+    <string name="about_author">by Beryndil</string>
     <string name="about_author_name">Beryndil portrait</string>
-    <string name="about_enjoy">Enjoying Pharos?</string>
-    <string name="about_support">Support the developer</string>
     <string name="about_section_data_sources">Data sources</string>
     <string name="about_rxnorm_attribution">Drug names and ingredient data: RxNorm, provided by the U.S. National Library of Medicine (NLM) via the RxNav API. NLM does not endorse or certify this app.</string>
     <string name="about_openfda_attribution">Drug label and side-effect information: openFDA and DailyMed, provided by the U.S. Food and Drug Administration (FDA). FDA does not endorse or certify this app.</string>

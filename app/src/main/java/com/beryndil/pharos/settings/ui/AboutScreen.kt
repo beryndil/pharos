@@ -146,28 +146,10 @@ fun AboutScreen(
                         contentDescription = stringResource(R.string.about_author_name),
                         modifier = Modifier
                             .size(72.dp)
-                            .clip(RoundedCornerShape(16.dp)),
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable { uriHandler.openUri("https://hardknocks.university/developer.html") },
                         contentScale = ContentScale.Crop,
                     )
-                    Spacer(Modifier.height(12.dp))
-                    Column(
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                            .clickable { uriHandler.openUri("https://hardknocks.university/developer.html") }
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.about_enjoy),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                        )
-                        Text(
-                            text = stringResource(R.string.about_support),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
                 }
             }
 
