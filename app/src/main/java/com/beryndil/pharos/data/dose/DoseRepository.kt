@@ -95,6 +95,9 @@ class DoseRepository(
     suspend fun logPrn(medicationId: String, scheduleId: String) =
         stateMachine.logPrnTaken(medicationId, scheduleId)
 
+    /** Hard-delete a dose instance (user-initiated cleanup, e.g. removing a duplicate). */
+    suspend fun deleteDoseInstance(doseId: String) = doseInstanceDao.deleteById(doseId)
+
     /**
      * Observe the set of active PRN medications for the Today screen (spec §2.7).
      *

@@ -196,10 +196,10 @@ fun TodayScreen(
                     items(actionableDoses, key = { it.doseId }) { dose ->
                         DoseCard(
                             dose = dose,
-                            onTake    = { onEvent(TodayEvent.Take(dose.doseId)) },
-                            onSnooze  = { onEvent(TodayEvent.Snooze(dose.doseId)) },
-                            onSkip    = { onEvent(TodayEvent.Skip(dose.doseId)) },
-                            onHistory = { onOpenHistory(dose.medicationId) },
+                            onTake        = { onEvent(TodayEvent.Take(dose.doseId)) },
+                            onSnooze      = { onEvent(TodayEvent.Snooze(dose.doseId)) },
+                            onSkip        = { onEvent(TodayEvent.Skip(dose.doseId)) },
+                            onMenuRequest = { onEvent(TodayEvent.DeleteDoseRequest(dose.doseId)) },
                         )
                     }
                 }
@@ -220,10 +220,10 @@ fun TodayScreen(
                     items(completedDoses, key = { it.doseId }) { dose ->
                         DoseCard(
                             dose = dose,
-                            onTake    = { onEvent(TodayEvent.Take(dose.doseId)) },
-                            onSnooze  = { onEvent(TodayEvent.Snooze(dose.doseId)) },
-                            onSkip    = { onEvent(TodayEvent.Skip(dose.doseId)) },
-                            onHistory = { onOpenHistory(dose.medicationId) },
+                            onTake        = { onEvent(TodayEvent.Take(dose.doseId)) },
+                            onSnooze      = { onEvent(TodayEvent.Snooze(dose.doseId)) },
+                            onSkip        = { onEvent(TodayEvent.Skip(dose.doseId)) },
+                            onMenuRequest = { onEvent(TodayEvent.DeleteDoseRequest(dose.doseId)) },
                         )
                     }
                 }
@@ -253,6 +253,40 @@ fun TodayScreen(
                 }
             }
         }
+    }
+
+    // ── Dose entry delete dialog ──────────────────────────────────────────────────────────────
+    val pendingDeleteId = uiState.pendingDeleteDoseId
+    if (pendingDeleteId != null) {
+        val doseRow = uiState.doses.find { it.doseId == pendingDeleteId }
+        AlertDialog(
+            onDismissRequest = { onEvent(TodayEvent.DeleteDoseDismiss) },
+            title = { Text(doseRow?.medName ?: stringResource(R.string.today_dose_menu_title_fallback)) },
+            text  = { Text(stringResource(R.string.today_dose_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = { onEvent(TodayEvent.DeleteDoseConfirm) }) {
+                    Text(
+                        text  = stringResource(R.string.today_dose_menu_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                    if (doseRow != null) {
+                        TextButton(onClick = {
+                            onEvent(TodayEvent.DeleteDoseDismiss)
+                            onOpenHistory(doseRow.medicationId)
+                        }) {
+                            Text(stringResource(R.string.today_dose_menu_history))
+                        }
+                    }
+                    TextButton(onClick = { onEvent(TodayEvent.DeleteDoseDismiss) }) {
+                        Text(stringResource(R.string.btn_cancel))
+                    }
+                }
+            },
+        )
     }
 
     // ── PRN daily-max advisory dialog (non-blocking, Law 3 — dose already logged) ────────────
@@ -457,7 +491,7 @@ private fun DoseCard(
     onTake: () -> Unit,
     onSnooze: () -> Unit,
     onSkip: () -> Unit,
-    onHistory: () -> Unit,
+    onMenuRequest: () -> Unit,
 ) {
     val context = LocalContext.current
     val timeText = DateFormat.getTimeFormat(context).format(Date(dose.dueEpochMs))
@@ -468,7 +502,7 @@ private fun DoseCard(
     val skipCd  = stringResource(R.string.cd_dose_skip_action,  dose.medName)
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-        // Info header — merged into one TalkBack node; double-tap opens dose history.
+        // Info header — merged into one TalkBack node; tap opens the dose menu (history / delete).
         // §8: mergeDescendants = true collapses med name + dose summary + state label
         // into a single focus node so TalkBack reads a coherent sentence rather than
         // three separate fragments.
@@ -478,8 +512,8 @@ private fun DoseCard(
                 .heightIn(min = 48.dp)
                 .semantics(mergeDescendants = true) {}
                 .clickable(
-                    onClickLabel = stringResource(R.string.cd_dose_history_action, dose.medName),
-                    onClick = onHistory,
+                    onClickLabel = stringResource(R.string.cd_dose_menu_action, dose.medName),
+                    onClick = onMenuRequest,
                 ),
         ) {
             Text(

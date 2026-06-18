@@ -653,6 +653,13 @@
     <string name="cd_dose_skip_action">Skip %1$s</string>
     <!-- Clickable med-name link to dose history in Today screen. %1$s = medication name. -->
     <string name="cd_dose_history_action">View history for %1$s</string>
+    <!-- Tap target on a dose card that opens the dose menu (history / delete). -->
+    <string name="cd_dose_menu_action">Options for %1$s</string>
+    <!-- Dose card menu dialog strings. -->
+    <string name="today_dose_menu_title_fallback">Dose entry</string>
+    <string name="today_dose_delete_body">Remove this dose entry from today\'s list?</string>
+    <string name="today_dose_menu_delete">Delete</string>
+    <string name="today_dose_menu_history">History</string>
     <!-- Loading indicator for drug reference screen. -->
     <string name="cd_loading_drug_reference">Loading drug reference</string>
 

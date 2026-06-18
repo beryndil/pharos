@@ -44,6 +44,8 @@ data class NextUpItem(
 data class TodayUiState(
     val doses: List<DoseRow> = emptyList(),
     val prnMeds: List<PrnMedRow> = emptyList(),
+    /** Non-null while the delete-entry confirmation dialog should be shown. */
+    val pendingDeleteDoseId: String? = null,
     /**
      * Non-null when a PRN log triggered the daily-max advisory (spec §2.7, Law 3).
      * Holds (doseNumber, dailyMax). The UI formats the user-facing string from these values.
@@ -103,6 +105,17 @@ sealed interface TodayEvent {
 
     /** User dismissed the error snackbar/dialog. */
     data object EmailMedListErrorDismissed : TodayEvent
+
+    // ── Dose entry deletion ───────────────────────────────────────────────
+
+    /** User tapped a dose card → show the delete/history menu dialog. */
+    data class DeleteDoseRequest(val doseId: String) : TodayEvent
+
+    /** User confirmed deletion in the dialog. */
+    data object DeleteDoseConfirm : TodayEvent
+
+    /** User dismissed the dialog without deleting. */
+    data object DeleteDoseDismiss : TodayEvent
 }
 
 /** Drives the today/upcoming dose surface (Slice 5). Actions route to the dose state machine. */
@@ -117,6 +130,8 @@ class TodayViewModel(
     /** Non-null while the PRN daily-max advisory should be shown. */
     private val _prnWarning = MutableStateFlow<Pair<Int, Int>?>(null)
 
+    private val _pendingDeleteId = MutableStateFlow<String?>(null)
+
     /** Holds all transient email-action state in a single flow so we stay within combine's 5-arg limit. */
     private data class EmailState(
         val showConfirm: Boolean = false,
@@ -126,22 +141,26 @@ class TodayViewModel(
     private val _emailState = MutableStateFlow(EmailState())
 
     val uiState: StateFlow<TodayUiState> = combine(
-        doseRepository.observeTodayDoses(),
-        doseRepository.observePrnMeds(),
-        _prnWarning,
-        _emailState,
-    ) { doses, prnMeds, warning, email ->
-        TodayUiState(
-            doses = doses,
-            prnMeds = prnMeds,
-            prnWarningDoseNumber = warning?.first,
-            prnWarningDailyMax = warning?.second ?: 0,
-            nextUp = selectNextUp(doses),
-            showEmailConfirmDialog = email.showConfirm,
-            pendingEmailFile = email.pendingFile,
-            emailError = email.error,
-        )
-    }.stateIn(
+        combine(
+            doseRepository.observeTodayDoses(),
+            doseRepository.observePrnMeds(),
+            _prnWarning,
+            _emailState,
+        ) { doses, prnMeds, warning, email ->
+            TodayUiState(
+                doses = doses,
+                prnMeds = prnMeds,
+                prnWarningDoseNumber = warning?.first,
+                prnWarningDailyMax = warning?.second ?: 0,
+                nextUp = selectNextUp(doses),
+                showEmailConfirmDialog = email.showConfirm,
+                pendingEmailFile = email.pendingFile,
+                emailError = email.error,
+            )
+        },
+        _pendingDeleteId,
+    ) { state, deleteId -> state.copy(pendingDeleteDoseId = deleteId) }
+    .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = TodayUiState(),
@@ -155,6 +174,8 @@ class TodayViewModel(
             is TodayEvent.EmailMedListIntentConsumed-> { _emailState.value = _emailState.value.copy(pendingFile = null); return }
             is TodayEvent.EmailMedListErrorDismissed-> { _emailState.value = _emailState.value.copy(error = null); return }
             is TodayEvent.EmailMedListConfirm       -> { _emailState.value = _emailState.value.copy(showConfirm = false); generateEmailPdf(); return }
+            is TodayEvent.DeleteDoseRequest         -> { _pendingDeleteId.value = event.doseId; return }
+            is TodayEvent.DeleteDoseDismiss         -> { _pendingDeleteId.value = null; return }
             else -> { /* handled in the IO coroutine below */ }
         }
         viewModelScope.launch {
@@ -168,6 +189,11 @@ class TodayViewModel(
                         if (result.exceedsMax && result.dailyMax != null) {
                             _prnWarning.value = Pair(result.doseNumber, result.dailyMax)
                         }
+                    }
+                    is TodayEvent.DeleteDoseConfirm -> {
+                        val id = _pendingDeleteId.value
+                        _pendingDeleteId.value = null
+                        if (id != null) doseRepository.deleteDoseInstance(id)
                     }
                     // All other branches handled synchronously above.
                     else -> Unit

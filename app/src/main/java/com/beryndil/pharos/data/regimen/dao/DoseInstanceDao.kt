@@ -196,6 +196,13 @@ interface DoseInstanceDao {
     suspend fun getAll(): List<DoseInstanceEntity>
 
     /**
+     * Hard-delete a single dose instance by id. Used only for explicit user-initiated cleanup
+     * (e.g. removing a duplicate entry from the Today screen). Not for routine state transitions.
+     */
+    @Query("DELETE FROM dose_instances WHERE id = :id")
+    suspend fun deleteById(id: String)
+
+    /**
      * Reactively observe all TAKEN dose instances logged at or after [sinceEpochMs].
      * Used by [com.beryndil.pharos.data.dose.DoseRepository.observePrnMeds] to show a
      * live "Logged today: N" count on the Today screen for PRN medications (spec §2.7).
