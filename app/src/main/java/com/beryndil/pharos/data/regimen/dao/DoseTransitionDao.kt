@@ -28,13 +28,6 @@ interface DoseTransitionDao {
     )
     fun observeByMedication(medicationId: String): Flow<List<DoseTransitionEntity>>
 
-    /** All transitions for a single dose instance, oldest first. */
-    @Query(
-        "SELECT * FROM dose_transitions WHERE doseInstanceId = :doseInstanceId " +
-            "ORDER BY atEpochMs ASC, id ASC",
-    )
-    suspend fun getByDose(doseInstanceId: String): List<DoseTransitionEntity>
-
     @Query("SELECT COUNT(*) FROM dose_transitions WHERE doseInstanceId = :doseInstanceId")
     suspend fun countByDose(doseInstanceId: String): Int
 

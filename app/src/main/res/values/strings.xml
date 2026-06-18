@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Pharos</string>
-    <string name="welcome_title">Pharos</string>
-    <string name="welcome_tagline">Private. Reliable. Free.</string>
 
     <!-- ── Medication list ───────────────────────────────────────────── -->
     <string name="screen_medications">Medications</string>
@@ -24,8 +22,6 @@
     <string name="no_drug_db_match">No matches in drug database</string>
     <string name="add_as_custom">Add as custom medication</string>
     <string name="add_as_custom_desc">Reminders and refill tracking, but no ingredient checking or interaction reference.</string>
-    <!-- %1$s = ingredient name(s) shown in each search-result item subtitle -->
-    <string name="search_result_ingredients">%1$s</string>
     <!-- %1$s = RxNorm term type (e.g., "IN", "BN", "MIN") -->
     <string name="search_result_subtitle">%1$s</string>
     <!-- Accessibility: %1$s = name, %2$s = RxNorm term type. -->
@@ -37,13 +33,10 @@
     <string name="label_ingredient">Ingredient</string>
     <string name="label_ingredients">Ingredients</string>
     <string name="label_type">Type</string>
-    <string name="label_strength">Strength</string>
-    <string name="label_form">Form</string>
     <string name="btn_confirm">Confirm</string>
     <string name="btn_not_right">Not right — search again</string>
 
     <!-- ── Details step ──────────────────────────────────────────────── -->
-    <string name="step_details_heading">Medication details</string>
     <string name="free_text_notice">This medication is not in the drug database. Reminders and refill tracking are available, but ingredient checking and interaction reference are not.</string>
     <string name="cd_free_text_notice">Information: limited drug data for this medication</string>
 
@@ -177,8 +170,6 @@
     <string name="btn_cancel">Cancel</string>
     <string name="btn_delete">Delete</string>
     <string name="btn_save_anyway">Save anyway</string>
-    <string name="btn_back">Back</string>
-    <string name="btn_clear_date">Clear</string>
     <string name="cd_back_button">Go back</string>
     <string name="cd_clear_end_date">Clear end date</string>
 
@@ -210,8 +201,6 @@
     <string name="screen_today">Today</string>
     <string name="screen_dose_history">Dose history</string>
     <string name="cd_open_medications">Medications</string>
-    <!-- %1$s = strength, %2$s = time -->
-    <string name="today_dose_summary">%1$s · %2$s</string>
     <string name="empty_today_body">No doses scheduled for today.</string>
     <string name="empty_history_body">No dose history yet.</string>
 
@@ -285,7 +274,6 @@
     <string name="onboarding_back">Go back</string>
     <string name="onboarding_btn_skip">Skip</string>
     <string name="onboarding_btn_next">Next</string>
-    <string name="onboarding_btn_done">Done</string>
 
     <!-- Welcome step -->
     <string name="onboarding_welcome_headline">Pharos</string>
@@ -361,21 +349,12 @@
 
     <!-- ── Substitution link (V1.3-F2) — reference framing only (Law 3) ────── -->
     <string name="label_substitute_for">Prescribed in place of (optional)</string>
-    <string name="label_substitute_for_none">None</string>
     <string name="substitute_for_placeholder">e.g. Flomax</string>
-    <string name="label_substitute_note">Note (optional)</string>
     <string name="substitute_for_helper">Type the brand or generic name this was prescribed to replace.</string>
     <string name="label_brand_suggestions">Suggested brand names</string>
-    <string name="settings_section_default_contacts">Default contacts</string>
-    <string name="settings_label_default_provider">Default provider</string>
-    <string name="settings_label_default_pharmacy">Default pharmacy</string>
-    <string name="settings_default_contact_none">None</string>
-    <string name="med_status_paused">Paused</string>
     <string name="med_status_ended">Ended</string>
     <string name="med_substitute_for">Substitute for: %1$s</string>
     <string name="med_has_substitute">Has substitute: %1$s</string>
-    <string name="cd_substitute_picker">Substitute for picker. Currently: %1$s. Tap to change.</string>
-    <string name="cd_substitute_note_field">Optional note about the substitution</string>
 
     <!-- ── Combined / split prescription (v1.5.3) ────────────────────────── -->
     <string name="section_combined_prescription">Combined prescription (optional)</string>
@@ -431,7 +410,6 @@
     <string name="cd_reliability_fix">Fix: %1$s</string>
     <!-- %1$s = item label, %2$s = status description -->
     <string name="cd_reliability_item_desc">%1$s: %2$s</string>
-    <string name="reliability_dkma_link">dontkillmyapp.com</string>
 
     <!-- Alarm history rows -->
     <string name="reliability_last_alarm_label">Last reminder fired</string>
@@ -469,13 +447,9 @@
 
     <!-- Timestamp format used in the dashboard rows -->
     <!-- %1$s = time, %2$s = date -->
-    <string name="reliability_timestamp">%1$s · %2$s</string>
-
     <!-- ── Refill tracking (Slice 7, spec §2.9) ────────────────────────────── -->
     <!-- Screen title and navigation -->
     <string name="screen_refill">Refill</string>
-    <!-- %1$s = medication name -->
-    <string name="cd_track_refill">Track refill for %1$s</string>
     <string name="action_track_refill">Track refill</string>
 
     <!-- Supply status section -->
@@ -495,9 +469,7 @@
     <!-- PRN: on-hand count shown but no run-out date (spec §2.9) -->
     <string name="refill_prn_no_runout">On-hand count is tracked. A run-out date cannot be computed for as-needed medications.</string>
 
-    <!-- Low-supply status banner -->
-    <string name="refill_low_supply_title">Low supply</string>
-    <!-- %1$d = days remaining -->
+    <!-- Low-supply status banner: %1$d = days remaining -->
     <string name="refill_low_supply_body">%1$d days of supply remaining.</string>
     <string name="refill_zero_supply_body">No supply on record. Dose reminders are not affected.</string>
 
@@ -594,10 +566,7 @@
     <string name="drug_reference_disclaimer">This information is from the drug\'s label and is provided for reference only. It is not medical advice. Always check with your doctor or pharmacist before making any changes to your medication.</string>
 
     <!-- ── Backup / restore / export (Slice 9, spec §2.12) ──────────────────── -->
-    <!-- Screen title -->
     <string name="screen_backup">Backup &amp; restore</string>
-    <!-- Navigation entry in settings / today menu -->
-    <string name="action_backup">Backup &amp; restore</string>
     <string name="cd_open_backup">Backup and restore</string>
 
     <!-- Auto-restore banner: shown on fresh install when a previous auto-backup exists -->
@@ -800,8 +769,6 @@
     <string name="settings_theme_dark">Dark</string>
     <!-- %1$s = option name (System default / Light / Dark), %2$s = Selected or Not selected -->
     <string name="cd_theme_option">Theme: %1$s. %2$s.</string>
-    <string name="cd_selected">Selected</string>
-    <string name="cd_not_selected">Not selected</string>
 
     <!-- Text size options -->
     <string name="settings_text_size_label">Text size</string>
@@ -809,8 +776,6 @@
     <string name="settings_text_size_large">Large</string>
     <string name="settings_text_size_extra_large">Extra large</string>
     <string name="settings_text_size_largest">Largest</string>
-    <!-- %1$s = option name, %2$s = Selected or Not selected -->
-    <string name="cd_text_size_option">Text size: %1$s. %2$s.</string>
     <string name="settings_text_size_preview">The quick brown fox jumps over the lazy dog.</string>
 
     <!-- About / Legal rows -->
@@ -822,10 +787,7 @@
     <!-- ── About screen (A5-S1) ──────────────────────────────────────────── -->
     <string name="screen_about">About Pharos</string>
     <string name="about_app_name">Pharos</string>
-    <string name="about_brand">Beryndil</string>
     <string name="about_companion">A private medication reminder.</string>
-    <string name="about_description">A private medication reminder.</string>
-    <string name="about_mission">Private. Reliable. Free.\nNo ads. All data stays on your device.</string>
     <string name="about_version_label">Version</string>
     <string name="about_author">Beryndil</string>
     <string name="about_author_name">Beryndil portrait</string>
@@ -843,12 +805,7 @@
     <string name="about_section_feedback">Feedback</string>
     <string name="about_report_bug">Report a bug</string>
     <string name="about_request_feature">Request a feature</string>
-    <string name="about_action_license">License and credits</string>
-    <string name="about_action_legal">Legal notices</string>
     <string name="about_medical_disclaimer">Medical disclaimer</string>
-    <string name="cd_about_app_icon">Pharos app icon</string>
-    <string name="cd_navigate_license">Open license and credits</string>
-    <string name="cd_navigate_legal_from_about">Open legal notices</string>
 
     <!-- ── License / credits screen (A5-S1) ────────────────────────────── -->
     <string name="screen_license">License and credits</string>
@@ -872,11 +829,12 @@
     <!-- ── User profile screen ────────────────────────────────────────────── -->
     <string name="screen_profile">My Profile</string>
     <string name="settings_action_profile">My Profile</string>
+    <string name="settings_action_contacts">Saved contacts</string>
     <string name="cd_navigate_profile">Open my profile</string>
+    <string name="cd_navigate_contacts">Open saved contacts</string>
     <string name="profile_description">Your profile appears at the top of exported medication lists so providers can identify the list quickly. All fields are optional.</string>
     <string name="profile_label_name">Full name</string>
     <string name="profile_label_dob">Date of birth</string>
-    <string name="profile_placeholder_dob">e.g. January 1, 1980</string>
     <string name="profile_label_phone">Phone number</string>
     <string name="profile_label_address">Address</string>
     <string name="profile_label_allergies">Known allergies</string>

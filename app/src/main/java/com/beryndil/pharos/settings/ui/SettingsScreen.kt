@@ -66,6 +66,7 @@ fun SettingsScreen(
     onOpenAbout: () -> Unit,
     onOpenLegal: () -> Unit,
     onOpenProfile: () -> Unit = {},
+    onOpenContacts: () -> Unit = {},
     onOpenReliability: () -> Unit = {},
     onShareDebugLog: () -> Unit = {},
     onBack: () -> Unit,
@@ -170,6 +171,12 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_action_profile),
                 contentDesc = stringResource(R.string.cd_navigate_profile),
                 onClick = onOpenProfile,
+            )
+            HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
+            NavigationRow(
+                label = stringResource(R.string.settings_action_contacts),
+                contentDesc = stringResource(R.string.cd_navigate_contacts),
+                onClick = onOpenContacts,
             )
 
             Spacer(modifier = Modifier.height(16.dp))

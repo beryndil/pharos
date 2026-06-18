@@ -337,6 +337,7 @@ fun PharosNavGraph(
                 onOpenAbout        = { navController.navigate(NavRoute.About.route) },
                 onOpenLegal        = { navController.navigate(NavRoute.Legal.route) },
                 onOpenProfile      = { navController.navigate(NavRoute.UserProfile.route) },
+                onOpenContacts     = { navController.navigate(NavRoute.SavedContacts.route) },
                 onOpenReliability  = { navController.navigate(NavRoute.ReliabilityDashboard.route) },
                 onShareDebugLog = {
                     scope.launch(Dispatchers.IO) {
