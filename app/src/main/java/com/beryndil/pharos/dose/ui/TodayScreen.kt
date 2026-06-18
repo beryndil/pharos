@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -229,9 +230,10 @@ fun TodayScreen(
                 }
 
                 // ── PRN (as-needed) section ───────────────────────────────────
-                if (hasPrn) {
-                    // Only add a divider if dose cards were actually rendered above.
-                    // SCHEDULED-only days produce no cards (Next Up covers them), so no divider.
+                val manualPrn = uiState.prnMeds.filter { !it.isAutoManaged }
+                val autoPrn   = uiState.prnMeds.filter { it.isAutoManaged }
+
+                if (manualPrn.isNotEmpty()) {
                     if (hasActionable || hasCompleted) {
                         item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
                     }
@@ -243,10 +245,30 @@ fun TodayScreen(
                             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                         )
                     }
-                    items(uiState.prnMeds, key = { "prn_${it.medicationId}" }) { prn ->
+                    items(manualPrn, key = { "prn_${it.medicationId}" }) { prn ->
                         PrnMedCard(
                             prn       = prn,
                             onLogDose = { onEvent(TodayEvent.LogPrn(prn.medicationId, prn.scheduleId)) },
+                            onHistory = { onOpenHistory(prn.medicationId) },
+                        )
+                    }
+                }
+
+                // ── Device-managed section ────────────────────────────────────
+                if (autoPrn.isNotEmpty()) {
+                    item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+                    item {
+                        Text(
+                            text = stringResource(R.string.today_auto_managed_section_header),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(autoPrn, key = { "auto_${it.medicationId}" }) { prn ->
+                        AutoManagedMedCard(
+                            prn       = prn,
+                            onRecord  = { onEvent(TodayEvent.LogPrn(prn.medicationId, prn.scheduleId)) },
                             onHistory = { onOpenHistory(prn.medicationId) },
                         )
                     }
@@ -635,6 +657,74 @@ private fun PrnMedCard(
                 .semantics { contentDescription = logDoseCd },
         ) {
             Text(stringResource(R.string.today_prn_log_dose))
+        }
+    }
+}
+
+/**
+ * Card for a device-managed medication (auto PRN: pump, patch, etc.).
+ *
+ * No primary "Log dose" button — the device handles delivery. A small
+ * "Record" TextButton is available for manual override (e.g., a bolus the
+ * user initiated on the pump). Tapping the card header opens dose history.
+ */
+@Composable
+private fun AutoManagedMedCard(
+    prn: PrnMedRow,
+    onRecord: () -> Unit,
+    onHistory: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val recordCd = stringResource(R.string.cd_auto_managed_record, prn.medName)
+    androidx.compose.material3.OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onHistory),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.SettingsSuggest,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(R.string.auto_managed_device_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
+            Text(
+                text = prn.medName,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            if (prn.strength.isNotBlank()) {
+                Text(
+                    text = prn.strength,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            if (prn.dosesToday > 0) {
+                Text(
+                    text = stringResource(R.string.today_prn_doses_today, prn.dosesToday),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            TextButton(
+                onClick = onRecord,
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .semantics { contentDescription = recordCd },
+            ) {
+                Text(stringResource(R.string.auto_managed_record_action))
+            }
         }
     }
 }

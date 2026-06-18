@@ -133,6 +133,7 @@ class DoseRepository(
                     indication = sched.indication ?: med.purpose,
                     dosesToday = takenCountByMed[med.id] ?: 0,
                     dailyMax = sched.dailyMaxDoses,
+                    isAutoManaged = med.isAutoManaged,
                 )
             }
         }
@@ -188,4 +189,6 @@ data class PrnMedRow(
     val indication: String?,
     val dosesToday: Int,
     val dailyMax: Int?,
+    /** True when the medication is delivered automatically by a device (pump, patch, etc.). */
+    val isAutoManaged: Boolean = false,
 )

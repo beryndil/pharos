@@ -253,6 +253,21 @@
     <!-- Shows how many PRN doses the user has logged since midnight. %1$d = count -->
     <string name="today_prn_doses_today">Logged today: %1$d</string>
 
+    <!-- ── Device-managed (auto PRN) section ─────────────────────────── -->
+    <string name="today_auto_managed_section_header">Device-managed</string>
+    <!-- Chip/label shown on an auto-managed med card -->
+    <string name="auto_managed_device_label">Managed automatically</string>
+    <!-- TextButton to manually record a device-delivered dose (e.g. pump bolus) -->
+    <string name="auto_managed_record_action">Record</string>
+    <!-- Accessibility: %1$s = medication name -->
+    <string name="cd_auto_managed_record">Record a dose of %1$s</string>
+
+    <!-- Toggle in add/edit screen (isAutoManaged) -->
+    <string name="auto_managed_toggle_label">Managed automatically by a device</string>
+    <string name="auto_managed_toggle_desc">Use for pumps, patches, and other devices that deliver the medication without manual action.</string>
+    <string name="cd_auto_managed_toggle_on">Managed automatically — on</string>
+    <string name="cd_auto_managed_toggle_off">Managed automatically — off</string>
+
     <!-- Shared button label for informational / advisory dialogs -->
     <string name="btn_ok">OK</string>
 

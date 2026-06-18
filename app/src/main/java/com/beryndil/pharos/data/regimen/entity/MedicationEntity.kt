@@ -152,6 +152,13 @@ data class MedicationEntity(
      * Null (treated as blank) = no combined display override.
      */
     val combinedDisplayStrength: String? = null,
+
+    /**
+     * True when this medication is delivered automatically by a device (insulin pump, patch, etc.)
+     * and requires no user action on the Today screen. The "Log dose" button is hidden; an
+     * optional "Record" button remains for manual override logging.
+     */
+    val isAutoManaged: Boolean = false,
 )
 
 /** Lifecycle status of a medication in the user's regimen. */

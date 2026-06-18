@@ -131,6 +131,9 @@ data class AddEditMedicationUiState(
      */
     val isCritical: Boolean = false,
 
+    /** True when this medication is delivered automatically by a device (pump, patch, etc.). */
+    val isAutoManaged: Boolean = false,
+
     // ── Miss window (spec §2.6, G1) ───────────────────────────────────────
     /**
      * User-entered text for the miss-window field in minutes. Stored as a String so the
@@ -207,6 +210,7 @@ sealed interface AddEditMedEvent {
     data class NotesChanged(val value: String) : AddEditMedEvent
     data class ScheduleInputChanged(val input: ScheduleInput) : AddEditMedEvent
     data class IsCriticalToggled(val value: Boolean) : AddEditMedEvent
+    data class IsAutoManagedToggled(val value: Boolean) : AddEditMedEvent
     data class MissWindowMinutesChanged(val value: String) : AddEditMedEvent
     data object DndPermissionRationaleDismissed : AddEditMedEvent
     /** User selected (or cleared) the substitute-for medication. Null clears the link. */
@@ -379,6 +383,8 @@ class AddEditMedicationViewModel(
             is AddEditMedEvent.ScheduleInputChanged ->
                 _uiState.update { it.copy(scheduleInput = event.input, scheduleValidationError = false) }
             is AddEditMedEvent.IsCriticalToggled -> onIsCriticalToggled(event.value)
+            is AddEditMedEvent.IsAutoManagedToggled ->
+                _uiState.update { it.copy(isAutoManaged = event.value) }
             is AddEditMedEvent.MissWindowMinutesChanged ->
                 _uiState.update {
                     val valid = event.value.toIntOrNull()?.let { it in 5..360 } ?: false
@@ -479,6 +485,7 @@ class AddEditMedicationViewModel(
                     combinedWithMedId = med.combinedWithMedId,
                     combinedDisplayStrength = med.combinedDisplayStrength ?: "",
                     isCritical = med.isCritical,
+                    isAutoManaged = med.isAutoManaged,
                     missWindowMinutesText = med.missWindowMinutes.toString(),
                     originalCreatedAtMs = med.createdAtEpochMs,
                     scheduleInput = scheduleInput,
@@ -791,6 +798,7 @@ class AddEditMedicationViewModel(
             notes = state.notes.trim().ifEmpty { null },
             isFreeText = state.isFreeText,
             isCritical = state.isCritical,
+            isAutoManaged = state.isAutoManaged,
             missWindowMinutes = missWindowMinutes,
             status = MedicationStatus.ACTIVE.name,
             startEpochMs = startDate

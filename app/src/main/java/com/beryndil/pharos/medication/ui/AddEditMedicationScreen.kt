@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NotificationsOff
+import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Switch
@@ -580,6 +581,11 @@ private fun DetailsStep(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            AutoManagedToggleRow(
+                isAutoManaged = uiState.isAutoManaged,
+                onToggle = { onEvent(AddEditMedEvent.IsAutoManagedToggled(it)) },
+            )
+
             if (uiState.editMedId != null && !uiState.isFreeText) {
                 DrugInfoCard(labelPreview = uiState.labelPreview)
             }
@@ -971,6 +977,60 @@ private fun CriticalToggleRow(
             }
             Switch(
                 checked = isCritical,
+                onCheckedChange = onToggle,
+            )
+        }
+    }
+}
+
+// ── Auto-managed toggle ───────────────────────────────────────────────────
+
+@Composable
+private fun AutoManagedToggleRow(
+    isAutoManaged: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val cd = if (isAutoManaged) {
+        stringResource(R.string.cd_auto_managed_toggle_on)
+    } else {
+        stringResource(R.string.cd_auto_managed_toggle_off)
+    }
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = cd },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.SettingsSuggest,
+                contentDescription = null,
+                tint = if (isAutoManaged) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(20.dp)
+                    .padding(top = 2.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.auto_managed_toggle_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.auto_managed_toggle_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            Switch(
+                checked = isAutoManaged,
                 onCheckedChange = onToggle,
             )
         }
