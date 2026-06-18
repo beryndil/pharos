@@ -38,9 +38,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.beryndil.pharos.R
+import com.beryndil.pharos.contacts.ui.ContactAutocompleteField
+import com.beryndil.pharos.contacts.ui.PharmacyAutocompleteField
 import com.beryndil.pharos.supply.AddEditSupplyEvent
 import com.beryndil.pharos.supply.AddEditSupplyUiState
-import com.beryndil.pharos.ui.util.PhoneVisualTransformation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,29 +175,18 @@ fun AddEditSupplyScreen(
                 )
             }
             item {
-                OutlinedTextField(
+                ContactAutocompleteField(
                     value = uiState.prescriberName,
                     onValueChange = { onEvent(AddEditSupplyEvent.PrescriberNameChanged(it)) },
-                    label = { Text(stringResource(R.string.label_prescriber)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Words,
-                        imeAction = ImeAction.Next,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = uiState.prescriberPhone,
-                    onValueChange = { onEvent(AddEditSupplyEvent.PrescriberPhoneChanged(it)) },
-                    label = { Text(stringResource(R.string.label_prescriber_phone)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
-                        imeAction = ImeAction.Next,
-                    ),
-                    visualTransformation = PhoneVisualTransformation(),
+                    label = stringResource(R.string.label_prescriber),
+                    suggestions = uiState.prescriberSuggestions,
+                    onSuggestionPicked = { onEvent(AddEditSupplyEvent.PrescriberSuggestionPicked(it)) },
+                    practiceValue = uiState.prescriberPractice,
+                    onPracticeChange = { onEvent(AddEditSupplyEvent.PrescriberPracticeChanged(it)) },
+                    practiceLabel = stringResource(R.string.label_prescriber_practice),
+                    phoneValue = uiState.prescriberPhone,
+                    onPhoneChange = { onEvent(AddEditSupplyEvent.PrescriberPhoneChanged(it)) },
+                    phoneLabel = stringResource(R.string.label_prescriber_phone),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -209,29 +199,15 @@ fun AddEditSupplyScreen(
                 )
             }
             item {
-                OutlinedTextField(
+                PharmacyAutocompleteField(
                     value = uiState.pharmacyName,
                     onValueChange = { onEvent(AddEditSupplyEvent.PharmacyNameChanged(it)) },
-                    label = { Text(stringResource(R.string.label_pharmacy)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Words,
-                        imeAction = ImeAction.Next,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = uiState.pharmacyPhone,
-                    onValueChange = { onEvent(AddEditSupplyEvent.PharmacyPhoneChanged(it)) },
-                    label = { Text(stringResource(R.string.label_pharmacy_phone)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
-                        imeAction = ImeAction.Next,
-                    ),
-                    visualTransformation = PhoneVisualTransformation(),
+                    label = stringResource(R.string.label_pharmacy),
+                    suggestions = uiState.pharmacySuggestions,
+                    onSuggestionPicked = { onEvent(AddEditSupplyEvent.PharmacySuggestionPicked(it)) },
+                    phoneValue = uiState.pharmacyPhone,
+                    onPhoneChange = { onEvent(AddEditSupplyEvent.PharmacyPhoneChanged(it)) },
+                    phoneLabel = stringResource(R.string.label_pharmacy_phone),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

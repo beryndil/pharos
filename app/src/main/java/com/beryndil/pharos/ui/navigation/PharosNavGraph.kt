@@ -343,7 +343,10 @@ fun PharosNavGraph(
         // ── Add supply ────────────────────────────────────────────────────
         composable(NavRoute.AddSupply.route) {
             val viewModel: AddEditSupplyViewModel = viewModel(
-                factory = AddEditSupplyViewModel.factory(supplyRepository = supplyRepository),
+                factory = AddEditSupplyViewModel.factory(
+                    supplyRepository = supplyRepository,
+                    contactRepository = contactRepository,
+                ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             AddEditSupplyScreen(
@@ -390,6 +393,7 @@ fun PharosNavGraph(
             val viewModel: AddEditSupplyViewModel = viewModel(
                 factory = AddEditSupplyViewModel.factory(
                     supplyRepository = supplyRepository,
+                    contactRepository = contactRepository,
                     editSupplyId = supplyId,
                 ),
             )
