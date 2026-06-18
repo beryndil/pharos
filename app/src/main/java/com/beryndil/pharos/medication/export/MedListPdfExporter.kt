@@ -12,10 +12,12 @@ import com.beryndil.pharos.data.regimen.entity.MedicationStatus
 import com.beryndil.pharos.data.regimen.entity.ScheduleEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleType
 import com.beryndil.pharos.settings.UserProfile
+import com.beryndil.pharos.ui.util.formatPhoneDisplay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.OutputStream
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -153,9 +155,13 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
             y += titlePaint.textSize + 4f
         }
         if (userProfile != null) {
+            val dobFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
             listOfNotNull(
-                userProfile.dateOfBirth?.let { "DOB: $it" },
-                userProfile.phone,
+                userProfile.dateOfBirth?.let { raw ->
+                    val parsed = runCatching { LocalDate.parse(raw) }.getOrNull()
+                    "DOB: ${parsed?.format(dobFormatter) ?: raw}"
+                },
+                userProfile.phone?.let { formatPhoneDisplay(it) },
                 userProfile.address,
             ).forEach { line ->
                 y += drawFull(line, y, headerSubPaint) + 3f
@@ -174,8 +180,8 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
                 val ecLine = buildString {
                     if (!userProfile.emergencyContactName.isNullOrBlank()) append(userProfile.emergencyContactName)
                     if (!userProfile.emergencyContactPhone.isNullOrBlank()) {
-                        if (isNotEmpty()) append("  ") else Unit
-                        append(userProfile.emergencyContactPhone)
+                        if (isNotEmpty()) append("  ")
+                        append(formatPhoneDisplay(userProfile.emergencyContactPhone))
                     }
                 }
                 y += drawFull("Emergency contact: $ecLine", y, headerSubPaint) + 3f
@@ -278,7 +284,7 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
             if (options.includePrescriber && !med.prescriber.isNullOrBlank()) {
                 val value = buildString {
                     append(med.prescriber)
-                    if (!med.prescriberPhone.isNullOrBlank()) append("  ·  ${med.prescriberPhone}")
+                    if (!med.prescriberPhone.isNullOrBlank()) append("  ·  ${formatPhoneDisplay(med.prescriberPhone)}")
                 }
                 newPageIfNeeded(24f)
                 drawRow("PRESCRIBER", value)
@@ -287,7 +293,7 @@ class MedListPdfExporter(private val db: RegimenDatabase) {
             if (options.includePharmacy && !med.pharmacy.isNullOrBlank()) {
                 val value = buildString {
                     append(med.pharmacy)
-                    if (!med.pharmacyPhone.isNullOrBlank()) append("  ·  ${med.pharmacyPhone}")
+                    if (!med.pharmacyPhone.isNullOrBlank()) append("  ·  ${formatPhoneDisplay(med.pharmacyPhone)}")
                 }
                 newPageIfNeeded(24f)
                 drawRow("PHARMACY", value)
