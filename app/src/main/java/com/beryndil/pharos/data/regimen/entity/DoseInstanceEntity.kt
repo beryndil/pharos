@@ -37,7 +37,13 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.RESTRICT,
         ),
     ],
-    indices = [Index("medicationId"), Index("scheduleId"), Index("dueEpochMs"), Index("state")],
+    indices = [
+        Index("medicationId"),
+        Index("scheduleId"),
+        Index("dueEpochMs"),
+        Index("state"),
+        Index(value = ["scheduleId", "dueEpochMs"], unique = true),
+    ],
 )
 data class DoseInstanceEntity(
     @PrimaryKey val id: String,

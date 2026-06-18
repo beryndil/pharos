@@ -24,7 +24,7 @@ object RegimenDatabaseFactory {
      * AND by the newer-schema guard to detect on-disk databases from future app versions.
      * Keep in sync with [RegimenDatabase]'s `@Database` annotation.
      */
-    const val CURRENT_VERSION = 11
+    const val CURRENT_VERSION = 12
 
     /**
      * v1 → v2 (Slice 5): adds the append-only [dose_transitions] history table. Additive only —
@@ -180,6 +180,35 @@ object RegimenDatabaseFactory {
     }
 
     /**
+     * v11 → v12: deduplicates dose_instances and adds a UNIQUE index on (scheduleId, dueEpochMs).
+     *
+     * Root cause: topUpGeneration() had a TOCTOU race — getDueTimesForSchedule() and the subsequent
+     * insert were not atomic. Two concurrent invocations (startup + onReRegistration) both read an
+     * empty set and both inserted the same instances, creating duplicate rows with different UUIDs
+     * but identical scheduleId + dueEpochMs.
+     *
+     * The dedup step keeps the row with the lowest rowid (oldest insert) per pair. Since duplicates
+     * were always created atomically by the same race, both copies will be in the same state —
+     * MIN(rowid) is safe and avoids complex multi-column priority logic.
+     *
+     * The unique index prevents future races from inserting duplicates (insertAll uses IGNORE
+     * conflict strategy, so a racing second insert silently skips the duplicate row).
+     */
+    val MIGRATION_11_12: Migration = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "DELETE FROM dose_instances WHERE rowid NOT IN (" +
+                    "SELECT MIN(rowid) FROM dose_instances GROUP BY scheduleId, dueEpochMs" +
+                    ")",
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_dose_instances_scheduleId_dueEpochMs` " +
+                    "ON `dose_instances` (`scheduleId`, `dueEpochMs`)",
+            )
+        }
+    }
+
+    /**
      * Builds [RegimenDatabase] with a newer-schema version guard.
      *
      * @param openHelperFactory SQLCipher [net.zetetic.database.sqlcipher.SupportFactory] in
@@ -201,7 +230,7 @@ object RegimenDatabaseFactory {
         enforceSchemaVersion(context, passphrase)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
             .build()
     }
 
