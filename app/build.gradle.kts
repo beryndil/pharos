@@ -27,13 +27,16 @@ android {
     }
 
     signingConfigs {
-        // Release signing: if keystore.properties (gitignored) exists, sign with Dave's real
-        // release keystore — required for an installable, updatable sideload/Play build. Otherwise
-        // fall back to the debug keystore so CI / a fresh checkout can still produce a verifiable
-        // R8-minified APK without credentials (DECISIONS.md S11-A1, RELEASE-1).
+        // Release signing: credentials live at ~/.secrets/pharos/keystore.properties (mode 600,
+        // outside the project tree). Falls back to project-root keystore.properties for legacy
+        // compatibility, then to the debug keystore so CI / a fresh checkout still produces a
+        // verifiable R8-minified APK without credentials (DECISIONS.md S11-A1, RELEASE-1).
         create("release") {
-            val keystorePropsFile = rootProject.file("keystore.properties")
-            if (keystorePropsFile.exists()) {
+            val userHome = System.getProperty("user.home") ?: ""
+            val keystorePropsFile =
+                file("$userHome/.secrets/pharos/keystore.properties").takeIf { it.exists() }
+                    ?: rootProject.file("keystore.properties").takeIf { it.exists() }
+            if (keystorePropsFile != null) {
                 val props = Properties().apply {
                     keystorePropsFile.inputStream().use { stream -> load(stream) }
                 }
