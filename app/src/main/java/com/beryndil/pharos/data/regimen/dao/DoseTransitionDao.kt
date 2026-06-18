@@ -49,4 +49,11 @@ interface DoseTransitionDao {
      */
     @Query("DELETE FROM dose_transitions WHERE medicationId = :medicationId")
     suspend fun deleteByMedication(medicationId: String)
+
+    /**
+     * Delete all transition records for a single dose instance. Must run before
+     * [DoseInstanceDao.deleteById] to satisfy the FK RESTRICT constraint.
+     */
+    @Query("DELETE FROM dose_transitions WHERE doseInstanceId = :doseInstanceId")
+    suspend fun deleteByDoseInstance(doseInstanceId: String)
 }
