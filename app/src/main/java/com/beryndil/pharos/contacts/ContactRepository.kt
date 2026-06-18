@@ -73,23 +73,28 @@ class ContactRepository(
         val trimmed = name.trim()
         if (trimmed.isBlank()) return
         val existing = prescriberDao.getByName(trimmed)
+        val contactId: String
         if (existing == null) {
+            val newId = UUID.randomUUID().toString()
             prescriberDao.upsert(
                 PrescriberEntity(
-                    id = UUID.randomUUID().toString(),
+                    id = newId,
                     name = trimmed,
                     phone = phone?.trim()?.ifEmpty { null },
                     practice = practice?.trim()?.ifEmpty { null },
                     createdAtEpochMs = System.currentTimeMillis(),
                 ),
             )
+            contactId = newId
         } else {
             val newPhone = if (phone != null && phone.trim().isNotEmpty()) phone.trim() else existing.phone
             val newPractice = if (!practice.isNullOrBlank()) practice.trim() else existing.practice
             if (newPhone != existing.phone || newPractice != existing.practice) {
                 prescriberDao.update(existing.copy(phone = newPhone, practice = newPractice))
             }
+            contactId = existing.id
         }
+        if (settingDao.get(KEY_DEFAULT_PRESCRIBER) == null) setDefaultPrescriberId(contactId)
     }
 
     /**
@@ -101,18 +106,25 @@ class ContactRepository(
         val trimmed = name.trim()
         if (trimmed.isBlank()) return
         val existing = pharmacyDao.getByName(trimmed)
+        val contactId: String
         if (existing == null) {
+            val newId = UUID.randomUUID().toString()
             pharmacyDao.upsert(
                 PharmacyEntity(
-                    id = UUID.randomUUID().toString(),
+                    id = newId,
                     name = trimmed,
                     phone = phone?.trim()?.ifEmpty { null },
                     createdAtEpochMs = System.currentTimeMillis(),
                 ),
             )
-        } else if (phone != null && phone.trim().isNotEmpty() && existing.phone != phone.trim()) {
-            pharmacyDao.update(existing.copy(phone = phone.trim()))
+            contactId = newId
+        } else {
+            if (phone != null && phone.trim().isNotEmpty() && existing.phone != phone.trim()) {
+                pharmacyDao.update(existing.copy(phone = phone.trim()))
+            }
+            contactId = existing.id
         }
+        if (settingDao.get(KEY_DEFAULT_PHARMACY) == null) setDefaultPharmacyId(contactId)
     }
 
     // ── Manage screen CRUD ────────────────────────────────────────────────

@@ -16,8 +16,8 @@ android {
         applicationId = "com.beryndil.pharos"
         minSdk = 26
         targetSdk = 35
-        versionCode = 95
-        versionName = "0.9.1-alpha"
+        versionCode = 96
+        versionName = "0.9.2-alpha"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
