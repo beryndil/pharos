@@ -126,9 +126,10 @@ class ScheduleRepository(
                 nowMs = nowMs,
             )
 
-            for (instance in instances) {
-                doseInstanceDao.insert(instance)
-            }
+            // insertAll batches into one DB transaction → one Room Flow invalidation per schedule
+            // instead of one per row. IGNORE conflict strategy handles any duplicates that slip
+            // through the existingDueTimes pre-filter.
+            if (instances.isNotEmpty()) doseInstanceDao.insertAll(instances)
         }
     }
 

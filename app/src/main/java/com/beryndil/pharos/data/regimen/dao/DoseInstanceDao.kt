@@ -24,6 +24,11 @@ interface DoseInstanceDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(dose: DoseInstanceEntity)
 
+    // Room wraps @Insert(list) in a single transaction → one DB invalidation for the whole batch.
+    // Use IGNORE so duplicate due-times are silently skipped without aborting the batch.
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(doses: List<DoseInstanceEntity>)
+
     // ── state transitions ─────────────────────────────────────────────────────
 
     @Query("UPDATE dose_instances SET state = 'DUE' WHERE id = :id AND state = 'SCHEDULED'")

@@ -11,6 +11,8 @@ import com.beryndil.pharos.data.regimen.entity.DoseTransitionEntity
 import com.beryndil.pharos.dose.DoseStateMachine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.onEach
 import java.time.Instant
 import java.time.ZoneId
 
@@ -30,6 +32,7 @@ class DoseRepository(
 ) {
 
     /** Today's actionable + upcoming doses (DUE / SNOOZED / SCHEDULED before tomorrow). */
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     fun observeTodayDoses(): Flow<List<DoseRow>> {
         val scheduledFrom = startOfDayEpochMs()
         val before = startOfTomorrowEpochMs()
@@ -38,8 +41,6 @@ class DoseRepository(
             doseInstanceDao.observeActionable(scheduledFrom, before),
             medicationDao.observeAll(),
         ) { doses, meds ->
-            val byState = doses.groupBy { it.state }.mapValues { it.value.size }
-            DebugLogger.log("TodayDiag", "observeActionable emit: ${doses.size} instances $byState, ${meds.size} meds in DB")
             val byId = meds.associateBy { it.id }
             val rows = doses.mapNotNull { d ->
                 byId[d.medicationId]?.let { m ->
@@ -54,24 +55,26 @@ class DoseRepository(
                     )
                 }
             }
-            if (rows.size != doses.size) {
-                DebugLogger.log("TodayDiag", "  WARNING: ${doses.size - rows.size} instances had no matching medication in DB")
-            }
-            // Per-row breakdown so duplicates (same med in multiple states/times) are visible.
+            rows
+        }
+        // Coalesce rapid-fire Room invalidations (e.g. topUpGeneration writing 90 days of
+        // instances one schedule at a time) into a single downstream emission.
+        .debounce(50L)
+        .onEach { rows ->
+            val byState = rows.groupBy { it.state }.mapValues { it.value.size }
+            DebugLogger.log("TodayDiag", "observeActionable emit: ${rows.size} rows $byState")
             val nowMs = now()
             rows.forEach { r ->
                 val minsFromNow = (r.dueEpochMs - nowMs) / 60_000L
                 val offset = if (minsFromNow >= 0) "+${minsFromNow}min" else "${minsFromNow}min"
                 DebugLogger.log("TodayDiag", "  row medId=${r.medicationId.take(8)} doseId=${r.doseId.take(8)} state=${r.state} due=$offset")
             }
-            // Flag if the same medication appears more than once (expected for multi-dose/day; logged for clarity).
             rows.groupBy { it.medicationId }.forEach { (medId, medRows) ->
                 if (medRows.size > 1) {
                     val states = medRows.joinToString { it.state.name }
                     DebugLogger.log("TodayDiag", "  MULTI-ROW medId=${medId.take(8)}: ${medRows.size} rows [$states]")
                 }
             }
-            rows
         }
     }
 
