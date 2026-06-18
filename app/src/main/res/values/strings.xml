@@ -847,5 +847,50 @@
 
     <!-- ── Common actions ─────────────────────────────────────────────────── -->
     <string name="action_save">Save</string>
+    <string name="action_edit">Edit</string>
+
+    <!-- ── Supplies ──────────────────────────────────────────────────────────── -->
+    <string name="screen_supplies">Supplies</string>
+    <string name="screen_add_supply">Add supply</string>
+    <string name="screen_edit_supply">Edit supply</string>
+    <string name="action_supplies">Supplies</string>
+    <string name="cd_add_supply">Add supply</string>
+
+    <string name="empty_supplies_title">No supplies</string>
+    <string name="empty_supplies_body">Track non-drug supplies like sensors, pods, and needles.</string>
+
+    <string name="label_supply_name">Supply name (e.g., Dexcom G7 Sensors)</string>
+    <string name="label_supply_unit">Unit (e.g., sensors, pods, needles)</string>
+    <string name="label_supply_unit_hint">sensors, pods, needles, pads…</string>
+    <string name="label_supply_initial_count">Initial count (optional)</string>
+    <string name="label_supply_low_threshold">Low supply warning threshold (optional)</string>
+    <string name="label_supply_low_threshold_hint">Warn when on-hand drops to or below this number (0 = off)</string>
+
+    <string name="supply_section_prescriber">Prescriber</string>
+    <string name="supply_section_pharmacy">Pharmacy</string>
+    <string name="supply_section_history">History</string>
+
+    <string name="supply_no_count_yet">No count recorded yet</string>
+    <string name="supply_low_warning">Low supply</string>
+
+    <string name="supply_action_log_usage">Log usage</string>
+    <string name="supply_action_log_restock">Log restock</string>
+    <string name="supply_action_adjust">Adjust count</string>
+    <string name="supply_action_end">End supply</string>
+
+    <string name="supply_event_initial">Initial count</string>
+    <string name="supply_event_restock">Restock</string>
+    <string name="supply_event_usage">Usage</string>
+    <string name="supply_event_adjustment">Adjustment</string>
+
+    <string name="supply_dialog_log_usage_title">Log usage</string>
+    <string name="supply_dialog_log_usage_confirm">Log</string>
+    <string name="supply_dialog_log_restock_title">Log restock</string>
+    <string name="supply_dialog_log_restock_confirm">Log</string>
+    <string name="supply_dialog_adjust_title">Adjust count</string>
+    <string name="supply_dialog_adjust_body">Set the current on-hand count to the correct value.</string>
+    <string name="supply_dialog_quantity_label">Quantity</string>
+    <string name="supply_dialog_end_title">End supply</string>
+    <string name="supply_dialog_end_body">This supply will be marked as ended and removed from your active list. The history is preserved.</string>
 
 </resources>

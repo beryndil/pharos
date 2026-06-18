@@ -52,6 +52,12 @@ import com.beryndil.pharos.settings.ui.AboutScreen
 import com.beryndil.pharos.settings.ui.LicenseScreen
 import com.beryndil.pharos.settings.ui.SettingsScreen
 import com.beryndil.pharos.settings.ui.UserProfileScreen
+import com.beryndil.pharos.supply.AddEditSupplyViewModel
+import com.beryndil.pharos.supply.SupplyDetailViewModel
+import com.beryndil.pharos.supply.SupplyListViewModel
+import com.beryndil.pharos.supply.ui.AddEditSupplyScreen
+import com.beryndil.pharos.supply.ui.SupplyDetailScreen
+import com.beryndil.pharos.supply.ui.SupplyListScreen
 
 /**
  * The Pharos nav graph.
@@ -75,6 +81,7 @@ fun PharosNavGraph(
     val scheduleRepository = app.appContainer.scheduleRepository
     val doseRepository = app.appContainer.doseRepository
     val refillRepository = app.appContainer.refillRepository
+    val supplyRepository = app.appContainer.supplyRepository
     val drugLabelRepository = app.appContainer.drugLabelRepository
     val backupRepository = app.appContainer.backupRepository
     val autoBackupManager = app.appContainer.autoBackupManager
@@ -185,6 +192,9 @@ fun PharosNavGraph(
                 },
                 onOpenSavedContacts = {
                     navController.navigate(NavRoute.SavedContacts.route)
+                },
+                onOpenSupplies = {
+                    navController.navigate(NavRoute.Supplies.route)
                 },
                 onOpenBackup = {
                     navController.navigate(NavRoute.BackupRestore.route)
@@ -312,6 +322,84 @@ fun PharosNavGraph(
             SavedContactsScreen(
                 uiState = uiState,
                 onEvent = viewModel::onEvent,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Supply list ───────────────────────────────────────────────────
+        composable(NavRoute.Supplies.route) {
+            val viewModel: SupplyListViewModel = viewModel(
+                factory = SupplyListViewModel.factory(supplyRepository = supplyRepository),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            SupplyListScreen(
+                uiState = uiState,
+                onAddSupply = { navController.navigate(NavRoute.AddSupply.route) },
+                onSupplyClicked = { supplyId ->
+                    navController.navigate(NavRoute.SupplyDetail.buildRoute(supplyId))
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Add supply ────────────────────────────────────────────────────
+        composable(NavRoute.AddSupply.route) {
+            val viewModel: AddEditSupplyViewModel = viewModel(
+                factory = AddEditSupplyViewModel.factory(supplyRepository = supplyRepository),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            AddEditSupplyScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onDone = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Supply detail ─────────────────────────────────────────────────
+        composable(
+            route = NavRoute.SupplyDetail.route,
+            arguments = listOf(
+                navArgument(NavRoute.SupplyDetail.ARG_SUPPLY_ID) { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val supplyId = backStackEntry.arguments?.getString(NavRoute.SupplyDetail.ARG_SUPPLY_ID).orEmpty()
+            val viewModel: SupplyDetailViewModel = viewModel(
+                factory = SupplyDetailViewModel.factory(
+                    supplyRepository = supplyRepository,
+                    supplyId = supplyId,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            SupplyDetailScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onEdit = {
+                    navController.navigate(NavRoute.EditSupply.buildRoute(supplyId))
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Edit supply ───────────────────────────────────────────────────
+        composable(
+            route = NavRoute.EditSupply.route,
+            arguments = listOf(
+                navArgument(NavRoute.EditSupply.ARG_SUPPLY_ID) { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val supplyId = backStackEntry.arguments?.getString(NavRoute.EditSupply.ARG_SUPPLY_ID).orEmpty()
+            val viewModel: AddEditSupplyViewModel = viewModel(
+                factory = AddEditSupplyViewModel.factory(
+                    supplyRepository = supplyRepository,
+                    editSupplyId = supplyId,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            AddEditSupplyScreen(
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                onDone = { navController.popBackStack() },
                 onBack = { navController.popBackStack() },
             )
         }
@@ -484,6 +572,22 @@ sealed class NavRoute(val route: String) {
         const val ARG_MED_ID = "medId"
 
         fun buildRoute(medId: String): String = "medications/$medId/reference"
+    }
+
+    data object Supplies : NavRoute("supplies")
+
+    data object AddSupply : NavRoute("supplies/add")
+
+    data object SupplyDetail : NavRoute("supplies/{supplyId}") {
+        const val ARG_SUPPLY_ID = "supplyId"
+
+        fun buildRoute(supplyId: String): String = "supplies/$supplyId"
+    }
+
+    data object EditSupply : NavRoute("supplies/{supplyId}/edit") {
+        const val ARG_SUPPLY_ID = "supplyId"
+
+        fun buildRoute(supplyId: String): String = "supplies/$supplyId/edit"
     }
 
     data object BackupRestore : NavRoute("backup")

@@ -36,6 +36,7 @@ import com.beryndil.pharos.refill.AndroidRefillNotifier
 import com.beryndil.pharos.refill.LowSupplyCheckWorker
 import com.beryndil.pharos.refill.RefillNotifier
 import com.beryndil.pharos.refill.RefillRepository
+import com.beryndil.pharos.supply.SupplyRepository
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
@@ -207,6 +208,19 @@ class AppContainer(private val applicationContext: Context) {
      */
     val refillNotifier: RefillNotifier by lazy {
         AndroidRefillNotifier(applicationContext)
+    }
+
+    // ── Supply tracking ────────────────────────────────────────────────────────
+
+    /**
+     * Repository for non-drug supply tracking (needles, pods, sensors, etc.).
+     * Architecturally isolated from the dose engine — supply counts NEVER affect reminders (Law 1).
+     */
+    val supplyRepository: SupplyRepository by lazy {
+        SupplyRepository(
+            supplyDao = regimenDatabase.supplyDao(),
+            supplyRecordDao = regimenDatabase.supplyRecordDao(),
+        )
     }
 
     // ── Drug reference (Slice 8, spec §2.10 / §3.2 / §3.5) ──────────────────

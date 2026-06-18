@@ -12,6 +12,8 @@ import com.beryndil.pharos.data.regimen.dao.RestoreDao
 import com.beryndil.pharos.data.regimen.dao.ScheduleDao
 import com.beryndil.pharos.data.regimen.dao.SchedulePhaseDao
 import com.beryndil.pharos.data.regimen.dao.SettingDao
+import com.beryndil.pharos.data.regimen.dao.SupplyDao
+import com.beryndil.pharos.data.regimen.dao.SupplyRecordDao
 import com.beryndil.pharos.data.regimen.entity.DoseInstanceEntity
 import com.beryndil.pharos.data.regimen.entity.DoseTransitionEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
@@ -21,6 +23,8 @@ import com.beryndil.pharos.data.regimen.entity.RefillRecordEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleEntity
 import com.beryndil.pharos.data.regimen.entity.SchedulePhaseEntity
 import com.beryndil.pharos.data.regimen.entity.SettingEntity
+import com.beryndil.pharos.data.regimen.entity.SupplyEntity
+import com.beryndil.pharos.data.regimen.entity.SupplyRecordEntity
 
 /**
  * Room database for the user's regimen: medications, schedules, dose history, refills, settings.
@@ -46,8 +50,10 @@ import com.beryndil.pharos.data.regimen.entity.SettingEntity
         SettingEntity::class,
         PrescriberEntity::class,
         PharmacyEntity::class,
+        SupplyEntity::class,
+        SupplyRecordEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 abstract class RegimenDatabase : RoomDatabase() {
@@ -61,6 +67,8 @@ abstract class RegimenDatabase : RoomDatabase() {
     abstract fun settingDao(): SettingDao
     abstract fun prescriberDao(): PrescriberDao
     abstract fun pharmacyDao(): PharmacyDao
+    abstract fun supplyDao(): SupplyDao
+    abstract fun supplyRecordDao(): SupplyRecordDao
 
     /** Backup/restore operations — see [RestoreDao] for usage contract. */
     abstract fun restoreDao(): RestoreDao

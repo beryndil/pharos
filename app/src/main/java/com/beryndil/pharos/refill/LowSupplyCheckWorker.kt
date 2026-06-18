@@ -33,6 +33,7 @@ class LowSupplyCheckWorker(
         return runCatching {
             val container = (applicationContext as Application).appContainer
             val refillRepository = container.refillRepository
+            val supplyRepository = container.supplyRepository
             val refillNotifier = container.refillNotifier
 
             refillNotifier.ensureRefillChannel()
@@ -45,6 +46,16 @@ class LowSupplyCheckWorker(
                     daysLeft = summary.daysUntilEmpty ?: 0,
                 )
             }
+
+            val lowSupplyItems = supplyRepository.getLowSupplies()
+            for (item in lowSupplyItems) {
+                refillNotifier.postLowSupplyAlert(
+                    medicationId = item.supplyId,
+                    medName = item.supplyName,
+                    daysLeft = 0,
+                )
+            }
+
             Result.success()
         }.getOrElse {
             // Transient failure (DB locked, etc.) — retry once; then give up until next period.

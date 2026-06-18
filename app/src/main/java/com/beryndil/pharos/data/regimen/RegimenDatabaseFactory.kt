@@ -24,7 +24,7 @@ object RegimenDatabaseFactory {
      * AND by the newer-schema guard to detect on-disk databases from future app versions.
      * Keep in sync with [RegimenDatabase]'s `@Database` annotation.
      */
-    const val CURRENT_VERSION = 14
+    const val CURRENT_VERSION = 15
 
     /**
      * v1 → v2 (Slice 5): adds the append-only [dose_transitions] history table. Additive only —
@@ -215,6 +215,47 @@ object RegimenDatabaseFactory {
         }
     }
 
+    /** v14 → v15: adds [supplies] and [supply_records] tables for non-drug supply tracking. */
+    val MIGRATION_14_15: Migration = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `supplies` (" +
+                    "`id` TEXT NOT NULL, " +
+                    "`name` TEXT NOT NULL, " +
+                    "`unit` TEXT NOT NULL, " +
+                    "`prescriberName` TEXT, " +
+                    "`prescriberPhone` TEXT, " +
+                    "`pharmacyName` TEXT, " +
+                    "`pharmacyPhone` TEXT, " +
+                    "`lowThreshold` INTEGER NOT NULL DEFAULT 0, " +
+                    "`notes` TEXT, " +
+                    "`status` TEXT NOT NULL DEFAULT 'ACTIVE', " +
+                    "`createdAtEpochMs` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`id`))",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_supplies_status` ON `supplies` (`status`)",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `supply_records` (" +
+                    "`id` TEXT NOT NULL, " +
+                    "`supplyId` TEXT NOT NULL, " +
+                    "`quantityDelta` INTEGER NOT NULL, " +
+                    "`quantityAfter` INTEGER NOT NULL, " +
+                    "`eventType` TEXT NOT NULL, " +
+                    "`notes` TEXT, " +
+                    "`createdAtEpochMs` INTEGER NOT NULL, " +
+                    "PRIMARY KEY(`id`), " +
+                    "FOREIGN KEY(`supplyId`) REFERENCES `supplies`(`id`) " +
+                    "ON UPDATE NO ACTION ON DELETE RESTRICT)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_supply_records_supplyId` " +
+                    "ON `supply_records` (`supplyId`)",
+            )
+        }
+    }
+
     /** v12 → v13: adds [weekInterval] to [schedules] for every-N-weeks DAYS_OF_WEEK schedules. */
     val MIGRATION_12_13: Migration = object : Migration(12, 13) {
         override fun migrate(db: SupportSQLiteDatabase) {
@@ -244,7 +285,7 @@ object RegimenDatabaseFactory {
         enforceSchemaVersion(context, passphrase)
         return Room.databaseBuilder(context, RegimenDatabase::class.java, DATABASE_NAME)
             .apply { if (openHelperFactory != null) openHelperFactory(openHelperFactory) }
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
             .build()
     }
 
