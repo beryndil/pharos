@@ -190,6 +190,7 @@ class ScheduleRepository(
                 windowStartTime = null,
                 windowEndTime = null,
                 dailyMaxDoses = null,
+                weekInterval = input.weekInterval.coerceAtLeast(1),
                 zoneId = zone,
                 isActive = true,
                 startEpochMs = startMs,
@@ -343,6 +344,7 @@ class ScheduleRepository(
                 type = type,
                 times = times.ifEmpty { listOf(java.time.LocalTime.of(8, 0)) },
                 daysOfWeek = parseDayValues(entity.daysOfWeekJson),
+                weekInterval = entity.weekInterval.coerceAtLeast(1),
             )
 
             ScheduleType.INTERVAL -> {

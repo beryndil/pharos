@@ -87,6 +87,13 @@ data class ScheduleEntity(
      */
     val indication: String? = null,
 
+    /**
+     * For [ScheduleType.DAYS_OF_WEEK]: repeat every N weeks (1 = every week, 2 = every other week).
+     * The anchor is [startEpochMs] — week 0 is the week containing the start date.
+     * Defaults to 1 (weekly) for all other schedule types and existing rows.
+     */
+    val weekInterval: Int = 1,
+
     /** IANA zone string at schedule creation time. Used for all alarm math via DoseClock. */
     val zoneId: String,
 

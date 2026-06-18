@@ -97,6 +97,11 @@
     <string name="cd_schedule_add_time">Add a dose time</string>
     <string name="schedule_times_label">Times</string>
     <string name="schedule_days_label">Days</string>
+    <string name="schedule_week_interval_label">Repeat</string>
+    <string name="schedule_week_interval_1">Every week</string>
+    <string name="schedule_week_interval_2">Every 2 weeks</string>
+    <string name="schedule_week_interval_3">Every 3 weeks</string>
+    <string name="schedule_week_interval_4">Every 4 weeks</string>
     <string name="schedule_interval_label">Every</string>
     <string name="schedule_interval_hours_suffix">hours</string>
     <string name="schedule_anchor_schedule">From schedule</string>

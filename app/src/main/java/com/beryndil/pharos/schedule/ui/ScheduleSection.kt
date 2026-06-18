@@ -215,6 +215,32 @@ private fun DaysOfWeekSection(
             )
         }
     }
+
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = stringResource(R.string.schedule_week_interval_label),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+    Spacer(Modifier.height(4.dp))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        listOf(
+            1 to R.string.schedule_week_interval_1,
+            2 to R.string.schedule_week_interval_2,
+            3 to R.string.schedule_week_interval_3,
+            4 to R.string.schedule_week_interval_4,
+        ).forEach { (weeks, labelRes) ->
+            val label = stringResource(labelRes)
+            FilterChip(
+                selected = input.weekInterval == weeks,
+                onClick = { onInputChanged(input.copy(weekInterval = weeks)) },
+                label = { Text(label) },
+                modifier = Modifier.semantics { contentDescription = label },
+            )
+        }
+    }
 }
 
 // ── Interval ──────────────────────────────────────────────────────────────────

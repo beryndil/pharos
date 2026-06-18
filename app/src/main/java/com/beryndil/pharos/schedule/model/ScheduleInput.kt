@@ -16,6 +16,8 @@ data class ScheduleInput(
 
     // DAYS_OF_WEEK
     val daysOfWeek: Set<DayOfWeek> = emptySet(),
+    /** Repeat every N weeks (1 = every week, 2 = every other week, etc.). DAYS_OF_WEEK only. */
+    val weekInterval: Int = 1,
 
     // INTERVAL
     val intervalHours: Int = 8,

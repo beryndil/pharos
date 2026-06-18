@@ -13,6 +13,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -179,11 +180,19 @@ object ScheduleEngine {
         val allowedDays = parseDaysOfWeek(schedule.daysOfWeekJson)
         if (allowedDays.isEmpty()) return emptyList()
 
+        val weekInterval = schedule.weekInterval.coerceAtLeast(1)
+        val startDate: LocalDate = schedule.startEpochMs
+            ?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+            ?: from.atZone(zone).toLocalDate()
+
         return times.flatMap { time ->
             DoseClock.dailyOccurrencesInRange(time, zone, from, to)
                 .filter { instant ->
-                    val dow = ZonedDateTime.ofInstant(instant, zone).dayOfWeek.value
-                    dow in allowedDays
+                    val zdt = ZonedDateTime.ofInstant(instant, zone)
+                    if (zdt.dayOfWeek.value !in allowedDays) return@filter false
+                    if (weekInterval == 1) return@filter true
+                    val weekIndex = ChronoUnit.DAYS.between(startDate, zdt.toLocalDate()) / 7
+                    weekIndex % weekInterval == 0L
                 }
         }.map { it.toEpochMilli() }
     }
