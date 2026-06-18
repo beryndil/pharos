@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.beryndil.pharos.BuildConfig
 import com.beryndil.pharos.PharosApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,8 +52,8 @@ class AlarmReceiver : BroadcastReceiver() {
             } catch (t: Throwable) {
                 // Never silently swallow (Standards §1): log without PHI, then recover by leaving
                 // the engine to re-arm on the next trigger. Re-throwing would crash a system-driven
-                // broadcast for no user benefit.
-                if (BuildConfig.DEBUG) Log.e(TAG, "alarm handling failed for $action", t)
+                // broadcast for no user benefit. action is a constant string — no PHI.
+                Log.e(TAG, "alarm handling failed for $action", t)
             } finally {
                 pending.finish()
             }

@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.beryndil.pharos.BuildConfig
 import com.beryndil.pharos.PharosApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +37,8 @@ class AlarmReRegistrationReceiver : BroadcastReceiver() {
             try {
                 coordinator.onReRegistration(action)
             } catch (t: Throwable) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "re-registration failed for $action", t)
+                // action is a constant string — no PHI.
+                Log.e(TAG, "re-registration failed for $action", t)
             } finally {
                 pending.finish()
             }

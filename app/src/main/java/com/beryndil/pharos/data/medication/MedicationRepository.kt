@@ -98,7 +98,10 @@ class MedicationRepository(
                 if (!name.isNullOrBlank()) return name
             }
             null
-        } catch (_: Exception) { null }
+        } catch (e: Exception) {
+            DebugLogger.logError("MedRepo", "findBrandName: drug ref DB read failed", e)
+            null
+        }
     }
 
     /**
@@ -111,7 +114,10 @@ class MedicationRepository(
             drugSearchDao.allBrandNamesForIngredients(ingredientRxcuis).map { name ->
                 DrugSearchResult(rxcui = "", name = name, tty = "BN", ingredientRxcuis = emptyList(), ingredientNames = emptyList())
             }
-        } catch (_: Exception) { emptyList() }
+        } catch (e: Exception) {
+            DebugLogger.logError("MedRepo", "findAllBrandSuggestions: drug ref DB read failed", e)
+            emptyList()
+        }
     }
 
     // ── Duplicate-ingredient detection ───────────────────────────────────
@@ -302,7 +308,8 @@ class MedicationRepository(
     fun parseIngredientRxcuis(json: String): List<String> =
         try {
             Json.decodeFromString<List<String>>(json)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            DebugLogger.logError("MedRepo", "parseIngredientRxcuis: malformed JSON", e)
             emptyList()
         }
 

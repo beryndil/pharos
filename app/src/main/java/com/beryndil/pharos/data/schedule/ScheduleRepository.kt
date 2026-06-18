@@ -1,5 +1,6 @@
 package com.beryndil.pharos.data.schedule
 
+import com.beryndil.pharos.core.debug.DebugLogger
 import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
 import com.beryndil.pharos.data.regimen.dao.ScheduleDao
 import com.beryndil.pharos.data.regimen.dao.SchedulePhaseDao
@@ -403,14 +404,16 @@ class ScheduleRepository(
         return try {
             json.decodeFromString<List<String>>(jsonOrNull)
                 .mapNotNull { parseTime(it) }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            DebugLogger.logError("ScheduleRepo", "parseTimes: malformed JSON", e)
             emptyList()
         }
     }
 
     private fun parseTime(hhmm: String): java.time.LocalTime? = try {
         java.time.LocalTime.parse(hhmm)
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        DebugLogger.logError("ScheduleRepo", "parseTime: invalid time string", e)
         null
     }
 
@@ -420,7 +423,8 @@ class ScheduleRepository(
             json.decodeFromString<List<Int>>(jsonOrNull)
                 .mapNotNull { runCatching { java.time.DayOfWeek.of(it) }.getOrNull() }
                 .toSet()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            DebugLogger.logError("ScheduleRepo", "parseDayValues: malformed JSON", e)
             emptySet()
         }
     }

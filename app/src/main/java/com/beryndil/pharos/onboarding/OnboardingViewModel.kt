@@ -76,33 +76,33 @@ data class OnboardingUiState(
 
 // ── Events ───────────────────────────────────────────────────────────────────────────────────
 
-sealed class OnboardingEvent {
+sealed interface OnboardingEvent {
     /** Advance to the next step. */
-    object NextStep : OnboardingEvent()
+    object NextStep : OnboardingEvent
 
     /** Return to the previous step. No-op on the first step. */
-    object PreviousStep : OnboardingEvent()
+    object PreviousStep : OnboardingEvent
 
     /** Schedule the test alarm (Law 6). Best-effort: failure marks [OnboardingUiState.testReminderSent] true anyway. */
-    object SendTestReminder : OnboardingEvent()
+    object SendTestReminder : OnboardingEvent
 
     /** Persist completion and signal [OnboardingUiState.isComplete]. Called from the CONTACTS step. */
-    object CompleteOnboarding : OnboardingEvent()
+    object CompleteOnboarding : OnboardingEvent
 
     // Profile field events
-    data class ProfileNameChanged(val value: String) : OnboardingEvent()
-    data class ProfileDobChanged(val date: LocalDate?) : OnboardingEvent()
-    data class ProfilePhoneChanged(val value: String) : OnboardingEvent()
-    data class ProfileAllergiesChanged(val value: String) : OnboardingEvent()
+    data class ProfileNameChanged(val value: String) : OnboardingEvent
+    data class ProfileDobChanged(val date: LocalDate?) : OnboardingEvent
+    data class ProfilePhoneChanged(val value: String) : OnboardingEvent
+    data class ProfileAllergiesChanged(val value: String) : OnboardingEvent
 
     // Prescriber field events
-    data class PrescriberNameChanged(val value: String) : OnboardingEvent()
-    data class PrescriberPhoneChanged(val value: String) : OnboardingEvent()
-    data class PrescriberPracticeChanged(val value: String) : OnboardingEvent()
+    data class PrescriberNameChanged(val value: String) : OnboardingEvent
+    data class PrescriberPhoneChanged(val value: String) : OnboardingEvent
+    data class PrescriberPracticeChanged(val value: String) : OnboardingEvent
 
     // Pharmacy field events
-    data class PharmacyNameChanged(val value: String) : OnboardingEvent()
-    data class PharmacyPhoneChanged(val value: String) : OnboardingEvent()
+    data class PharmacyNameChanged(val value: String) : OnboardingEvent
+    data class PharmacyPhoneChanged(val value: String) : OnboardingEvent
 }
 
 // ── ViewModel ────────────────────────────────────────────────────────────────────────────────

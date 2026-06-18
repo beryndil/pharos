@@ -514,6 +514,7 @@ class AddEditMedicationViewModel(
                 }
             }
             } catch (e: Exception) {
+                DebugLogger.logError("AddEditMed", "save failed", e)
                 _uiState.update { it.copy(saveError = SaveError.GENERAL) }
             }
         }
