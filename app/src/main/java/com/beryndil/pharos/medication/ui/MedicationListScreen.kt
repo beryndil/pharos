@@ -68,8 +68,6 @@ fun MedicationListScreen(
     onDrugReferenceClicked: (String) -> Unit,
     /** Navigate to the Saved Contacts manage screen (V1.3-F1). */
     onOpenSavedContacts: () -> Unit = {},
-    /** Navigate to the non-drug supplies tracking screen. */
-    onOpenSupplies: () -> Unit = {},
     /** Navigate to backup/restore screen — used in the post-wipe empty-state card. */
     onOpenBackup: () -> Unit,
     /** Navigate to the Legal screen (spec §4.2 — Terms, Privacy, Medical Disclaimer). */
@@ -105,13 +103,6 @@ fun MedicationListScreen(
                                 onClick = {
                                     globalMenuExpanded = false
                                     onOpenSettings()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.action_supplies)) },
-                                onClick = {
-                                    globalMenuExpanded = false
-                                    onOpenSupplies()
                                 },
                             )
                             DropdownMenuItem(

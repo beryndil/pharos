@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsSuggest
@@ -80,6 +81,7 @@ fun TodayScreen(
     uiState: TodayUiState,
     onEvent: (TodayEvent) -> Unit,
     onOpenMedications: () -> Unit,
+    onOpenSupplies: () -> Unit = {},
     onOpenHistory: (String) -> Unit,
     onOpenReliability: () -> Unit,
     onOpenSettings: () -> Unit = {},
@@ -120,6 +122,12 @@ fun TodayScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ListAlt,
                             contentDescription = stringResource(R.string.cd_open_medications),
+                        )
+                    }
+                    IconButton(onClick = onOpenSupplies) {
+                        Icon(
+                            imageVector = Icons.Outlined.Inventory2,
+                            contentDescription = stringResource(R.string.action_supplies),
                         )
                     }
                     IconButton(onClick = onOpenSettings) {

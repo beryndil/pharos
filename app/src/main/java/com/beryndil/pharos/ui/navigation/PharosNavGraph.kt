@@ -134,6 +134,7 @@ fun PharosNavGraph(
                 uiState = uiState,
                 onEvent = viewModel::onEvent,
                 onOpenMedications = { navController.navigate(NavRoute.MedicationList.route) },
+                onOpenSupplies = { navController.navigate(NavRoute.Supplies.route) },
                 onOpenHistory = { medId ->
                     navController.navigate(NavRoute.DoseHistory.buildRoute(medId))
                 },
@@ -192,9 +193,6 @@ fun PharosNavGraph(
                 },
                 onOpenSavedContacts = {
                     navController.navigate(NavRoute.SavedContacts.route)
-                },
-                onOpenSupplies = {
-                    navController.navigate(NavRoute.Supplies.route)
                 },
                 onOpenBackup = {
                     navController.navigate(NavRoute.BackupRestore.route)
