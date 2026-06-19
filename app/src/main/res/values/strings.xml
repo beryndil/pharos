@@ -56,6 +56,9 @@
 
     <string name="section_required">Required</string>
     <string name="section_optional">Optional</string>
+    <string name="section_optional_details">Optional details</string>
+    <string name="cd_optional_details_expand">Expand optional details</string>
+    <string name="cd_optional_details_collapse">Collapse optional details</string>
 
     <!-- ── Schedule (Slice 3) ──────────────────────────────────────────── -->
     <!-- Schedule type chips -->
@@ -644,6 +647,8 @@
     <string name="cd_dose_history_action">View history for %1$s</string>
     <!-- Tap target on a dose card that opens the dose menu (history / delete). -->
     <string name="cd_dose_menu_action">Options for %1$s</string>
+    <!-- Tap target on a dose / PRN card that opens the medication detail screen. %1$s = medication name. -->
+    <string name="cd_dose_detail_action">Open details for %1$s</string>
     <!-- Dose card menu dialog strings. -->
     <string name="today_dose_menu_title_fallback">Dose entry</string>
     <string name="today_dose_delete_body">Remove this dose entry from today\'s list?</string>
@@ -892,5 +897,22 @@
     <string name="supply_dialog_quantity_label">Quantity</string>
     <string name="supply_dialog_end_title">End supply</string>
     <string name="supply_dialog_end_body">This supply will be marked as ended and removed from your active list. The history is preserved.</string>
+
+    <!-- ── Medication detail (read-only summary + reference + history) ──────── -->
+    <string name="screen_medication_detail">Medication</string>
+    <string name="cd_edit_medication">Edit this medication</string>
+    <string name="med_detail_section_regimen">Your medication</string>
+    <string name="med_detail_dose_label">Dose</string>
+    <string name="med_detail_schedule_label">Schedule</string>
+    <string name="med_detail_alarm_times_label">Reminder times</string>
+    <string name="med_detail_status_label">Status</string>
+    <string name="med_status_active">Active</string>
+    <string name="med_status_paused">Paused</string>
+    <!-- %1$d = interval hours -->
+    <string name="med_detail_schedule_interval">Every %1$d hours</string>
+    <!-- %1$s = window open time, %2$s = window close time -->
+    <string name="med_detail_schedule_window">Between %1$s and %2$s</string>
+    <string name="med_detail_no_reference">No drug reference available for manually-entered medications.</string>
+    <string name="med_detail_section_history">Dose history</string>
 
 </resources>

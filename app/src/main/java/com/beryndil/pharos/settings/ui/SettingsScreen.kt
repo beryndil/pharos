@@ -69,6 +69,10 @@ fun SettingsScreen(
     onOpenContacts: () -> Unit = {},
     onOpenReliability: () -> Unit = {},
     onShareDebugLog: () -> Unit = {},
+    /** Navigate to the Medications screen (shared top-bar nav). */
+    onOpenMedications: () -> Unit = {},
+    /** Navigate to the Supplies screen (shared top-bar nav). */
+    onOpenSupplies: () -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -91,6 +95,14 @@ fun SettingsScreen(
                             contentDescription = null,
                         )
                     }
+                },
+                actions = {
+                    com.beryndil.pharos.ui.navigation.PharosTopBarActions(
+                        current = com.beryndil.pharos.ui.navigation.PharosTopBarScreen.SETTINGS,
+                        onOpenMedications = onOpenMedications,
+                        onOpenSupplies = onOpenSupplies,
+                        onOpenSettings = {},
+                    )
                 },
                 scrollBehavior = scrollBehavior,
             )

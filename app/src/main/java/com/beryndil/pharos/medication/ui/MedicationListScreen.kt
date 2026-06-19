@@ -1,5 +1,6 @@
 package com.beryndil.pharos.medication.ui
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,8 +52,11 @@ import com.beryndil.pharos.R
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
 import com.beryndil.pharos.data.regimen.entity.MedicationStatus
+import com.beryndil.pharos.data.regimen.entity.ScheduleType
+import com.beryndil.pharos.medication.MedScheduleInfo
 import com.beryndil.pharos.medication.MedicationListEvent
 import com.beryndil.pharos.medication.MedicationListUiState
+import java.time.LocalTime
 
 /**
  * Shows all active medications with a FAB to add a new one.
@@ -72,6 +77,8 @@ fun MedicationListScreen(
     onOpenBackup: () -> Unit,
     /** Navigate to the Legal screen (spec §4.2 — Terms, Privacy, Medical Disclaimer). */
     onOpenLegal: () -> Unit = {},
+    /** Navigate to the Supplies screen (shared top-bar nav). */
+    onOpenSupplies: () -> Unit = {},
     /** Navigate to the Settings screen (A5-S1 — theme, text size, about/legal). */
     onOpenSettings: () -> Unit = {},
     onEvent: (MedicationListEvent) -> Unit,
@@ -87,6 +94,12 @@ fun MedicationListScreen(
             LargeTopAppBar(
                 title = { Text(stringResource(R.string.screen_medications)) },
                 actions = {
+                    com.beryndil.pharos.ui.navigation.PharosTopBarActions(
+                        current = com.beryndil.pharos.ui.navigation.PharosTopBarScreen.MEDICATIONS,
+                        onOpenMedications = {},
+                        onOpenSupplies = onOpenSupplies,
+                        onOpenSettings = onOpenSettings,
+                    )
                     Box {
                         IconButton(onClick = { globalMenuExpanded = true }) {
                             Icon(
@@ -159,6 +172,7 @@ fun MedicationListScreen(
                         medication = med,
                         substituteForMedName = med.substituteForDrugName,
                         hasSubstituteName = null,
+                        scheduleInfo = uiState.scheduleInfo[med.id],
                         interactionWarnings = uiState.interactionAlerts[med.id] ?: emptyList(),
                         hasFoodNote = med.id in uiState.foodNoteMedIds,
                         onClick = { onMedicationClicked(med.id) },
@@ -211,6 +225,8 @@ private fun MedicationListItem(
     substituteForMedName: String?,
     /** Name of a med that has declared this one as its substitute — for back-reference (V1.3-F2). */
     hasSubstituteName: String?,
+    /** Active-schedule reminder info for this med, or null if none / still loading. */
+    scheduleInfo: MedScheduleInfo?,
     interactionWarnings: List<String>,
     hasFoodNote: Boolean,
     onClick: () -> Unit,
@@ -259,6 +275,14 @@ private fun MedicationListItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = dimmedVariantColor,
                 )
+                val reminderText = scheduleInfo?.let { reminderSummaryText(it) }
+                if (reminderText != null) {
+                    Text(
+                        text = reminderText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = dimmedVariantColor,
+                    )
+                }
                 if (substituteForMedName != null) {
                     Text(
                         text = stringResource(R.string.med_substitute_for, substituteForMedName),
@@ -425,6 +449,50 @@ private fun EmptyMedicationsState(
                 Text(stringResource(R.string.backup_restore_offer_button))
             }
         }
+    }
+}
+
+/**
+ * The reminder line shown under a medication's strength on the list row.
+ *
+ * For schedules with wall-clock times (fixed daily / days-of-week) this is the locale-formatted
+ * times, e.g. "8:00 AM, 8:00 PM". For types without wall-clock times it is the appropriate label —
+ * the interval text for interval schedules, "As needed" for PRN, etc. Returns null when there is no
+ * active schedule (nothing to show). Mirrors the read-only Medication Detail summary.
+ */
+@Composable
+private fun reminderSummaryText(info: MedScheduleInfo): String? {
+    if (info.scheduledTimes.isNotEmpty()) {
+        return formatScheduleTimes(info.scheduledTimes)
+    }
+    val type = info.scheduleType?.let {
+        runCatching { ScheduleType.valueOf(it) }.getOrNull()
+    } ?: return null
+    return when (type) {
+        ScheduleType.FIXED_DAILY -> stringResource(R.string.schedule_type_fixed_daily)
+        ScheduleType.DAYS_OF_WEEK -> stringResource(R.string.schedule_type_days_of_week)
+        ScheduleType.INTERVAL -> info.intervalHours
+            ?.let { stringResource(R.string.med_detail_schedule_interval, it) }
+            ?: stringResource(R.string.schedule_type_interval)
+        ScheduleType.DOSE_WINDOW -> stringResource(R.string.schedule_type_dose_window)
+        ScheduleType.PRN -> stringResource(R.string.schedule_type_prn)
+        ScheduleType.TEMPORARY -> stringResource(R.string.schedule_type_temporary)
+        ScheduleType.TAPER -> stringResource(R.string.schedule_type_taper)
+    }
+}
+
+/** Formats wall-clock times with the device locale (e.g. "8:00 AM, 8:00 PM"). */
+@Composable
+private fun formatScheduleTimes(times: List<LocalTime>): String {
+    val context = LocalContext.current
+    val formatter = DateFormat.getTimeFormat(context)
+    return times.joinToString(", ") { time ->
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, time.hour)
+            set(java.util.Calendar.MINUTE, time.minute)
+            set(java.util.Calendar.SECOND, 0)
+        }
+        formatter.format(cal.time)
     }
 }
 

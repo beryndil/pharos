@@ -10,6 +10,7 @@ import com.beryndil.pharos.data.drugref.DrugLabelRepository
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.schedule.ScheduleRepository
+import com.beryndil.pharos.schedule.ScheduleEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
+import java.time.LocalTime
 
 @Immutable
 data class MedicationListUiState(
@@ -31,6 +33,25 @@ data class MedicationListUiState(
     val interactionAlerts: Map<String, List<String>> = emptyMap(),
     /** medIds for which a food interaction note exists in the cached FDA label. */
     val foodNoteMedIds: Set<String> = emptySet(),
+    /** medId → active-schedule reminder info, for showing alarm time(s) on each row. */
+    val scheduleInfo: Map<String, MedScheduleInfo> = emptyMap(),
+)
+
+/**
+ * The reminder/alarm information for one medication's active schedule, surfaced on the list row.
+ *
+ * The raw schedule fields are exposed (not a pre-formatted string) so the UI layer can format
+ * times with the device locale and resolve labels via string resources — matching the read-only
+ * Medication Detail summary. Empty/null fields mean the schedule type has no wall-clock times.
+ */
+@Immutable
+data class MedScheduleInfo(
+    /** Stored [com.beryndil.pharos.data.regimen.entity.ScheduleType] name, or null if no schedule. */
+    val scheduleType: String?,
+    /** Wall-clock reminder times for fixed/day-of-week schedules. Empty for other types. */
+    val scheduledTimes: List<LocalTime> = emptyList(),
+    /** Interval in hours for interval schedules, or null. */
+    val intervalHours: Int? = null,
 )
 
 sealed interface MedicationListEvent {
@@ -50,18 +71,21 @@ class MedicationListViewModel(
 
     private val _deleteState = MutableStateFlow<Pair<String, String>?>(null)
     private val _drugAlerts = MutableStateFlow(Pair(emptyMap<String, List<String>>(), emptySet<String>()))
+    private val _scheduleInfo = MutableStateFlow<Map<String, MedScheduleInfo>>(emptyMap())
 
     val uiState: StateFlow<MedicationListUiState> = combine(
         medicationRepository.observeAllMedications(),
         _deleteState,
         _drugAlerts,
-    ) { meds, del, (interactions, foodNotes) ->
+        _scheduleInfo,
+    ) { meds, del, (interactions, foodNotes), scheduleInfo ->
         MedicationListUiState(
             medications = meds,
             pendingDeleteMedId = del?.first,
             pendingDeleteMedName = del?.second,
             interactionAlerts = interactions,
             foodNoteMedIds = foodNotes,
+            scheduleInfo = scheduleInfo,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -73,8 +97,26 @@ class MedicationListViewModel(
         viewModelScope.launch {
             medicationRepository.observeAllMedications().collect { meds ->
                 loadDrugAlerts(meds)
+                loadScheduleInfo(meds)
             }
         }
+    }
+
+    /** Load each medication's active-schedule reminder info for the list row. */
+    private suspend fun loadScheduleInfo(meds: List<MedicationEntity>) {
+        val info = withContext(Dispatchers.IO) {
+            meds.associate { med ->
+                val schedule = scheduleRepository.getActiveSchedule(med.id)
+                med.id to MedScheduleInfo(
+                    scheduleType = schedule?.type,
+                    scheduledTimes = schedule
+                        ?.let { ScheduleEngine.parseTimes(it.scheduledTimesJson) }
+                        ?: emptyList(),
+                    intervalHours = schedule?.intervalHours,
+                )
+            }
+        }
+        _scheduleInfo.value = info
     }
 
     private suspend fun loadDrugAlerts(meds: List<MedicationEntity>) {

@@ -3,6 +3,8 @@ package com.beryndil.pharos.dose.ui
 import android.content.Intent
 import android.text.format.DateFormat
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,13 +18,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
@@ -31,7 +30,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -83,6 +81,8 @@ fun TodayScreen(
     onOpenMedications: () -> Unit,
     onOpenSupplies: () -> Unit = {},
     onOpenHistory: (String) -> Unit,
+    /** Open the read-only Medication Detail screen for a med (dose-row / PRN-row tap, item #3). */
+    onOpenDetail: (String) -> Unit = {},
     onOpenReliability: () -> Unit,
     onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -118,24 +118,12 @@ fun TodayScreen(
             LargeTopAppBar(
                 title = { Text(stringResource(R.string.screen_today)) },
                 actions = {
-                    IconButton(onClick = onOpenMedications) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ListAlt,
-                            contentDescription = stringResource(R.string.cd_open_medications),
-                        )
-                    }
-                    IconButton(onClick = onOpenSupplies) {
-                        Icon(
-                            imageVector = Icons.Outlined.Inventory2,
-                            contentDescription = stringResource(R.string.action_supplies),
-                        )
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = stringResource(R.string.cd_open_settings),
-                        )
-                    }
+                    com.beryndil.pharos.ui.navigation.PharosTopBarActions(
+                        current = com.beryndil.pharos.ui.navigation.PharosTopBarScreen.OTHER,
+                        onOpenMedications = onOpenMedications,
+                        onOpenSupplies = onOpenSupplies,
+                        onOpenSettings = onOpenSettings,
+                    )
                 },
                 scrollBehavior = scrollBehavior,
             )
@@ -208,6 +196,7 @@ fun TodayScreen(
                             onTake        = { onEvent(TodayEvent.Take(dose.doseId)) },
                             onSnooze      = { onEvent(TodayEvent.Snooze(dose.doseId)) },
                             onSkip        = { onEvent(TodayEvent.Skip(dose.doseId)) },
+                            onOpenDetail  = { onOpenDetail(dose.medicationId) },
                             onMenuRequest = { onEvent(TodayEvent.DeleteDoseRequest(dose.doseId)) },
                         )
                     }
@@ -232,6 +221,7 @@ fun TodayScreen(
                             onTake        = { onEvent(TodayEvent.Take(dose.doseId)) },
                             onSnooze      = { onEvent(TodayEvent.Snooze(dose.doseId)) },
                             onSkip        = { onEvent(TodayEvent.Skip(dose.doseId)) },
+                            onOpenDetail  = { onOpenDetail(dose.medicationId) },
                             onMenuRequest = { onEvent(TodayEvent.DeleteDoseRequest(dose.doseId)) },
                         )
                     }
@@ -255,9 +245,9 @@ fun TodayScreen(
                     }
                     items(manualPrn, key = { "prn_${it.medicationId}" }) { prn ->
                         PrnMedCard(
-                            prn       = prn,
-                            onLogDose = { onEvent(TodayEvent.LogPrn(prn.medicationId, prn.scheduleId)) },
-                            onHistory = { onOpenHistory(prn.medicationId) },
+                            prn        = prn,
+                            onLogDose  = { onEvent(TodayEvent.LogPrn(prn.medicationId, prn.scheduleId)) },
+                            onOpenDetail = { onOpenDetail(prn.medicationId) },
                         )
                     }
                 }
@@ -275,9 +265,9 @@ fun TodayScreen(
                     }
                     items(autoPrn, key = { "auto_${it.medicationId}" }) { prn ->
                         AutoManagedMedCard(
-                            prn       = prn,
-                            onRecord  = { onEvent(TodayEvent.LogPrn(prn.medicationId, prn.scheduleId)) },
-                            onHistory = { onOpenHistory(prn.medicationId) },
+                            prn          = prn,
+                            onRecord     = { onEvent(TodayEvent.LogPrn(prn.medicationId, prn.scheduleId)) },
+                            onOpenDetail = { onOpenDetail(prn.medicationId) },
                         )
                     }
                 }
@@ -306,7 +296,7 @@ fun TodayScreen(
                     if (doseRow != null) {
                         TextButton(onClick = {
                             onEvent(TodayEvent.DeleteDoseDismiss)
-                            onOpenHistory(doseRow.medicationId)
+                            onOpenDetail(doseRow.medicationId)
                         }) {
                             Text(stringResource(R.string.today_dose_menu_history))
                         }
@@ -515,12 +505,14 @@ private fun QuickActionButton(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DoseCard(
     dose: DoseRow,
     onTake: () -> Unit,
     onSnooze: () -> Unit,
     onSkip: () -> Unit,
+    onOpenDetail: () -> Unit,
     onMenuRequest: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -541,9 +533,11 @@ private fun DoseCard(
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .semantics(mergeDescendants = true) {}
-                .clickable(
-                    onClickLabel = stringResource(R.string.cd_dose_menu_action, dose.medName),
-                    onClick = onMenuRequest,
+                .combinedClickable(
+                    onClickLabel = stringResource(R.string.cd_dose_detail_action, dose.medName),
+                    onClick = onOpenDetail,
+                    onLongClickLabel = stringResource(R.string.cd_dose_menu_action, dose.medName),
+                    onLongClick = onMenuRequest,
                 ),
         ) {
             Text(
@@ -607,7 +601,7 @@ private fun DoseCard(
 private fun PrnMedCard(
     prn: PrnMedRow,
     onLogDose: () -> Unit,
-    onHistory: () -> Unit,
+    onOpenDetail: () -> Unit,
 ) {
     val logDoseCd = stringResource(R.string.cd_prn_log_dose, prn.medName)
 
@@ -620,8 +614,8 @@ private fun PrnMedCard(
                 .heightIn(min = 48.dp)
                 .semantics(mergeDescendants = true) {}
                 .clickable(
-                    onClickLabel = stringResource(R.string.cd_dose_history_action, prn.medName),
-                    onClick = onHistory,
+                    onClickLabel = stringResource(R.string.cd_dose_detail_action, prn.medName),
+                    onClick = onOpenDetail,
                 ),
         ) {
             Text(
@@ -680,14 +674,14 @@ private fun PrnMedCard(
 private fun AutoManagedMedCard(
     prn: PrnMedRow,
     onRecord: () -> Unit,
-    onHistory: () -> Unit,
+    onOpenDetail: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val recordCd = stringResource(R.string.cd_auto_managed_record, prn.medName)
     androidx.compose.material3.OutlinedCard(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onHistory),
+            .clickable(onClick = onOpenDetail),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

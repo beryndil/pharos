@@ -1,6 +1,5 @@
 package com.beryndil.pharos.medication.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,11 +10,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,7 +28,6 @@ import androidx.compose.material.icons.outlined.SettingsSuggest
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Switch
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -432,6 +430,7 @@ private fun DetailsStep(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
+                .imePadding()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -488,63 +487,17 @@ private fun DetailsStep(
                 onClear = null,
             )
 
-            SectionHeader(stringResource(R.string.section_optional))
-
-            DateField(
-                label = stringResource(R.string.label_end_date),
-                date = uiState.endDate,
-                isError = false,
-                errorText = null,
-                onPickerRequested = { showEndDatePicker = true },
-                onClear = { onEvent(AddEditMedEvent.EndDateSelected(null)) },
-            )
-
-            ContactAutocompleteField(
-                value = uiState.prescriber,
-                onValueChange = { onEvent(AddEditMedEvent.PrescriberChanged(it)) },
-                label = stringResource(R.string.label_prescriber),
-                suggestions = uiState.prescriberSuggestions,
-                onSuggestionPicked = { onEvent(AddEditMedEvent.PrescriberSuggestionPicked(it)) },
-                practiceValue = uiState.prescriberPractice,
-                onPracticeChange = { onEvent(AddEditMedEvent.PrescriberPracticeChanged(it)) },
-                practiceLabel = stringResource(R.string.label_prescriber_practice),
-                phoneValue = uiState.prescriberPhone,
-                onPhoneChange = { onEvent(AddEditMedEvent.PrescriberPhoneChanged(it)) },
-                phoneLabel = stringResource(R.string.label_prescriber_phone),
+            ScheduleSection(
+                input = uiState.scheduleInput,
+                error = uiState.scheduleValidationError,
+                onInputChanged = { onEvent(AddEditMedEvent.ScheduleInputChanged(it)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            PharmacyAutocompleteField(
-                value = uiState.pharmacy,
-                onValueChange = { onEvent(AddEditMedEvent.PharmacyChanged(it)) },
-                label = stringResource(R.string.label_pharmacy),
-                suggestions = uiState.pharmacySuggestions,
-                onSuggestionPicked = { onEvent(AddEditMedEvent.PharmacySuggestionPicked(it)) },
-                phoneValue = uiState.pharmacyPhone,
-                onPhoneChange = { onEvent(AddEditMedEvent.PharmacyPhoneChanged(it)) },
-                phoneLabel = stringResource(R.string.label_pharmacy_phone),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            OutlinedTextField(
-                value = uiState.purpose,
-                onValueChange = { onEvent(AddEditMedEvent.PurposeChanged(it)) },
-                label = { Text(stringResource(R.string.label_purpose)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            val notesCd = stringResource(R.string.cd_notes_field)
-            OutlinedTextField(
-                value = uiState.notes,
-                onValueChange = { onEvent(AddEditMedEvent.NotesChanged(it)) },
-                label = { Text(stringResource(R.string.label_notes)) },
-                placeholder = { Text(stringResource(R.string.label_notes_hint)) },
-                singleLine = false,
-                maxLines = 3,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { contentDescription = notesCd },
+            OptionalDetailsCard(
+                uiState = uiState,
+                onEvent = onEvent,
+                onEndDatePickerRequested = { showEndDatePicker = true },
             )
 
             SubstituteSection(
@@ -574,13 +527,6 @@ private fun DetailsStep(
                 value = uiState.missWindowMinutesText,
                 isError = uiState.missWindowMinutesError,
                 onValueChange = { onEvent(AddEditMedEvent.MissWindowMinutesChanged(it)) },
-            )
-
-            ScheduleSection(
-                input = uiState.scheduleInput,
-                error = uiState.scheduleValidationError,
-                onInputChanged = { onEvent(AddEditMedEvent.ScheduleInputChanged(it)) },
-                modifier = Modifier.fillMaxWidth(),
             )
 
             AutoManagedToggleRow(
@@ -633,6 +579,116 @@ private fun DetailsStep(
     }
 }
 
+// ── Optional details (collapsed by default) ───────────────────────────────
+
+/**
+ * Collapses the non-required fields (end date, prescriber, pharmacy, purpose,
+ * notes) into a single expandable card so the required block + schedule/time
+ * stay front-and-center. Collapsed by default; reuses the in-file collapse
+ * pattern from [DrugInfoCard]. Autofill behavior (prescriber/pharmacy
+ * autocomplete, dose-amount unit auto-fill via autoFormatDoseAmount) is
+ * preserved — the same fields with the same events live inside the card.
+ *
+ * Accessibility (Law 10): the expand/collapse control carries a TalkBack
+ * contentDescription; the toggle row is the full-width header (≥48dp).
+ */
+@Composable
+private fun OptionalDetailsCard(
+    uiState: AddEditMedicationUiState,
+    onEvent: (AddEditMedEvent) -> Unit,
+    onEndDatePickerRequested: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val expandLabel = if (expanded) {
+        stringResource(R.string.cd_optional_details_collapse)
+    } else {
+        stringResource(R.string.cd_optional_details_expand)
+    }
+    OutlinedCard(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClickLabel = expandLabel) { expanded = !expanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.section_optional_details),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (expanded) {
+                Spacer(Modifier.height(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    DateField(
+                        label = stringResource(R.string.label_end_date),
+                        date = uiState.endDate,
+                        isError = false,
+                        errorText = null,
+                        onPickerRequested = onEndDatePickerRequested,
+                        onClear = { onEvent(AddEditMedEvent.EndDateSelected(null)) },
+                    )
+
+                    ContactAutocompleteField(
+                        value = uiState.prescriber,
+                        onValueChange = { onEvent(AddEditMedEvent.PrescriberChanged(it)) },
+                        label = stringResource(R.string.label_prescriber),
+                        suggestions = uiState.prescriberSuggestions,
+                        onSuggestionPicked = { onEvent(AddEditMedEvent.PrescriberSuggestionPicked(it)) },
+                        practiceValue = uiState.prescriberPractice,
+                        onPracticeChange = { onEvent(AddEditMedEvent.PrescriberPracticeChanged(it)) },
+                        practiceLabel = stringResource(R.string.label_prescriber_practice),
+                        phoneValue = uiState.prescriberPhone,
+                        onPhoneChange = { onEvent(AddEditMedEvent.PrescriberPhoneChanged(it)) },
+                        phoneLabel = stringResource(R.string.label_prescriber_phone),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    PharmacyAutocompleteField(
+                        value = uiState.pharmacy,
+                        onValueChange = { onEvent(AddEditMedEvent.PharmacyChanged(it)) },
+                        label = stringResource(R.string.label_pharmacy),
+                        suggestions = uiState.pharmacySuggestions,
+                        onSuggestionPicked = { onEvent(AddEditMedEvent.PharmacySuggestionPicked(it)) },
+                        phoneValue = uiState.pharmacyPhone,
+                        onPhoneChange = { onEvent(AddEditMedEvent.PharmacyPhoneChanged(it)) },
+                        phoneLabel = stringResource(R.string.label_pharmacy_phone),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.purpose,
+                        onValueChange = { onEvent(AddEditMedEvent.PurposeChanged(it)) },
+                        label = { Text(stringResource(R.string.label_purpose)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    val notesCd = stringResource(R.string.cd_notes_field)
+                    OutlinedTextField(
+                        value = uiState.notes,
+                        onValueChange = { onEvent(AddEditMedEvent.NotesChanged(it)) },
+                        label = { Text(stringResource(R.string.label_notes)) },
+                        placeholder = { Text(stringResource(R.string.label_notes_hint)) },
+                        singleLine = false,
+                        maxLines = 3,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = notesCd },
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun FreeTextNotice() {
     val desc = stringResource(R.string.cd_free_text_notice)
@@ -669,162 +725,6 @@ private fun SectionHeader(title: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 8.dp),
     )
-}
-
-// ── Drug info preview (shown in CONFIRM step and edit mode) ───────────────
-
-@Composable
-private fun DrugInfoLoadingRow(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-        Text(
-            text = stringResource(R.string.drug_info_loading),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun DrugInfoPreviewSections(preview: LabelPreviewState.Available, modifier: Modifier = Modifier) {
-    val hasAnyData = preview.boxedWarningText != null || preview.sideEffectsText != null ||
-        preview.interactionsText != null || preview.warningsText != null ||
-        preview.precautionsText != null || preview.foodEffectText != null
-    if (!hasAnyData) return
-
-    SelectionContainer {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeader(stringResource(R.string.section_drug_info))
-        preview.boxedWarningText?.let { DrugInfoBoxedWarning(it) }
-        preview.sideEffectsText?.let {
-            DrugInfoSection(stringResource(R.string.drug_reference_section_side_effects), it)
-        }
-        preview.interactionsText?.let {
-            DrugInfoSection(stringResource(R.string.drug_reference_section_interactions), it)
-        }
-        preview.warningsText?.let {
-            DrugInfoSection(stringResource(R.string.drug_reference_section_warnings), it)
-        }
-        preview.precautionsText?.let {
-            DrugInfoSection(stringResource(R.string.drug_reference_section_precautions), it)
-        }
-        preview.foodEffectText?.let {
-            DrugInfoSection(stringResource(R.string.drug_reference_section_food_effect), it)
-        }
-        Text(
-            text = stringResource(R.string.drug_reference_disclaimer),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    }
-}
-
-@Composable
-private fun DrugInfoBoxedWarning(body: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.errorContainer,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.drug_reference_section_boxed_warning),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-        Text(
-            text = body,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-    }
-}
-
-@Composable
-private fun DrugInfoSection(title: String, body: String) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val truncated = body.length > DRUG_INFO_PREVIEW_CHARS
-    val displayed = if (truncated && !expanded) body.take(DRUG_INFO_PREVIEW_CHARS).trimEnd() + "…" else body
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleSmall)
-        Text(
-            text = displayed,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (truncated) {
-            Text(
-                text = if (expanded) stringResource(R.string.drug_info_show_less)
-                       else stringResource(R.string.drug_info_read_more),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clickable { expanded = !expanded }
-                    .padding(vertical = 4.dp),
-            )
-        }
-    }
-}
-
-private const val DRUG_INFO_PREVIEW_CHARS = 400
-
-@Composable
-private fun DrugInfoCard(labelPreview: LabelPreviewState, modifier: Modifier = Modifier) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-
-    when (labelPreview) {
-        is LabelPreviewState.Loading -> DrugInfoLoadingRow(modifier)
-        is LabelPreviewState.Available -> {
-            val hasAnyData = labelPreview.boxedWarningText != null ||
-                labelPreview.sideEffectsText != null ||
-                labelPreview.interactionsText != null ||
-                labelPreview.warningsText != null ||
-                labelPreview.precautionsText != null ||
-                labelPreview.foodEffectText != null
-            if (!hasAnyData) return
-            val expandLabel = if (expanded)
-                stringResource(R.string.cd_drug_info_collapse)
-            else
-                stringResource(R.string.cd_drug_info_expand)
-            OutlinedCard(modifier = modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClickLabel = expandLabel) { expanded = !expanded },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.section_drug_info),
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Icon(
-                            imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (expanded) {
-                        Spacer(Modifier.height(8.dp))
-                        DrugInfoPreviewSections(preview = labelPreview)
-                    }
-                }
-            }
-        }
-        else -> {}
-    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

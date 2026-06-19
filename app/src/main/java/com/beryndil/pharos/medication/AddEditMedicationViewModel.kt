@@ -260,6 +260,12 @@ class AddEditMedicationViewModel(
         repository::getCriticalActiveMedications,
     /** Explicitly supplied med ID for edit mode (belt-and-suspenders over SavedStateHandle auto-wiring). */
     private val initialEditMedId: String? = null,
+    /**
+     * Optional alarm coordinator. When provided, the next dose alarm is re-armed immediately after a
+     * successful save so a schedule/time edit takes effect without an app restart (the stale alarm is
+     * cleanly replaced via a stable request code). Null in tests that don't provide it — re-arm is skipped.
+     */
+    private val alarmCoordinator: com.beryndil.pharos.alarm.AlarmCoordinator? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditMedicationUiState())
@@ -824,6 +830,9 @@ class AddEditMedicationViewModel(
                         endDate = state.endDate,
                         zoneId = ZoneId.systemDefault(),
                     )
+                    // Re-arm the next dose alarm immediately so a schedule/time edit takes effect
+                    // without an app restart. No-op when no coordinator is injected (tests).
+                    alarmCoordinator?.rearmNextDoseAlarm()
                 }
             }.onSuccess {
                 _uiState.update { it.copy(isSaving = false, savedSuccessfully = true) }
@@ -902,6 +911,7 @@ class AddEditMedicationViewModel(
             drugLabelRepository: DrugLabelRepository? = null,
             isDndAccessGranted: () -> Boolean = { true },
             editMedId: String? = null,
+            alarmCoordinator: com.beryndil.pharos.alarm.AlarmCoordinator? = null,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -913,6 +923,7 @@ class AddEditMedicationViewModel(
                         drugLabelRepository = drugLabelRepository,
                         isDndAccessGranted = isDndAccessGranted,
                         initialEditMedId = editMedId,
+                        alarmCoordinator = alarmCoordinator,
                     )
                 }
             }

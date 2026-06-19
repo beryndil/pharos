@@ -50,6 +50,10 @@ fun SupplyListScreen(
     onAddSupply: () -> Unit,
     onSupplyClicked: (String) -> Unit,
     onBack: () -> Unit,
+    /** Navigate to the Medications screen (shared top-bar nav). */
+    onOpenMedications: () -> Unit = {},
+    /** Navigate to the Settings screen (shared top-bar nav). */
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     com.beryndil.pharos.core.ui.SecureWindow()
@@ -72,6 +76,14 @@ fun SupplyListScreen(
                             contentDescription = null,
                         )
                     }
+                },
+                actions = {
+                    com.beryndil.pharos.ui.navigation.PharosTopBarActions(
+                        current = com.beryndil.pharos.ui.navigation.PharosTopBarScreen.SUPPLIES,
+                        onOpenMedications = onOpenMedications,
+                        onOpenSupplies = {},
+                        onOpenSettings = onOpenSettings,
+                    )
                 },
                 scrollBehavior = scrollBehavior,
             )

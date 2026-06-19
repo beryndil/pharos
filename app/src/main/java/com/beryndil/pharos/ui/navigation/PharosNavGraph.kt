@@ -28,8 +28,10 @@ import com.beryndil.pharos.dose.ui.DoseHistoryViewModel
 import com.beryndil.pharos.dose.ui.TodayScreen
 import com.beryndil.pharos.dose.ui.TodayViewModel
 import com.beryndil.pharos.medication.AddEditMedicationViewModel
+import com.beryndil.pharos.medication.MedicationDetailViewModel
 import com.beryndil.pharos.medication.MedicationListViewModel
 import com.beryndil.pharos.medication.ui.AddEditMedicationScreen
+import com.beryndil.pharos.medication.ui.MedicationDetailScreen
 import com.beryndil.pharos.medication.ui.MedicationListScreen
 import com.beryndil.pharos.onboarding.OnboardingViewModel
 import com.beryndil.pharos.onboarding.ui.OnboardingScreen
@@ -138,6 +140,9 @@ fun PharosNavGraph(
                 onOpenHistory = { medId ->
                     navController.navigate(NavRoute.DoseHistory.buildRoute(medId))
                 },
+                onOpenDetail = { medId ->
+                    navController.navigate(NavRoute.MedicationDetail.buildRoute(medId))
+                },
                 onOpenReliability = {
                     navController.navigate(NavRoute.ReliabilityDashboard.route)
                 },
@@ -167,6 +172,32 @@ fun PharosNavGraph(
             )
         }
 
+        // ── Medication detail (read-only summary + reference + history) ────
+        composable(
+            route = NavRoute.MedicationDetail.route,
+            arguments = listOf(
+                navArgument(NavRoute.MedicationDetail.ARG_MED_ID) { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            val medId =
+                backStackEntry.arguments?.getString(NavRoute.MedicationDetail.ARG_MED_ID).orEmpty()
+            val viewModel: MedicationDetailViewModel = viewModel(
+                factory = MedicationDetailViewModel.factory(
+                    medicationId = medId,
+                    medicationRepository = medicationRepository,
+                    scheduleRepository = scheduleRepository,
+                    drugLabelRepository = drugLabelRepository,
+                    doseRepository = doseRepository,
+                ),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            MedicationDetailScreen(
+                uiState = uiState,
+                onBack = { navController.popBackStack() },
+                onEdit = { navController.navigate(NavRoute.EditMedication.buildRoute(medId)) },
+            )
+        }
+
         // ── Medication list ───────────────────────────────────────────────
         composable(NavRoute.MedicationList.route) {
             val viewModel: MedicationListViewModel = viewModel(
@@ -183,7 +214,7 @@ fun PharosNavGraph(
                     navController.navigate(NavRoute.AddMedication.route)
                 },
                 onMedicationClicked = { medId ->
-                    navController.navigate(NavRoute.EditMedication.buildRoute(medId))
+                    navController.navigate(NavRoute.MedicationDetail.buildRoute(medId))
                 },
                 onRefillClicked = { medId ->
                     navController.navigate(NavRoute.RefillDetail.buildRoute(medId))
@@ -198,6 +229,7 @@ fun PharosNavGraph(
                     navController.navigate(NavRoute.BackupRestore.route)
                 },
                 onOpenLegal = { navController.navigate(NavRoute.Legal.route) },
+                onOpenSupplies = { navController.navigate(NavRoute.Supplies.route) },
                 onOpenSettings = { navController.navigate(NavRoute.Settings.route) },
                 onEvent = viewModel::onEvent,
             )
@@ -212,6 +244,7 @@ fun PharosNavGraph(
                     contactRepository = contactRepository,
                     drugLabelRepository = drugLabelRepository,
                     isDndAccessGranted = { nm.isNotificationPolicyAccessGranted },
+                    alarmCoordinator = app.appContainer.alarmCoordinator,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -240,6 +273,7 @@ fun PharosNavGraph(
                     drugLabelRepository = drugLabelRepository,
                     isDndAccessGranted = { nm.isNotificationPolicyAccessGranted },
                     editMedId = medId,
+                    alarmCoordinator = app.appContainer.alarmCoordinator,
                 ),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -337,6 +371,8 @@ fun PharosNavGraph(
                     navController.navigate(NavRoute.SupplyDetail.buildRoute(supplyId))
                 },
                 onBack = { navController.popBackStack() },
+                onOpenMedications = { navController.navigate(NavRoute.MedicationList.route) },
+                onOpenSettings = { navController.navigate(NavRoute.Settings.route) },
             )
         }
 
@@ -429,6 +465,8 @@ fun PharosNavGraph(
                 onOpenProfile      = { navController.navigate(NavRoute.UserProfile.route) },
                 onOpenContacts     = { navController.navigate(NavRoute.SavedContacts.route) },
                 onOpenReliability  = { navController.navigate(NavRoute.ReliabilityDashboard.route) },
+                onOpenMedications  = { navController.navigate(NavRoute.MedicationList.route) },
+                onOpenSupplies     = { navController.navigate(NavRoute.Supplies.route) },
                 onShareDebugLog = {
                     scope.launch(Dispatchers.IO) {
                         runCatching {
@@ -552,6 +590,12 @@ sealed class NavRoute(val route: String) {
     }
 
     data object MedicationList : NavRoute("medications")
+
+    data object MedicationDetail : NavRoute("medications/{medId}") {
+        const val ARG_MED_ID = "medId"
+
+        fun buildRoute(medId: String): String = "medications/$medId"
+    }
 
     data object AddMedication : NavRoute("medications/add")
 
