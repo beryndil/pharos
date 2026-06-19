@@ -19,6 +19,9 @@ android {
         versionCode = 99
         versionName = "0.9.5-alpha"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Launcher label is placeholder-driven so the side-by-side `sideload` variant can
+        // override it. Default resolves to the normal app name for debug/release.
+        manifestPlaceholders["appLabel"] = "@string/app_name"
     }
 
     // Locale-friendly from commit 1: en-US only in v1; infra ready for more locales.
@@ -67,6 +70,17 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+        }
+        // Side-by-side sideload build: same release signing/minification, but a distinct
+        // applicationId (.sideload) and launcher label so it installs and runs ALONGSIDE the
+        // production app instead of replacing it. Separate package = separate data, DB, and
+        // alarms — a clean isolated install for beta testing. Build with :app:assembleSideload.
+        create("sideload") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".sideload"
+            versionNameSuffix = "-sideload"
+            manifestPlaceholders["appLabel"] = "Pharos β"
+            matchingFallbacks += listOf("release")
         }
     }
     compileOptions {
