@@ -9,6 +9,7 @@ import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.dose.ui.TodayEvent
 import com.beryndil.pharos.dose.ui.TodayViewModel
 import com.beryndil.pharos.medication.export.MedListPdfExporter
+import com.beryndil.pharos.settings.UserProfileRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -100,6 +101,7 @@ class EmailConfirmDialogTest {
             doseRepository = doseRepository,
             pdfExporter    = MedListPdfExporter(db),
             cacheDir       = cacheDir,
+            userProfileRepository = UserProfileRepository(db.settingDao()),
         )
     }
 

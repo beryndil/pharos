@@ -167,4 +167,5 @@ private class FakeMedicationDao(private val meds: List<MedicationEntity>) : Medi
     override suspend fun countNonEnded(): Int = meds.count { it.status != "ENDED" }
 
     override suspend fun deleteById(id: String) {}
+    override suspend fun clearSubstituteRef(medId: String) {}
 }

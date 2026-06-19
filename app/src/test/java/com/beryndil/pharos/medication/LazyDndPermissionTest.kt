@@ -7,13 +7,17 @@ import com.beryndil.pharos.data.drugref.entity.DrugSearchEntity
 import com.beryndil.pharos.data.drugref.entity.IngredientMapEntity
 import com.beryndil.pharos.data.medication.MedicationRepository
 import com.beryndil.pharos.data.regimen.dao.DoseInstanceDao
+import com.beryndil.pharos.data.regimen.dao.DoseTransitionDao
 import com.beryndil.pharos.data.regimen.dao.MedicationDao
+import com.beryndil.pharos.data.regimen.dao.RefillRecordDao
 import com.beryndil.pharos.data.regimen.dao.ScheduleDao
 import com.beryndil.pharos.data.regimen.dao.SchedulePhaseDao
 import com.beryndil.pharos.data.regimen.entity.DoseInstanceEntity
+import com.beryndil.pharos.data.regimen.entity.DoseTransitionEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationForm
 import com.beryndil.pharos.data.regimen.entity.MedicationStatus
+import com.beryndil.pharos.data.regimen.entity.RefillRecordEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleEntity
 import com.beryndil.pharos.data.regimen.entity.SchedulePhaseEntity
 import com.beryndil.pharos.data.schedule.ScheduleRepository
@@ -74,6 +78,11 @@ class LazyDndPermissionTest {
             medicationDao = NoOpMedicationDao(),
             drugSearchDao = NoOpDrugSearchDao(),
             ingredientMapDao = NoOpIngredientMapDao(),
+            doseTransitionDao = NoOpDoseTransitionDao(),
+            doseInstanceDao = NoOpDoseInstanceDao(),
+            schedulePhaseDao = NoOpSchedulePhaseDao(),
+            scheduleDao = NoOpScheduleDao(),
+            refillRecordDao = NoOpRefillRecordDao(),
         )
         val scheduleRepo = ScheduleRepository(
             scheduleDao = NoOpScheduleDao(),
@@ -184,12 +193,16 @@ private class NoOpMedicationDao : MedicationDao {
     override suspend fun getAll(): List<MedicationEntity> = emptyList()
     override suspend fun getCriticalActive(): List<MedicationEntity> = emptyList()
     override suspend fun countNonEnded(): Int = 0
+    override suspend fun deleteById(id: String) = Unit
+    override suspend fun clearSubstituteRef(medId: String) = Unit
 }
 
 private class NoOpDrugSearchDao : DrugSearchDao {
     override suspend fun insertAll(drugs: List<DrugSearchEntity>) = Unit
     override suspend fun searchByName(q: String): List<DrugSearchEntity> = emptyList()
     override suspend fun getByRxcui(rxcui: String): DrugSearchEntity? = null
+    override suspend fun firstBrandNameForIngredient(ingredientRxcui: String): String? = null
+    override suspend fun allBrandNamesForIngredients(ingredientRxcuis: List<String>): List<String> = emptyList()
     override suspend fun count(): Int = 0
 }
 
@@ -211,23 +224,29 @@ private class NoOpScheduleDao : ScheduleDao {
     override suspend fun getAllVersionsForMedication(medicationId: String): List<ScheduleEntity> = emptyList()
     override suspend fun getAll(): List<ScheduleEntity> = emptyList()
     override fun observeAllActivePrn(): Flow<List<ScheduleEntity>> = empty.asStateFlow()
+    override suspend fun deleteByMedication(medicationId: String) = Unit
 }
 
 private class NoOpSchedulePhaseDao : SchedulePhaseDao {
     override suspend fun insertAll(phases: List<SchedulePhaseEntity>) = Unit
     override suspend fun getPhasesForSchedule(scheduleId: String): List<SchedulePhaseEntity> = emptyList()
     override suspend fun getAll(): List<SchedulePhaseEntity> = emptyList()
+    override suspend fun deleteByMedication(medicationId: String) = Unit
 }
 
 private class NoOpDoseInstanceDao : DoseInstanceDao {
     private val empty = MutableStateFlow<List<DoseInstanceEntity>>(emptyList())
     override suspend fun insert(dose: DoseInstanceEntity) = Unit
+    override suspend fun insertAll(doses: List<DoseInstanceEntity>) = Unit
     override suspend fun markDue(id: String) = Unit
     override suspend fun markTaken(id: String, takenEpochMs: Long) = Unit
     override suspend fun markSnoozed(id: String, snoozeUntilEpochMs: Long) = Unit
     override suspend fun markSkipped(id: String, skippedEpochMs: Long) = Unit
     override suspend fun markDueFromSnooze(id: String) = Unit
     override suspend fun markMissed(id: String, missedEpochMs: Long) = Unit
+    override suspend fun cancelScheduledBySchedule(scheduleId: String, missedEpochMs: Long) = Unit
+    override suspend fun cancelOrphanedScheduled(nowMs: Long): Int = 0
+    override suspend fun getAllInWindow(from: Long, to: Long): List<DoseInstanceEntity> = emptyList()
     override suspend fun getById(id: String): DoseInstanceEntity? = null
     override fun observeByMedication(medicationId: String): Flow<List<DoseInstanceEntity>> = empty.asStateFlow()
     override fun observePending(): Flow<List<DoseInstanceEntity>> = empty.asStateFlow()
@@ -241,5 +260,27 @@ private class NoOpDoseInstanceDao : DoseInstanceDao {
     override suspend fun getDueTimesForSchedule(scheduleId: String): List<Long> = emptyList()
     override suspend fun getLastTakenForSchedule(scheduleId: String): DoseInstanceEntity? = null
     override suspend fun getAll(): List<DoseInstanceEntity> = emptyList()
+    override suspend fun deleteById(id: String) = Unit
     override fun observeAllTakenSince(sinceEpochMs: Long): Flow<List<DoseInstanceEntity>> = empty.asStateFlow()
+    override suspend fun deleteByMedication(medicationId: String) = Unit
+}
+
+private class NoOpDoseTransitionDao : DoseTransitionDao {
+    private val empty = MutableStateFlow<List<DoseTransitionEntity>>(emptyList())
+    override suspend fun insert(transition: DoseTransitionEntity) = Unit
+    override fun observeByMedication(medicationId: String): Flow<List<DoseTransitionEntity>> = empty.asStateFlow()
+    override suspend fun getByDose(doseInstanceId: String): List<DoseTransitionEntity> = emptyList()
+    override suspend fun countByDose(doseInstanceId: String): Int = 0
+    override suspend fun getAll(): List<DoseTransitionEntity> = emptyList()
+    override suspend fun deleteByMedication(medicationId: String) = Unit
+    override suspend fun deleteByDoseInstance(doseInstanceId: String) = Unit
+}
+
+private class NoOpRefillRecordDao : RefillRecordDao {
+    private val empty = MutableStateFlow<List<RefillRecordEntity>>(emptyList())
+    override suspend fun insert(record: RefillRecordEntity) = Unit
+    override fun observeByMedication(medicationId: String): Flow<List<RefillRecordEntity>> = empty.asStateFlow()
+    override suspend fun getLatest(medicationId: String): RefillRecordEntity? = null
+    override suspend fun getAll(): List<RefillRecordEntity> = emptyList()
+    override suspend fun deleteByMedication(medicationId: String) = Unit
 }

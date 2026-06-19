@@ -61,6 +61,11 @@ class AddEditMedicationViewModelContactsTest {
             medicationDao = regimenDb.medicationDao(),
             drugSearchDao = drugRefDb.drugSearchDao(),
             ingredientMapDao = drugRefDb.ingredientMapDao(),
+            doseTransitionDao = regimenDb.doseTransitionDao(),
+            doseInstanceDao = regimenDb.doseInstanceDao(),
+            schedulePhaseDao = regimenDb.schedulePhaseDao(),
+            scheduleDao = regimenDb.scheduleDao(),
+            refillRecordDao = regimenDb.refillRecordDao(),
         )
         scheduleRepo = ScheduleRepository(
             scheduleDao = regimenDb.scheduleDao(),
@@ -70,6 +75,7 @@ class AddEditMedicationViewModelContactsTest {
         contactRepo = ContactRepository(
             prescriberDao = regimenDb.prescriberDao(),
             pharmacyDao = regimenDb.pharmacyDao(),
+            settingDao = regimenDb.settingDao(),
         )
     }
 
@@ -89,7 +95,9 @@ class AddEditMedicationViewModelContactsTest {
         vm.onEvent(AddEditMedEvent.PrescriberSuggestionPicked(suggestion))
         advanceUntilIdle()
         assertEquals("Dr. House", vm.uiState.value.prescriber)
-        assertEquals("555-1234", vm.uiState.value.prescriberPhone)
+        // The VM normalizes phone input to digits-only (max 10) so it stores the raw number;
+        // the dash is reapplied only by the display formatter.
+        assertEquals("5551234", vm.uiState.value.prescriberPhone)
     }
 
     @Test
@@ -101,7 +109,8 @@ class AddEditMedicationViewModelContactsTest {
         vm.onEvent(AddEditMedEvent.PharmacySuggestionPicked(suggestion))
         advanceUntilIdle()
         assertEquals("City Pharmacy", vm.uiState.value.pharmacy)
-        assertEquals("555-9999", vm.uiState.value.pharmacyPhone)
+        // Digits-only normalization (see prescriber test).
+        assertEquals("5559999", vm.uiState.value.pharmacyPhone)
     }
 
     @Test

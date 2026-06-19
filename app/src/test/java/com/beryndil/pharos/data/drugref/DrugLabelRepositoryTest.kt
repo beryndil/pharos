@@ -35,6 +35,8 @@ class DrugLabelRepositoryTest {
         precautionsText = null,
         contraindicationsText = null,
         boxedWarningText = null,
+        foodEffectText = null,
+        brandName = null,
         source = "openFDA",
     )
 

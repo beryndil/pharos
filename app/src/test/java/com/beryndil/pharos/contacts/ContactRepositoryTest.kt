@@ -37,6 +37,7 @@ class ContactRepositoryTest {
         repo = ContactRepository(
             prescriberDao = db.prescriberDao(),
             pharmacyDao = db.pharmacyDao(),
+            settingDao = db.settingDao(),
         )
     }
 

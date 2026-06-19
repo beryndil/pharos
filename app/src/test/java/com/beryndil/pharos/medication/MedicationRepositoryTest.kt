@@ -51,6 +51,11 @@ class MedicationRepositoryTest {
             medicationDao = regimenDb.medicationDao(),
             drugSearchDao = drugRefDb.drugSearchDao(),
             ingredientMapDao = drugRefDb.ingredientMapDao(),
+            doseTransitionDao = regimenDb.doseTransitionDao(),
+            doseInstanceDao = regimenDb.doseInstanceDao(),
+            schedulePhaseDao = regimenDb.schedulePhaseDao(),
+            scheduleDao = regimenDb.scheduleDao(),
+            refillRecordDao = regimenDb.refillRecordDao(),
         )
 
         // Seed fixture data used across tests.
@@ -249,79 +254,79 @@ class MedicationRepositoryTest {
         assertTrue("Empty ingredient list → no warnings", warnings.isEmpty())
     }
 
-    // ── Substitute-link suppression (V1.3-F2) — SAFETY-CRITICAL ─────────────
+    // ── Combined-prescription suppression — SAFETY-CRITICAL ─────────────────
 
     /**
-     * When med A is declared as a substitute for med B (A.substituteForMedId == B.id),
-     * no duplicate-ingredient warning fires between them even when they share an ingredient.
+     * When the medication being added/edited declares another med as its combined-prescription
+     * partner (an intentional split prescription, e.g. 60 mg + 30 mg = 90 mg/day), no
+     * duplicate-ingredient warning fires between them even when they share an ingredient.
      * All other meds are unaffected.
      */
     @Test
-    fun checkDuplicates_substituteLink_suppressesWarningBetweenLinkedPair_forwardDirection() = runTest {
-        // B: the original medication (Acetaminophen ingredient).
+    fun checkDuplicates_combinedLink_suppressesWarningBetweenLinkedPair() = runTest {
+        // B: the partner medication (Acetaminophen ingredient).
         val medB = sampleMedication(id = "b1", name = "MedB", ingredientsJson = """["161"]""")
         repo.saveMedication(medB)
 
-        // A is a substitute FOR B — no warning expected even though they share ingredient 161.
+        // The new med declares B as its combined partner — no warning expected even though
+        // they share ingredient 161.
         val warnings = repo.checkDuplicateIngredients(
             newIngredientRxcuis = listOf("161"),
             excludeMedId = null,
-            substituteForMedId = medB.id,
+            combinedWithMedId = medB.id,
         )
         assertTrue(
-            "Warning must be suppressed between a new med and the med it substitutes for",
+            "Warning must be suppressed between a med and its declared combined partner",
             warnings.isEmpty(),
         )
     }
 
     /**
-     * Reverse direction: B declares itself a substitute for A (the med being edited).
+     * Editing direction: the med being edited (A) declares B as its combined partner.
      * No duplicate-ingredient warning fires between A and B.
      */
     @Test
-    fun checkDuplicates_substituteLink_suppressesWarningBetweenLinkedPair_reverseDirection() = runTest {
-        // A (being edited) — we pass excludeMedId = A.id
+    fun checkDuplicates_combinedLink_suppressesWarningWhenEditing() = runTest {
+        // A (being edited) — passed as excludeMedId so it does not flag itself.
         val medAId = "a1"
-        // B declares itself as a substitute for A: B.substituteForMedId == A.id
         val medB = sampleMedication(
             id = "b2",
             name = "MedB",
             ingredientsJson = """["161"]""",
-            substituteForMedId = medAId,
         )
         repo.saveMedication(medB)
 
-        // Editing A — B.substituteForMedId == A.id triggers suppression.
+        // Editing A and declaring B as its combined partner triggers suppression.
         val warnings = repo.checkDuplicateIngredients(
             newIngredientRxcuis = listOf("161"),
             excludeMedId = medAId,
-            substituteForMedId = null,
+            combinedWithMedId = medB.id,
         )
         assertTrue(
-            "Warning must be suppressed when the existing med is a substitute for the med being edited",
+            "Warning must be suppressed when the existing med is the declared combined partner",
             warnings.isEmpty(),
         )
     }
 
     /**
-     * A third unlinked med sharing an ingredient with a substitute pair still fires the warning.
-     * Suppression ONLY applies to the explicitly linked substitute pair; all other pairings
+     * A third unlinked med sharing an ingredient with a combined pair still fires the warning.
+     * Suppression ONLY applies to the explicitly declared combined partner; all other pairings
      * are unaffected — safety detection is never weakened for unlinked medications.
      */
     @Test
-    fun checkDuplicates_substituteLink_unlinkedThirdMedStillFiresWarning() = runTest {
-        // B: the med that A will substitute for.
+    fun checkDuplicates_combinedLink_unlinkedThirdMedStillFiresWarning() = runTest {
+        // B: the declared combined partner.
         val medB = sampleMedication(id = "b3", name = "MedB", ingredientsJson = """["161"]""")
         repo.saveMedication(medB)
-        // C: an unrelated med also containing Acetaminophen (not linked to A).
+        // C: an unrelated med also containing Acetaminophen (not the combined partner).
         val medC = sampleMedication(id = "c3", name = "MedC", ingredientsJson = """["161"]""")
         repo.saveMedication(medC)
 
-        // A is a substitute for B — warning vs B suppressed, but warning vs C must still fire.
+        // Combined partner is B — warning vs B suppressed, but warning vs C must still fire.
         val warnings = repo.checkDuplicateIngredients(
             newIngredientRxcuis = listOf("161"),
             excludeMedId = null,
-            substituteForMedId = medB.id,
+            combinedWithMedId = medB.id,
         )
         assertEquals("Warning must still fire for the unlinked third med", 1, warnings.size)
         assertEquals("MedC", warnings.first().existingMedName)

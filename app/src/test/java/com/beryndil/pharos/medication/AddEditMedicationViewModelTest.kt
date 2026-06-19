@@ -73,6 +73,11 @@ class AddEditMedicationViewModelTest {
             medicationDao = regimenDb.medicationDao(),
             drugSearchDao = drugRefDb.drugSearchDao(),
             ingredientMapDao = drugRefDb.ingredientMapDao(),
+            doseTransitionDao = regimenDb.doseTransitionDao(),
+            doseInstanceDao = regimenDb.doseInstanceDao(),
+            schedulePhaseDao = regimenDb.schedulePhaseDao(),
+            scheduleDao = regimenDb.scheduleDao(),
+            refillRecordDao = regimenDb.refillRecordDao(),
         )
         scheduleRepo = ScheduleRepository(
             scheduleDao = regimenDb.scheduleDao(),

@@ -422,4 +422,5 @@ private class FakeMedicationDaoEmpty : MedicationDao {
     override suspend fun countNonEnded(): Int = 0
 
     override suspend fun deleteById(id: String) {}
+    override suspend fun clearSubstituteRef(medId: String) {}
 }
