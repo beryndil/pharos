@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.beryndil.pharos.contacts.ContactRepository
+import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
+import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
 import com.beryndil.pharos.data.regimen.entity.SupplyEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,12 +27,15 @@ data class AddEditSupplyUiState(
     val unit: String = "",
     val prescriberName: String = "",
     val prescriberPhone: String = "",
+    val prescriberPractice: String = "",
     val pharmacyName: String = "",
     val pharmacyPhone: String = "",
     val lowThreshold: String = "",
     val notes: String = "",
     /** Only shown when adding a new supply. */
     val initialCount: String = "",
+    val prescriberSuggestions: List<PrescriberEntity> = emptyList(),
+    val pharmacySuggestions: List<PharmacyEntity> = emptyList(),
     val isEditing: Boolean = false,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
@@ -43,8 +49,11 @@ sealed interface AddEditSupplyEvent {
     data class UnitChanged(val value: String) : AddEditSupplyEvent
     data class PrescriberNameChanged(val value: String) : AddEditSupplyEvent
     data class PrescriberPhoneChanged(val value: String) : AddEditSupplyEvent
+    data class PrescriberPracticeChanged(val value: String) : AddEditSupplyEvent
+    data class PrescriberSuggestionPicked(val prescriber: PrescriberEntity) : AddEditSupplyEvent
     data class PharmacyNameChanged(val value: String) : AddEditSupplyEvent
     data class PharmacyPhoneChanged(val value: String) : AddEditSupplyEvent
+    data class PharmacySuggestionPicked(val pharmacy: PharmacyEntity) : AddEditSupplyEvent
     data class LowThresholdChanged(val value: String) : AddEditSupplyEvent
     data class NotesChanged(val value: String) : AddEditSupplyEvent
     data class InitialCountChanged(val value: String) : AddEditSupplyEvent
@@ -55,12 +64,17 @@ sealed interface AddEditSupplyEvent {
 
 class AddEditSupplyViewModel(
     private val supplyRepository: SupplyRepository,
+    private val contactRepository: ContactRepository,
     private val editSupplyId: String? = null,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditSupplyUiState())
     val uiState: StateFlow<AddEditSupplyUiState> = _uiState.asStateFlow()
+
+    // Cached full lists for synchronous filtering on each keystroke.
+    private val _allPrescribers = MutableStateFlow<List<PrescriberEntity>>(emptyList())
+    private val _allPharmacies = MutableStateFlow<List<PharmacyEntity>>(emptyList())
 
     init {
         if (editSupplyId != null) {
@@ -87,20 +101,98 @@ class AddEditSupplyViewModel(
             }
         } else {
             _uiState.update { it.copy(loading = false) }
+            loadDefaultContacts()
+        }
+        startSuggestionCollection()
+    }
+
+    private fun loadDefaultContacts() {
+        viewModelScope.launch {
+            val prescriber = withContext(Dispatchers.IO) { contactRepository.getDefaultPrescriber() }
+            val pharmacy = withContext(Dispatchers.IO) { contactRepository.getDefaultPharmacy() }
+            if (prescriber == null && pharmacy == null) return@launch
+            _uiState.update { state ->
+                state.copy(
+                    prescriberName = prescriber?.name ?: state.prescriberName,
+                    prescriberPhone = prescriber?.phone ?: state.prescriberPhone,
+                    prescriberPractice = prescriber?.practice ?: state.prescriberPractice,
+                    pharmacyName = pharmacy?.name ?: state.pharmacyName,
+                    pharmacyPhone = pharmacy?.phone ?: state.pharmacyPhone,
+                )
+            }
+        }
+    }
+
+    private fun startSuggestionCollection() {
+        viewModelScope.launch {
+            contactRepository.observePrescribers().collect { all ->
+                _allPrescribers.value = all
+                _uiState.update { state ->
+                    state.copy(prescriberSuggestions = filterPrescribers(all, state.prescriberName))
+                }
+            }
+        }
+        viewModelScope.launch {
+            contactRepository.observePharmacies().collect { all ->
+                _allPharmacies.value = all
+                _uiState.update { state ->
+                    state.copy(pharmacySuggestions = filterPharmacies(all, state.pharmacyName))
+                }
+            }
         }
     }
 
     fun onEvent(event: AddEditSupplyEvent) {
         when (event) {
-            is AddEditSupplyEvent.NameChanged -> _uiState.update { it.copy(name = event.value) }
-            is AddEditSupplyEvent.UnitChanged -> _uiState.update { it.copy(unit = event.value) }
-            is AddEditSupplyEvent.PrescriberNameChanged -> _uiState.update { it.copy(prescriberName = event.value) }
-            is AddEditSupplyEvent.PrescriberPhoneChanged -> _uiState.update { it.copy(prescriberPhone = event.value) }
-            is AddEditSupplyEvent.PharmacyNameChanged -> _uiState.update { it.copy(pharmacyName = event.value) }
-            is AddEditSupplyEvent.PharmacyPhoneChanged -> _uiState.update { it.copy(pharmacyPhone = event.value) }
-            is AddEditSupplyEvent.LowThresholdChanged -> _uiState.update { it.copy(lowThreshold = event.value) }
-            is AddEditSupplyEvent.NotesChanged -> _uiState.update { it.copy(notes = event.value) }
-            is AddEditSupplyEvent.InitialCountChanged -> _uiState.update { it.copy(initialCount = event.value) }
+            is AddEditSupplyEvent.NameChanged ->
+                _uiState.update { it.copy(name = event.value) }
+            is AddEditSupplyEvent.UnitChanged ->
+                _uiState.update { it.copy(unit = event.value) }
+            is AddEditSupplyEvent.PrescriberNameChanged ->
+                _uiState.update { state ->
+                    state.copy(
+                        prescriberName = event.value,
+                        prescriberSuggestions = filterPrescribers(_allPrescribers.value, event.value),
+                    )
+                }
+            is AddEditSupplyEvent.PrescriberPhoneChanged ->
+                _uiState.update { it.copy(prescriberPhone = event.value) }
+            is AddEditSupplyEvent.PrescriberPracticeChanged ->
+                _uiState.update { it.copy(prescriberPractice = event.value) }
+            is AddEditSupplyEvent.PrescriberSuggestionPicked ->
+                _uiState.update {
+                    it.copy(
+                        prescriberName = event.prescriber.name,
+                        prescriberPhone = (event.prescriber.phone ?: it.prescriberPhone)
+                            .filter { c -> c.isDigit() }.take(10),
+                        prescriberPractice = event.prescriber.practice ?: it.prescriberPractice,
+                        prescriberSuggestions = emptyList(),
+                    )
+                }
+            is AddEditSupplyEvent.PharmacyNameChanged ->
+                _uiState.update { state ->
+                    state.copy(
+                        pharmacyName = event.value,
+                        pharmacySuggestions = filterPharmacies(_allPharmacies.value, event.value),
+                    )
+                }
+            is AddEditSupplyEvent.PharmacyPhoneChanged ->
+                _uiState.update { it.copy(pharmacyPhone = event.value) }
+            is AddEditSupplyEvent.PharmacySuggestionPicked ->
+                _uiState.update {
+                    it.copy(
+                        pharmacyName = event.pharmacy.name,
+                        pharmacyPhone = (event.pharmacy.phone ?: it.pharmacyPhone)
+                            .filter { c -> c.isDigit() }.take(10),
+                        pharmacySuggestions = emptyList(),
+                    )
+                }
+            is AddEditSupplyEvent.LowThresholdChanged ->
+                _uiState.update { it.copy(lowThreshold = event.value) }
+            is AddEditSupplyEvent.NotesChanged ->
+                _uiState.update { it.copy(notes = event.value) }
+            is AddEditSupplyEvent.InitialCountChanged ->
+                _uiState.update { it.copy(initialCount = event.value) }
             is AddEditSupplyEvent.Save -> save()
         }
     }
@@ -162,12 +254,27 @@ class AddEditSupplyViewModel(
         }
     }
 
+    private fun filterPrescribers(all: List<PrescriberEntity>, query: String): List<PrescriberEntity> =
+        if (query.isBlank()) emptyList()
+        else all.filter {
+            it.name.contains(query, ignoreCase = true) && !it.name.equals(query, ignoreCase = true)
+        }
+
+    private fun filterPharmacies(all: List<PharmacyEntity>, query: String): List<PharmacyEntity> =
+        if (query.isBlank()) emptyList()
+        else all.filter {
+            it.name.contains(query, ignoreCase = true) && !it.name.equals(query, ignoreCase = true)
+        }
+
     companion object {
         fun factory(
             supplyRepository: SupplyRepository,
+            contactRepository: ContactRepository,
             editSupplyId: String? = null,
         ): ViewModelProvider.Factory = viewModelFactory {
-            initializer { AddEditSupplyViewModel(supplyRepository, editSupplyId) }
+            initializer {
+                AddEditSupplyViewModel(supplyRepository, contactRepository, editSupplyId)
+            }
         }
     }
 }
