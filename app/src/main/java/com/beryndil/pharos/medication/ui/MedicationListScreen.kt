@@ -119,6 +119,13 @@ fun MedicationListScreen(
                                 },
                             )
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.screen_backup)) },
+                                onClick = {
+                                    globalMenuExpanded = false
+                                    onOpenBackup()
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_saved_contacts)) },
                                 onClick = {
                                     globalMenuExpanded = false

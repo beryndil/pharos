@@ -16,8 +16,8 @@ android {
         applicationId = "com.beryndil.pharos"
         minSdk = 26
         targetSdk = 35
-        versionCode = 99
-        versionName = "0.9.5-alpha"
+        versionCode = 100
+        versionName = "0.9.6-alpha"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Launcher label is placeholder-driven so the side-by-side `sideload` variant can
         // override it. Default resolves to the normal app name for debug/release.
