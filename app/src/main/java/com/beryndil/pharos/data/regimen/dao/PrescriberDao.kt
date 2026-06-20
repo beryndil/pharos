@@ -22,6 +22,10 @@ interface PrescriberDao {
     @Query("SELECT * FROM prescribers ORDER BY name ASC")
     fun observeAll(): Flow<List<PrescriberEntity>>
 
+    /** Returns every prescriber row — backup export only. */
+    @Query("SELECT * FROM prescribers ORDER BY createdAtEpochMs ASC")
+    suspend fun getAll(): List<PrescriberEntity>
+
     /** One-shot read for a specific name (case-insensitive match). */
     @Query("SELECT * FROM prescribers WHERE lower(name) = lower(:name) LIMIT 1")
     suspend fun getByName(name: String): PrescriberEntity?

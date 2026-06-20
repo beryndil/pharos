@@ -22,6 +22,10 @@ interface PharmacyDao {
     @Query("SELECT * FROM pharmacies ORDER BY name ASC")
     fun observeAll(): Flow<List<PharmacyEntity>>
 
+    /** Returns every pharmacy row — backup export only. */
+    @Query("SELECT * FROM pharmacies ORDER BY createdAtEpochMs ASC")
+    suspend fun getAll(): List<PharmacyEntity>
+
     /** One-shot read for a specific name (case-insensitive match). */
     @Query("SELECT * FROM pharmacies WHERE lower(name) = lower(:name) LIMIT 1")
     suspend fun getByName(name: String): PharmacyEntity?

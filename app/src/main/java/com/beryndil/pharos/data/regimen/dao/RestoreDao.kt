@@ -7,10 +7,14 @@ import androidx.room.Query
 import com.beryndil.pharos.data.regimen.entity.DoseInstanceEntity
 import com.beryndil.pharos.data.regimen.entity.DoseTransitionEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
+import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
+import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
 import com.beryndil.pharos.data.regimen.entity.RefillRecordEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleEntity
 import com.beryndil.pharos.data.regimen.entity.SchedulePhaseEntity
 import com.beryndil.pharos.data.regimen.entity.SettingEntity
+import com.beryndil.pharos.data.regimen.entity.SupplyEntity
+import com.beryndil.pharos.data.regimen.entity.SupplyRecordEntity
 
 /**
  * DAO used EXCLUSIVELY by the backup restore path (spec §2.12, DECISIONS.md S9-A2).
@@ -23,7 +27,8 @@ import com.beryndil.pharos.data.regimen.entity.SettingEntity
  * Delete order must respect foreign-key constraints:
  *   dose_transitions → dose_instances → schedule_phases → schedules
  *                                      refill_records   → medications
- *                   settings (no FK)
+ *   supply_records → supplies
+ *   settings / prescribers / pharmacies (no FK)
  */
 @Dao
 interface RestoreDao {
@@ -51,6 +56,18 @@ interface RestoreDao {
     @Query("DELETE FROM settings")
     suspend fun clearSettings()
 
+    @Query("DELETE FROM supply_records")
+    suspend fun clearSupplyRecords()
+
+    @Query("DELETE FROM supplies")
+    suspend fun clearSupplies()
+
+    @Query("DELETE FROM prescribers")
+    suspend fun clearPrescribers()
+
+    @Query("DELETE FROM pharmacies")
+    suspend fun clearPharmacies()
+
     // ── Bulk insert (FK-safe insertion order) ─────────────────────────────────
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
@@ -73,6 +90,18 @@ interface RestoreDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSettings(settings: List<SettingEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertPrescribers(prescribers: List<PrescriberEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertPharmacies(pharmacies: List<PharmacyEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertSupplies(supplies: List<SupplyEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertSupplyRecords(records: List<SupplyRecordEntity>)
 
     // ── Empty-regimen detection (post-wipe restore offer, spec §2.12) ─────────
 

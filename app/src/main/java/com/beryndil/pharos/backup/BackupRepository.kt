@@ -7,11 +7,15 @@ import com.beryndil.pharos.data.regimen.RegimenDatabase
 import com.beryndil.pharos.data.regimen.entity.DoseInstanceEntity
 import com.beryndil.pharos.data.regimen.entity.DoseTransitionEntity
 import com.beryndil.pharos.data.regimen.entity.MedicationEntity
+import com.beryndil.pharos.data.regimen.entity.PharmacyEntity
+import com.beryndil.pharos.data.regimen.entity.PrescriberEntity
 import com.beryndil.pharos.data.regimen.entity.RefillRecordEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleEntity
 import com.beryndil.pharos.data.regimen.entity.SchedulePhaseEntity
-import com.beryndil.pharos.data.regimen.entity.SettingEntity
 import com.beryndil.pharos.data.regimen.entity.ScheduleType
+import com.beryndil.pharos.data.regimen.entity.SettingEntity
+import com.beryndil.pharos.data.regimen.entity.SupplyEntity
+import com.beryndil.pharos.data.regimen.entity.SupplyRecordEntity
 import com.beryndil.pharos.medication.export.MedListPdfExporter
 import com.beryndil.pharos.medication.export.PdfExportOptions
 import com.beryndil.pharos.settings.UserProfileRepository
@@ -272,6 +276,10 @@ class BackupRepository(
         val transitions = db.doseTransitionDao().getAll().map { it.toBackup() }
         val refills = db.refillRecordDao().getAll().map { it.toBackup() }
         val settings = db.settingDao().getAll().map { it.toBackup() }
+        val prescribers = db.prescriberDao().getAll().map { it.toBackup() }
+        val pharmacies = db.pharmacyDao().getAll().map { it.toBackup() }
+        val supplies = db.supplyDao().getAll().map { it.toBackup() }
+        val supplyRecords = db.supplyRecordDao().getAll().map { it.toBackup() }
 
         return BackupPayload(
             exportedAtEpochMs = exportedAtEpochMs,
@@ -282,6 +290,10 @@ class BackupRepository(
             doseTransitions = transitions,
             refillRecords = refills,
             settings = settings,
+            prescribers = prescribers,
+            pharmacies = pharmacies,
+            supplies = supplies,
+            supplyRecords = supplyRecords,
         )
     }
 
@@ -330,6 +342,10 @@ class BackupRepository(
             restoreDao.clearRefillRecords()
             restoreDao.clearMedications()
             restoreDao.clearSettings()
+            restoreDao.clearSupplyRecords()
+            restoreDao.clearSupplies()
+            restoreDao.clearPrescribers()
+            restoreDao.clearPharmacies()
 
             // Insert in FK-safe order (parent tables first)
             restoreDao.insertMedications(payload.medications.map { it.toEntity() })
@@ -339,6 +355,10 @@ class BackupRepository(
             restoreDao.insertDoseTransitions(payload.doseTransitions.map { it.toEntity() })
             restoreDao.insertRefillRecords(payload.refillRecords.map { it.toEntity() })
             restoreDao.insertSettings(payload.settings.map { it.toEntity() })
+            restoreDao.insertPrescribers(payload.prescribers.map { it.toEntity() })
+            restoreDao.insertPharmacies(payload.pharmacies.map { it.toEntity() })
+            restoreDao.insertSupplies(payload.supplies.map { it.toEntity() })
+            restoreDao.insertSupplyRecords(payload.supplyRecords.map { it.toEntity() })
         }
     }
 
@@ -347,20 +367,28 @@ class BackupRepository(
     private fun MedicationEntity.toBackup() = MedicationBackup(
         id = id, name = name, rxcui = rxcui, ingredientsJson = ingredientsJson,
         strength = strength, form = form, doseAmount = doseAmount, prescriber = prescriber,
-        prescriberPhone = prescriberPhone, pharmacy = pharmacy, pharmacyPhone = pharmacyPhone,
-        purpose = purpose, notes = notes, isFreeText = isFreeText, status = status,
-        startEpochMs = startEpochMs, endEpochMs = endEpochMs,
+        prescriberPhone = prescriberPhone, prescriberPractice = prescriberPractice,
+        pharmacy = pharmacy, pharmacyPhone = pharmacyPhone,
+        purpose = purpose, notes = notes, isFreeText = isFreeText,
+        isCritical = isCritical, missWindowMinutes = missWindowMinutes,
+        status = status, startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs, updatedAtEpochMs = updatedAtEpochMs,
+        substituteForMedId = substituteForMedId, substituteForDrugName = substituteForDrugName,
+        substituteNote = substituteNote,
         combinedWithMedId = combinedWithMedId, combinedDisplayStrength = combinedDisplayStrength,
     )
 
     private fun MedicationBackup.toEntity() = MedicationEntity(
         id = id, name = name, rxcui = rxcui, ingredientsJson = ingredientsJson,
         strength = strength, form = form, doseAmount = doseAmount, prescriber = prescriber,
-        prescriberPhone = prescriberPhone, pharmacy = pharmacy, pharmacyPhone = pharmacyPhone,
-        purpose = purpose, notes = notes, isFreeText = isFreeText, status = status,
-        startEpochMs = startEpochMs, endEpochMs = endEpochMs,
+        prescriberPhone = prescriberPhone, prescriberPractice = prescriberPractice,
+        pharmacy = pharmacy, pharmacyPhone = pharmacyPhone,
+        purpose = purpose, notes = notes, isFreeText = isFreeText,
+        isCritical = isCritical, missWindowMinutes = missWindowMinutes,
+        status = status, startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs, updatedAtEpochMs = updatedAtEpochMs,
+        substituteForMedId = substituteForMedId, substituteForDrugName = substituteForDrugName,
+        substituteNote = substituteNote,
         combinedWithMedId = combinedWithMedId, combinedDisplayStrength = combinedDisplayStrength,
     )
 
@@ -370,6 +398,7 @@ class BackupRepository(
         intervalHours = intervalHours, intervalAnchorType = intervalAnchorType,
         windowStartTime = windowStartTime, windowEndTime = windowEndTime,
         dailyMaxDoses = dailyMaxDoses, indication = indication,
+        weekInterval = weekInterval,
         zoneId = zoneId, isActive = isActive,
         startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs,
@@ -381,6 +410,7 @@ class BackupRepository(
         intervalHours = intervalHours, intervalAnchorType = intervalAnchorType,
         windowStartTime = windowStartTime, windowEndTime = windowEndTime,
         dailyMaxDoses = dailyMaxDoses, indication = indication,
+        weekInterval = weekInterval,
         zoneId = zoneId, isActive = isActive,
         startEpochMs = startEpochMs, endEpochMs = endEpochMs,
         createdAtEpochMs = createdAtEpochMs,
@@ -444,6 +474,52 @@ class BackupRepository(
 
     private fun SettingBackup.toEntity() = SettingEntity(
         key = key, value = value, updatedAtEpochMs = updatedAtEpochMs,
+    )
+
+    private fun PrescriberEntity.toBackup() = PrescriberBackup(
+        id = id, name = name, phone = phone, practice = practice,
+        createdAtEpochMs = createdAtEpochMs,
+    )
+
+    private fun PrescriberBackup.toEntity() = PrescriberEntity(
+        id = id, name = name, phone = phone, practice = practice,
+        createdAtEpochMs = createdAtEpochMs,
+    )
+
+    private fun PharmacyEntity.toBackup() = PharmacyBackup(
+        id = id, name = name, phone = phone, createdAtEpochMs = createdAtEpochMs,
+    )
+
+    private fun PharmacyBackup.toEntity() = PharmacyEntity(
+        id = id, name = name, phone = phone, createdAtEpochMs = createdAtEpochMs,
+    )
+
+    private fun SupplyEntity.toBackup() = SupplyBackup(
+        id = id, name = name, unit = unit,
+        prescriberName = prescriberName, prescriberPhone = prescriberPhone,
+        pharmacyName = pharmacyName, pharmacyPhone = pharmacyPhone,
+        lowThreshold = lowThreshold, notes = notes, status = status,
+        createdAtEpochMs = createdAtEpochMs,
+    )
+
+    private fun SupplyBackup.toEntity() = SupplyEntity(
+        id = id, name = name, unit = unit,
+        prescriberName = prescriberName, prescriberPhone = prescriberPhone,
+        pharmacyName = pharmacyName, pharmacyPhone = pharmacyPhone,
+        lowThreshold = lowThreshold, notes = notes, status = status,
+        createdAtEpochMs = createdAtEpochMs,
+    )
+
+    private fun SupplyRecordEntity.toBackup() = SupplyRecordBackup(
+        id = id, supplyId = supplyId, quantityDelta = quantityDelta,
+        quantityAfter = quantityAfter, eventType = eventType, notes = notes,
+        createdAtEpochMs = createdAtEpochMs,
+    )
+
+    private fun SupplyRecordBackup.toEntity() = SupplyRecordEntity(
+        id = id, supplyId = supplyId, quantityDelta = quantityDelta,
+        quantityAfter = quantityAfter, eventType = eventType, notes = notes,
+        createdAtEpochMs = createdAtEpochMs,
     )
 
     private fun ScheduleEntity.toDisplayString(): String = when (

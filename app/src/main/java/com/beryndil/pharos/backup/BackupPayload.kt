@@ -23,9 +23,14 @@ data class BackupPayload(
     val doseTransitions: List<DoseTransitionBackup>,
     val refillRecords: List<RefillRecordBackup>,
     val settings: List<SettingBackup>,
+    /** Added schema v2 — default empty so schema v1 backups restore without error. */
+    val prescribers: List<PrescriberBackup> = emptyList(),
+    val pharmacies: List<PharmacyBackup> = emptyList(),
+    val supplies: List<SupplyBackup> = emptyList(),
+    val supplyRecords: List<SupplyRecordBackup> = emptyList(),
 ) {
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 1
+        const val CURRENT_SCHEMA_VERSION = 2
     }
 }
 
@@ -56,11 +61,23 @@ data class MedicationBackup(
     /** Free-text reminder note (v1.4+). Default null for backups from older app versions. */
     val notes: String? = null,
     val isFreeText: Boolean,
+    /** Default false for schema v1 backups. */
+    val isCritical: Boolean = false,
+    /** Default 60 for schema v1 backups. */
+    val missWindowMinutes: Int = 60,
     val status: String,
     val startEpochMs: Long,
     val endEpochMs: Long?,
     val createdAtEpochMs: Long,
     val updatedAtEpochMs: Long,
+    /** Dead column retained for schema fidelity. */
+    val substituteForMedId: String? = null,
+    /** Default null for schema v1 backups. */
+    val substituteForDrugName: String? = null,
+    /** Default null for schema v1 backups. */
+    val substituteNote: String? = null,
+    /** Default null for schema v1 backups. */
+    val prescriberPractice: String? = null,
     /** Combined prescription partner ID (v1.5.3+). Default null for older backups. */
     val combinedWithMedId: String? = null,
     /** User-typed combined display strength, e.g. "90 mg" (v1.5.3+). Default null for older backups. */
@@ -86,6 +103,8 @@ data class ScheduleBackup(
     val createdAtEpochMs: Long,
     /** PRN indication (v1.5.4+). Default null for backups from older app versions. */
     val indication: String? = null,
+    /** Every-N-weeks repeat (v1.6+). Default 1 (weekly) for schema v1 backups. */
+    val weekInterval: Int = 1,
 )
 
 @Serializable
@@ -142,4 +161,47 @@ data class SettingBackup(
     val key: String,
     val value: String,
     val updatedAtEpochMs: Long,
+)
+
+@Serializable
+data class PrescriberBackup(
+    val id: String,
+    val name: String,
+    val phone: String?,
+    val practice: String? = null,
+    val createdAtEpochMs: Long,
+)
+
+@Serializable
+data class PharmacyBackup(
+    val id: String,
+    val name: String,
+    val phone: String?,
+    val createdAtEpochMs: Long,
+)
+
+@Serializable
+data class SupplyBackup(
+    val id: String,
+    val name: String,
+    val unit: String,
+    val prescriberName: String?,
+    val prescriberPhone: String?,
+    val pharmacyName: String?,
+    val pharmacyPhone: String?,
+    val lowThreshold: Int,
+    val notes: String?,
+    val status: String,
+    val createdAtEpochMs: Long,
+)
+
+@Serializable
+data class SupplyRecordBackup(
+    val id: String,
+    val supplyId: String,
+    val quantityDelta: Int,
+    val quantityAfter: Int,
+    val eventType: String,
+    val notes: String?,
+    val createdAtEpochMs: Long,
 )
